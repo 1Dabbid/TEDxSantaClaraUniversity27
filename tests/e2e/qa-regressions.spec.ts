@@ -20,8 +20,14 @@ test.describe('first screen on a small phone', () => {
     };
     await inView('h1');
     await inView('time');
-    await inView('a.btn[href="#speakers"]');
-    await inView('a.btn:not([href="#speakers"])');
+    // Two actions: Tickets, and either Speakers (once announced) or Get updates (mailing list).
+    const actions = hero.locator('a.btn');
+    expect(await actions.count()).toBeGreaterThanOrEqual(2);
+    for (const i of [0, 1]) {
+      const box = await actions.nth(i).boundingBox();
+      expect(box, `hero action ${i}`).not.toBeNull();
+      expect(box!.y + box!.height, `hero action ${i} bottom`).toBeLessThanOrEqual(740);
+    }
     await expect(hero.getByText('Locatelli Student Activity Center')).toBeInViewport();
   });
 });
