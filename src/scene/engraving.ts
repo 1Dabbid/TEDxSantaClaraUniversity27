@@ -53,31 +53,56 @@ const FILLER: readonly string[] = [
 
 const body = (...phrases: string[]): EngravingRow => ({ kind: 'text', style: 'body', phrases });
 
-export const ENGRAVING_ROWS: readonly EngravingRow[] = [
-  { kind: 'rule' },
-  { kind: 'text', style: 'title', phrases: [EVENT_NAME, THEME] },
-  { kind: 'rule' },
-  { kind: 'text', style: 'label', phrases: [DATE_LINE, VENUE_LINE, SEATS_LINE] },
-  body(CLAUSES[0], FILLER[0]),
-  body(CLAUSES[1], FILLER[1]),
-  body(CLAUSES[2], FILLER[2]),
-  body(CLAUSES[3], FILLER[3]),
-  body(CLAUSES[4], FILLER[4]),
-  { kind: 'text', style: 'label', phrases: [LICENSE_LINE, EVENT_NAME] },
-  body(CLAUSES[5], FILLER[5]),
-  body(CLAUSES[6], FILLER[6]),
-  body(CLAUSES[7], FILLER[7]),
-  body(CLAUSES[8], FILLER[0]),
-  body(FILLER[1], CLAUSES[0]),
-  { kind: 'text', style: 'label', phrases: [THEME, DATE_LINE, VENUE_LINE] },
-  body(FILLER[3], CLAUSES[2]),
-  body(FILLER[5], CLAUSES[4]),
-  body(FILLER[6], CLAUSES[6]),
-  body(FILLER[7], CLAUSES[8]),
-  { kind: 'rule' },
-  { kind: 'text', style: 'title', phrases: [THEME, EVENT_NAME] },
-  { kind: 'rule' },
-];
+/** Content facts engraved on the barrel; every field defaults to the constants above. */
+export type EngravingFacts = {
+  eventName: string;
+  theme: string;
+  dateLine: string;
+  venueLine: string;
+  seatsLine: string;
+  licenseLine: string;
+};
+
+export const DEFAULT_FACTS: EngravingFacts = {
+  eventName: EVENT_NAME,
+  theme: THEME,
+  dateLine: DATE_LINE,
+  venueLine: VENUE_LINE,
+  seatsLine: SEATS_LINE,
+  licenseLine: LICENSE_LINE,
+};
+
+/** The engraved rows for a set of facts (missing fields use the defaults above). */
+export function engravingRows(facts: Partial<EngravingFacts> = {}): readonly EngravingRow[] {
+  const f = { ...DEFAULT_FACTS, ...facts };
+  return [
+    { kind: 'rule' },
+    { kind: 'text', style: 'title', phrases: [f.eventName, f.theme] },
+    { kind: 'rule' },
+    { kind: 'text', style: 'label', phrases: [f.dateLine, f.venueLine, f.seatsLine] },
+    body(CLAUSES[0], FILLER[0]),
+    body(CLAUSES[1], FILLER[1]),
+    body(CLAUSES[2], FILLER[2]),
+    body(CLAUSES[3], FILLER[3]),
+    body(CLAUSES[4], FILLER[4]),
+    { kind: 'text', style: 'label', phrases: [f.licenseLine, f.eventName] },
+    body(CLAUSES[5], FILLER[5]),
+    body(CLAUSES[6], FILLER[6]),
+    body(CLAUSES[7], FILLER[7]),
+    body(CLAUSES[8], FILLER[0]),
+    body(FILLER[1], CLAUSES[0]),
+    { kind: 'text', style: 'label', phrases: [f.theme, f.dateLine, f.venueLine] },
+    body(FILLER[3], CLAUSES[2]),
+    body(FILLER[5], CLAUSES[4]),
+    body(FILLER[6], CLAUSES[6]),
+    body(FILLER[7], CLAUSES[8]),
+    { kind: 'rule' },
+    { kind: 'text', style: 'title', phrases: [f.theme, f.eventName] },
+    { kind: 'rule' },
+  ];
+}
+
+export const ENGRAVING_ROWS: readonly EngravingRow[] = engravingRows();
 
 /** Separator drawn between repeated phrases. */
 export const ENGRAVING_SEPARATOR = '   ·   ';

@@ -49,7 +49,7 @@ export async function SiteShell({ children }: { children: ReactNode }) {
           <Footer settings={settings} />
         </div>
       </SmoothScroll>
-      <MotionRoot />
+      <MotionRoot caption={settings.copy.transitionCaption} />
     </>
   );
 }

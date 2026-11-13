@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { eventFacts } from './helpers';
 
 /** What the server HTML must say on its own: no JavaScript at all. */
 test.describe('home page without JavaScript', () => {
@@ -7,9 +8,12 @@ test.describe('home page without JavaScript', () => {
   test('states the event facts and the TEDx license line', async ({ page }) => {
     await page.goto('/');
     const text = (await page.locator('body').innerText()).replace(/\s+/g, ' ');
+    // This year's facts come from content/ (Event basics, Venue), so re-theming needs no test edit.
+    const facts = eventFacts();
     expect(text).toContain('TEDxSantaClaraUniversity');
-    expect(text).toContain('April 23, 2027');
-    expect(text).toContain('Locatelli Student Activity Center');
+    expect(text).toContain(facts.themeName);
+    expect(text).toContain(facts.dateText);
+    expect(text).toContain(facts.venueName);
     expect(text).toContain('This independent TEDx event is operated under license from TED.');
     await expect(page.getByRole('link', { name: /^Tickets/ }).first()).toBeVisible();
   });

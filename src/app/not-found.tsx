@@ -53,10 +53,10 @@ export default async function NotFound() {
               data-reveal="lines"
               className="mt-8 max-w-[14ch] text-headline font-semibold tracking-[-0.045em] text-balance"
             >
-              This page does not exist.
+              {settings.copy.notFoundHeading}
             </h1>
             <p className="mt-8 max-w-lg text-lg text-mute">
-              The link may be out of date, or the page may have moved.
+              {settings.copy.notFoundBody}
             </p>
             <div className="mt-10 flex flex-wrap gap-3">
               <Button href="/" size="lg">

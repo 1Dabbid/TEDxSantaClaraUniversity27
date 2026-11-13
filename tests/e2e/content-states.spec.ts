@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { publishedSpeakers } from './helpers';
+import { publishedSpeakers, themeCopy } from './helpers';
 
 /*
  * The home page follows content state: what is not announced is said once,
@@ -31,7 +31,7 @@ test.describe('home page follows content state (no JavaScript)', () => {
       await expect(page.locator(`a[href="/speakers/${s.slug}"]`)).toHaveCount(0);
     }
     if (!publishedSpeakers().some((s) => s.announced)) {
-      await expect(speakers.getByRole('heading', { level: 2 })).toHaveText(/to be announced/i);
+      await expect(speakers.getByRole('heading', { level: 2 })).toHaveText(themeCopy('speakersEmptyHeading'));
       await expect(speakers.locator('.speaker-card')).toHaveCount(0);
       await expect(speakers.getByRole('link', { name: /mailing list/i })).toHaveCount(1);
     }

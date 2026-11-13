@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Image from 'next/image';
-import type { PartnerBenefit, Sponsor, Tier } from '@/lib/content';
+import type { PartnerBenefit, Settings, Sponsor, Tier } from '@/lib/content';
 import { getPartnerBenefits, getSettings, getSponsors, getTiers } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
 import { SITE_NAME, venueLine } from '@/lib/site';
@@ -13,7 +13,7 @@ import { PartnersMotion } from '@/motion/sections/PartnersMotion';
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
-  const description = `Partner with ${SITE_NAME}: support the first ${SITE_NAME} mainstage event, up to ${s.capacity} guests; talks are recorded and submitted for publication on the TEDx Talks YouTube channel.`;
+  const description = s.copy.partnersDescription;
   // Share image: the root opengraph-image.tsx (file convention, hashed URL), never set here.
   return {
     title: 'Partners',
@@ -57,12 +57,15 @@ function LoopMark() {
 }
 
 /** The year-round card only shows when Show / hide sections > showYearRound is ticked (default off). */
-const reasons = (capacity: number, showYearRound: boolean): { figure: ReactNode; title: string; body: string }[] => [
-  {
-    figure: '1st',
-    title: 'The first mainstage.',
-    body: 'This is the first TEDxSantaClaraUniversity mainstage event. Partners who join now are part of it from the start.',
-  },
+/** The first card is Theme copy (left out while its title is blank). */
+const reasons = (
+  capacity: number,
+  showYearRound: boolean,
+  copy: Settings['copy'],
+): { figure: ReactNode; title: string; body: string }[] => [
+  ...(copy.partnersEditionTitle
+    ? [{ figure: copy.partnersEditionFigure, title: copy.partnersEditionTitle, body: copy.partnersEditionBody }]
+    : []),
   {
     figure: String(capacity),
     title: `A room of ${capacity}.`,
@@ -342,7 +345,7 @@ export default async function PartnersPage() {
       ? `mailto:${settings.partnershipsEmail}?subject=${encodeURIComponent(`${subject} · ${settings.eventName}`)}`
       : cta.href;
   const anyTerms = tiers.some((t) => t.amount || t.slots);
-  const REASONS = reasons(settings.capacity, settings.sections.showYearRound);
+  const REASONS = reasons(settings.capacity, settings.sections.showYearRound, settings.copy);
   // Four facts: 2 x 2 then a row of four. Three (year-round card off): one row of three from md up.
   const four = REASONS.length === 4;
   const anyPartners = sponsors.length > 0;
@@ -366,14 +369,12 @@ export default async function PartnersPage() {
           data-reveal-variant="shear"
           className="mt-8 max-w-[13ch] text-[clamp(3rem,9.5vw,9rem)] leading-[0.9] font-semibold tracking-[-0.055em] text-balance"
         >
-          Put your name in the fine print.
+          {settings.copy.partnersHeading}
         </h1>
         <div className="mt-12 grid gap-10 md:grid-cols-12 md:items-end">
           <p data-reveal="fade" className="max-w-xl text-lg text-pretty text-mute sm:text-xl md:col-span-7">
-            <span className="text-white">Become a partner of {settings.eventName}.</span> It is the club&rsquo;s
-            first mainstage event, organized by students at Santa Clara University: one evening of live talks for up
-            to {settings.capacity} guests, recorded and submitted for publication on the TEDx Talks YouTube channel.
-            We are inviting a small number of partners to make it possible.
+            <span className="text-white">Become a partner of {settings.eventName}.</span>
+            {` ${settings.copy.partnersIntro}`}
           </p>
           <div className="flex flex-wrap gap-3 md:col-span-5 md:justify-end">
             <Button href={cta.href} size="lg">

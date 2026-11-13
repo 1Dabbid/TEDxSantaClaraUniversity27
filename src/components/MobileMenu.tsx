@@ -64,12 +64,26 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
     html.setAttribute('data-menu-open', '');
     lenisRef.current?.stop();
     document.addEventListener('keydown', onKey);
+    // The panel and its toggle are hidden from `lg` up (`lg:hidden`): a rotated tablet or
+    // a widened window would otherwise keep the page locked with nothing left to close it.
+    const wide = window.matchMedia('(min-width: 64rem)');
+    const onWide = () => {
+      if (wide.matches) close(false);
+    };
+    // Restored from the back/forward cache with the menu still open: start closed.
+    const onShow = (e: PageTransitionEvent) => {
+      if (e.persisted) close(false);
+    };
+    wide.addEventListener('change', onWide);
+    window.addEventListener('pageshow', onShow);
     return () => {
       html.style.overflow = prev;
       page?.removeAttribute('inert');
       html.removeAttribute('data-menu-open');
       lenisRef.current?.start();
       document.removeEventListener('keydown', onKey);
+      wide.removeEventListener('change', onWide);
+      window.removeEventListener('pageshow', onShow);
     };
   }, [open, close]);
 

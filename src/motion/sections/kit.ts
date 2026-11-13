@@ -135,6 +135,35 @@ export function maskText(el: HTMLElement, { strip, wbr = false, only = /\S/ }: M
   };
 }
 
+/**
+ * Wraps a `gsap.matchMedia()` callback for a moment that changes the DOM (masks,
+ * visual copies, drawn rules). Reverts pushed to `undo` run, in order, when the
+ * query stops matching or the section is torn down, and also at once if the
+ * callback throws halfway: the error still reaches useSectionMotion, which then
+ * reverts every tween (and hidden start state) the section created. A failed
+ * moment never leaves its content split or hidden.
+ */
+export function moment<C>(body: (ctx: C, undo: (() => void)[]) => void): (ctx: C) => () => void {
+  return (ctx) => {
+    const undo: (() => void)[] = [];
+    const revert = () =>
+      undo.splice(0).forEach((u) => {
+        try {
+          u();
+        } catch {
+          // One failed revert must not keep the others from restoring their nodes.
+        }
+      });
+    try {
+      body(ctx, undo);
+    } catch (err) {
+      revert();
+      throw err;
+    }
+    return revert;
+  };
+}
+
 /** Runs `fn` once if keyboard focus lands inside `el` (never leave a focused thing hidden). */
 export function onFocusWithin(el: HTMLElement, fn: (target: Element) => void): () => void {
   const h = (e: FocusEvent) => {

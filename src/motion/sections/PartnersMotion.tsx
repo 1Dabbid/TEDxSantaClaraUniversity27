@@ -1,7 +1,7 @@
 'use client';
 
 import { useSectionMotion, type MotionKit } from '../useSectionMotion';
-import { belowFold, COMPACT, FULL, maskText, onFocusWithin, scrubbable, visualCopy } from './kit';
+import { belowFold, COMPACT, FULL, maskText, moment, onFocusWithin, scrubbable, visualCopy } from './kit';
 
 type Side = 'top' | 'bottom';
 
@@ -34,9 +34,8 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const link = cta?.closest<HTMLElement>('a') ?? null;
 
   const mm = gsap.matchMedia();
-  mm.add({ full: FULL, compact: COMPACT }, (ctx) => {
+  mm.add({ full: FULL, compact: COMPACT }, moment((ctx: gsap.Context, undo) => {
     const full = Boolean(ctx.conditions?.full);
-    const undo: (() => void)[] = [];
 
     if (ledger) {
       const rows = Array.from(ledger.children) as HTMLElement[];
@@ -144,8 +143,7 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       );
     }
 
-    return () => undo.forEach((u) => u());
-  });
+  }));
   return () => mm.revert();
 }
 

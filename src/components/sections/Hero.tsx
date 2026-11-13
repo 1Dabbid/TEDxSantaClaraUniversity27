@@ -46,7 +46,10 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
   const cta = ticketCta(settings);
   const caption = `${settings.dateISO.slice(0, 4)} theme`;
   const words = settings.themeName.split(/\s+/).filter(Boolean);
-  const fitEm = Math.max(1, ...words.map((w, i) => wordEm(w) + (i === words.length - 1 ? MARK : 0)));
+  // Theme copy (content/theme-copy.yaml). A blank footnote drops the marker too.
+  const { heroFootnote, heroScrollCue } = settings.copy;
+  const mark = heroFootnote ? MARK : 0;
+  const fitEm = Math.max(1, ...words.map((w, i) => wordEm(w) + (i === words.length - 1 ? mark : 0)));
   const center = (words.length - 1) / 2;
 
   return (
@@ -87,6 +90,7 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
               </span>
             ))}
           </span>
+          {heroFootnote ? (
           <a
             href="#hero-note"
             className="hero-mark tap relative ml-[0.06em] after:absolute after:-inset-3 after:content-[''] align-super font-mono text-[0.3em] font-normal tracking-normal text-accent no-underline transition-colors hover:text-white"
@@ -95,6 +99,7 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
             <span aria-hidden="true">1</span>
             <span className="sr-only"> (see note 1)</span>
           </a>
+          ) : null}
         </span>
         </h1>
 
@@ -161,16 +166,21 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
           </div>
 
           <div className="mt-8 flex items-end justify-between gap-8 max-sm:order-3 sm:mt-12">
-            <p id="hero-note" data-hero-seq style={seq(3)} className="fine-print max-w-md">
-              <span className="text-accent">1.</span> Terms and conditions apply. They are the whole point.
-            </p>
+            {heroFootnote ? (
+              <p id="hero-note" data-hero-seq style={seq(3)} className="fine-print max-w-md">
+                <span className="text-accent">1.</span>
+                {` ${heroFootnote}`}
+              </p>
+            ) : (
+              <span />
+            )}
             <a
               href="#theme"
               className="scroll-cue group hidden shrink-0 items-center gap-4 sm:flex"
               data-cursor="link"
             >
               <span className="fine-print text-mute transition-colors group-hover:text-white">
-                Scroll to read the fine print
+                {heroScrollCue}
               </span>
               <span aria-hidden="true" className="scroll-cue-line" />
             </a>

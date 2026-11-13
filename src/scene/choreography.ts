@@ -72,12 +72,17 @@ export type Shot = {
   bloom?: number;
   /** Studio environment (reflection strips) intensity, default 1. */
   env?: number;
+  /** Set by stageOrbit(): lets a variant re-aim the same orbit at another azimuth. */
+  orbit?: { az: number; el: number; dist: number; shiftRight: number; shiftUp: number };
 };
 
 export type ResolvedShot = {
   at: number;
   pos: Vector3;
   target: Vector3;
+  /** Unit offset from the target to the camera, and the log of that distance (the rig damps these, not pos). */
+  dir: Vector3;
+  logDist: number;
   up: Vector3;
   fov: number;
   exposure: number;
@@ -105,19 +110,24 @@ export type ResolvedShot = {
 };
 
 /**
- * Camera rig tuning. The position follows the sampled path with a critically
- * damped spring (`follow`, seconds); the look-at target uses an under-damped
- * spring so it overshoots slightly and settles, like a heavy fluid head; the
- * camera banks a little into lateral moves.
+ * Camera rig tuning. The rig follows the sampled path as a target point plus
+ * an offset (direction on the sphere, distance in log space), each critically
+ * damped (`follow`, seconds), so the camera can never pass through its own
+ * subject however fast the page is flung. The view direction then trails
+ * that composition through a lightly under-damped spring (a heavy fluid head:
+ * a small, bounded angular overshoot), and the camera banks a little into
+ * lateral moves.
  */
 export const RIG = {
   /** Smoothing of the journey coordinate itself (seconds). */
-  journeySmooth: 0.12,
-  /** Position follow time (seconds). */
-  follow: 0.7,
-  /** Look-at spring frequency (Hz) and damping ratio (< 1 overshoots). */
-  targetFreq: 0.62,
-  targetZeta: 0.68,
+  journeySmooth: 0.5,
+  /** Offset (direction, distance) follow time (seconds). */
+  follow: 0.3,
+  /** Target point follow time (seconds). */
+  targetFollow: 0.3,
+  /** View-direction spring frequency (Hz) and damping ratio (< 1 overshoots). */
+  targetFreq: 1.2,
+  targetZeta: 0.9,
   /** Bank angle per unit of lateral angular velocity (rad per rad/s), and its limit. */
   rollGain: 0.05,
   rollMax: 0.035,
@@ -148,7 +158,7 @@ function orbit(centre: Vector3, az: number, el: number, dist: number, shiftRight
 }
 
 /** Mic-space macro shot looking at the barrel surface at angle phi, height y. */
-function barrel(phi: number, y: number, dist: number, lookY = 0, shift = 0) {
+function barrel(phi: number, y: number, dist: number, lookY = 0, shift = 0, pan = 0) {
   const r = barrelRadius(y);
   const n = [Math.sin(phi), 0, Math.cos(phi)] as const;
   // Tangent (towards decreasing phi): shifting the target along it slides the barrel across the frame.
@@ -157,7 +167,8 @@ function barrel(phi: number, y: number, dist: number, lookY = 0, shift = 0) {
   return {
     space: 'mic' as const,
     pos: [s[0] + n[0] * dist + tg[0] * shift * 0.3, s[1] - lookY * 0.5, s[2] + n[2] * dist + tg[2] * shift * 0.3] as V3,
-    target: [s[0] + tg[0] * shift, s[1] + lookY, s[2] + tg[2] * shift] as V3,
+    // pan: turns the view only (camera stays), sliding the barrel sideways in frame.
+    target: [s[0] + tg[0] * (shift + pan), s[1] + lookY, s[2] + tg[2] * (shift + pan)] as V3,
   };
 }
 
@@ -180,6 +191,11 @@ function pullBackLevel(phi: number, dist: number, el: number, centre: Vector3) {
 const MIC_MID = micPoint(0.095);
 const STAGE = new Vector3(0, 0.15, 0);
 
+/** Orbit around the stage centre that remembers its parameters (see shotsFor). */
+function stageOrbit(az: number, el: number, dist: number, shiftRight = 0, shiftUp = 0) {
+  return { ...orbit(STAGE, az, el, dist, shiftRight, shiftUp), orbit: { az, el, dist, shiftRight, shiftUp } };
+}
+
 /** Hero: low, close, heroic three-quarter on the mic, subject on the right third. */
 const heroDesk = orbit(MIC_MID, 0.44, -0.07, 0.4, 0.088, -0.004);
 /** Barrel angle (mic space) that faces the hero camera, so the push-in is continuous. */
@@ -190,6 +206,13 @@ const PHI_HERO = (() => {
 
 const DARK_POS: V3 = [-2.4, 5.4, 20.5];
 const DARK_TARGET: V3 = [0, 0.4, 0];
+
+/**
+ * Pan of the desktop macro shots (metres along the barrel tangent): keeps the
+ * engraved column's left edge right of ~58% of the frame, clear of the theme
+ * copy ("Read the fine print." and the growing phrases).
+ */
+const MACRO_PAN = 0.0035;
 
 /** Macro look shared by the engraving shots: raking key from screen right, bright side right. */
 const MACRO = {
@@ -206,7 +229,7 @@ const MACRO = {
   haze: 0,
   motes: 1,
   vignette: 0.85,
-  focus: [0.7, 0.5] as const,
+  focus: [0.75, 0.5] as const,
   envRot: 0.6,
   env: 0.22,
   scrim: 0.55,
@@ -263,10 +286,10 @@ export const DESKTOP_SHOTS: Shot[] = [
     scrimEdge: 0.85,
     bloom: 1.2,
   },
-  { at: 0.98, ...barrel(PHI_HERO + 0.05, 0.088, 0.047, 0, 0.005), ...MACRO, keyDir: [1.1, 2.2, 0.3] },
-  { at: 1.3, ...barrel(PHI_HERO + 0.3, 0.077, 0.045, 0, 0.005), ...MACRO, keyDir: [1.5, 2.0, 0.3] },
-  { at: 1.62, ...barrel(PHI_HERO + 0.5, 0.068, 0.045, 0, 0.005), ...MACRO, keyDir: [1.8, 1.8, 0.3] },
-  { at: 1.8, ...barrel(PHI_HERO + 0.62, 0.064, 0.05, 0, 0.005), ...MACRO, keyDir: [2.0, 1.6, 0.3] },
+  { at: 0.98, ...barrel(PHI_HERO + 0.05, 0.088, 0.047, 0, 0.005, MACRO_PAN), ...MACRO, keyDir: [1.1, 2.2, 0.3] },
+  { at: 1.3, ...barrel(PHI_HERO + 0.3, 0.077, 0.045, 0, 0.005, MACRO_PAN), ...MACRO, keyDir: [1.5, 2.0, 0.3] },
+  { at: 1.62, ...barrel(PHI_HERO + 0.5, 0.068, 0.045, 0, 0.005, MACRO_PAN), ...MACRO, keyDir: [1.8, 1.8, 0.3] },
+  { at: 1.8, ...barrel(PHI_HERO + 0.62, 0.064, 0.05, 0, 0.005, MACRO_PAN), ...MACRO, keyDir: [2.0, 1.6, 0.3] },
   {
     at: 1.95,
     ...pullBackLevel(PHI_HERO + 0.72, 0.62, 0.04, micPoint(0.07)),
@@ -290,21 +313,21 @@ export const DESKTOP_SHOTS: Shot[] = [
   { at: 2.3, pos: [3.1, 1.05, 4.45], target: [-1.35, 0.28, -0.7], fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 1.3, spot: 1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.1 },
   { at: 2.48, ...RUG_CARDS, fov: 34, exposure: 0.95, drift: 0.025, parallax: 0.04, cone: 1.15, spot: 0.95, key: 0.5, rim: 0.8, rimAng: -0.6, vignette: 0.66 },
   { at: 3.05, pos: [2.4, 2.45, 5.3], target: [-1.15, -1.08, -0.7], fov: 34, exposure: 0.95, drift: 0.025, parallax: 0.04, cone: 1.15, spot: 0.95, key: 0.5, rim: 0.8, rimAng: -0.6, vignette: 0.66 },
-  { at: 3.3, ...orbit(STAGE, 0.5, 0.32, 6.6, 1.3, 0.5), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
-  { at: 3.6, ...orbit(STAGE, 0.12, 0.3, 6.6, 1.3, 0.45), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
-  { at: 3.9, ...orbit(STAGE, -0.3, 0.28, 6.6, 1.2, 0.4), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
-  { at: 4.5, pos: [0.9, 3.3, 15.2], target: [0, 0.55, 0], fov: 30, exposure: 1, drift: 0.04, parallax: 0.08, cone: 1.25, key: 0.3, vignette: 0.6, scrimEdge: 0.7 },
-  { at: 5.5, pos: [-1.4, 4.9, 18.4], target: [0, 0.4, 0], fov: 28, exposure: 0.85, drift: 0.04, parallax: 0.08, cone: 1.25, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
-  { at: 6.2, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
+  { at: 3.3, ...stageOrbit(0.5, 0.32, 6.6, 1.3, 0.5), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 3.6, ...stageOrbit(0.12, 0.3, 6.6, 1.3, 0.45), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 3.9, ...stageOrbit(-0.3, 0.28, 6.6, 1.2, 0.4), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 4.5, pos: [0.9, 3.3, 15.2], target: [0, 0.55, 0], fov: 30, exposure: 1, drift: 0.04, parallax: 0.08, cone: 0.8, key: 0.3, vignette: 0.6, scrimEdge: 0.7 },
+  { at: 5.5, pos: [-1.4, 4.9, 18.4], target: [0, 0.4, 0], fov: 28, exposure: 0.85, drift: 0.04, parallax: 0.08, cone: 0.9, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
+  { at: 6.0, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
   { at: 9.5, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
 ];
 
-/** Portrait hero: mic large, low right, cropped by the frame edge; rim-lit silhouette with a key. */
-const heroPortrait = orbit(micPoint(0.105), 0.56, -0.02, 0.5, 0.05, -0.06);
+/** Portrait hero: mic head in the lower 30% of the frame against the right edge, cropped (the tagline and buttons sit above it); rim-lit with a key. */
+const heroPortrait = orbit(micPoint(0.105), 0.56, -0.02, 0.5, 0.08, -0.12);
 
 const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 0.85, dof: 0.6, key: 0.5, motes: 0.6, focus: [0.66, 0.45] as const, scrim: 0.35, bloom: 0.9 };
 
-const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.06, spot: 0.15, key: 0.75, rim: 2.6, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
+const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.06, spot: 0.15, key: 0.75, rim: 3.4, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
 
 export const PORTRAIT_SHOTS: Shot[] = [
   { at: 0, ...heroPortrait, ...HERO_PORTRAIT_LOOK },
@@ -315,7 +338,7 @@ export const PORTRAIT_SHOTS: Shot[] = [
     up: tuple(MIC_AXIS),
     space: 'mic',
     fov: 32,
-    exposure: 0.9,
+    exposure: 0.78,
     dof: 0.3,
     drift: 0.004,
     cone: 0.05,
@@ -328,7 +351,10 @@ export const PORTRAIT_SHOTS: Shot[] = [
     haze: 0.2,
     vignette: 0.75,
     env: 0.5,
-    scrim: 0.25,
+    // The barrel slides up behind the hero title ("Print" and its red footnote mark): keep it dim there.
+    scrim: 0.6,
+    scrimEdge: 0.9,
+    shade: 1,
   },
   { at: 0.85, ...barrel(PHI_HERO + 0.05, 0.08, 0.085, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [0.6, 2.3, 0.3] },
   { at: 1.4, ...barrel(PHI_HERO + 0.35, 0.074, 0.08, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [1.0, 2.2, 0.3] },
@@ -337,11 +363,11 @@ export const PORTRAIT_SHOTS: Shot[] = [
   { at: 2.1, pos: [8.6, 3.0, 3.6], target: [0.15, 0.0, -0.1], fov: 40, exposure: 0.9, drift: 0.02, cone: 1.2, spot: 0.95, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
   { at: 2.3, pos: [8.4, 3.1, 3.4], target: [0.15, 0.0, -0.1], fov: 40, exposure: 0.9, drift: 0.02, cone: 1.2, spot: 0.95, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
   { at: 2.6, pos: [8.0, 3.8, 3.8], target: [0.1, -0.2, -0.1], fov: 40, exposure: 0.75, drift: 0.03, cone: 1.1, spot: 0.8, key: 0.5, rim: 0.8, vignette: 0.66 },
-  { at: 3.2, ...orbit(STAGE, 0.55, 0.32, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
-  { at: 3.9, ...orbit(STAGE, -0.3, 0.3, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
-  { at: 4.5, pos: [0.4, 2.6, 15.5], target: [0, 0.6, 0], fov: 40, exposure: 0.8, drift: 0.04, cone: 1.2, key: 0.3, vignette: 0.6, scrimEdge: 0.6 },
+  { at: 3.2, ...stageOrbit(0.55, 0.32, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
+  { at: 3.9, ...stageOrbit(-0.3, 0.3, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
+  { at: 4.5, pos: [0.4, 2.6, 15.5], target: [0, 0.6, 0], fov: 40, exposure: 0.8, drift: 0.04, cone: 0.85, key: 0.3, vignette: 0.6, scrimEdge: 0.6 },
   { at: 5.5, pos: [-0.8, 4.4, 19], target: [0, 0.3, 0], fov: 38, exposure: 0.7, drift: 0.04, cone: 1.2, key: 0.3, vignette: 0.65 },
-  { at: 6.2, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
+  { at: 6.0, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
   { at: 9.5, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
 ];
 
@@ -367,8 +393,56 @@ export const AWAY_SHOT_PORTRAIT: Shot = {
   exposure: 0.4,
 };
 
-/** Journey position at or beyond which the scene is fully dark. */
-export const DARK_FROM = 6.2;
+/**
+ * Journey position at or beyond which the scene is fully dark: the end of
+ * Tickets. The text-only partner band after Tickets has no data-section, so J
+ * rests at 6 while it scrolls past; the scene is already black behind it.
+ */
+export const DARK_FROM = 6.0;
+
+/* ------------------------------------------------------------------------- */
+/* Content-dependent variants                                                */
+/* ------------------------------------------------------------------------- */
+
+export type ShotOptions = {
+  /** No speaker announced yet: no card strip, one panel low-left; the rug holds through the whole pin. */
+  speakersTba: boolean;
+  /** Schedule height / the height its orbit was authored for (0.4..1): shortens the orbit arc for a short section. */
+  scheduleScale: number;
+};
+
+/**
+ * Rug hold for the speakers pin while nothing is announced, seen from the
+ * front of the house: rug centred right and mid-height, clear of the heading
+ * (top left) and the wide glass panel (bottom left); the stand runs up the
+ * right edge past the end of the heading. A slow push across the pin.
+ */
+const RUG_CENTRE = new Vector3(0, 0.1, 0);
+const RUG_TBA_A = orbit(RUG_CENTRE, 0.2, 0.2, 7.5, 1.12, 0.6);
+const RUG_TBA_B = orbit(RUG_CENTRE, 0.15, 0.2, 7.2, 1.2, 0.6);
+const RUG_TBA_C = orbit(RUG_CENTRE, 0.11, 0.21, 6.95, 1.25, 0.62);
+
+/** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
+export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
+  const base = portrait ? PORTRAIT_SHOTS : DESKTOP_SHOTS;
+  const k = Math.min(1, Math.max(0.4, opts.scheduleScale));
+  return base.flatMap((sh): Shot[] => {
+    // Schedule orbit: azimuth range shrinks around its middle for a short section.
+    if (sh.orbit && k < 1) {
+      const mid = portrait ? 0.12 : 0.1;
+      const o = sh.orbit;
+      return [{ ...sh, ...stageOrbit(mid + (o.az - mid) * k, o.el, o.dist, o.shiftRight, o.shiftUp) }];
+    }
+    if (!opts.speakersTba || portrait) return [sh];
+    // The beam rises behind the heading here: keep the haze low.
+    const hold = { fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 0.7, scrimEdge: 0.45, spot: 1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.1 };
+    if (sh.at === 2.1) return [{ at: 2.1, ...RUG_TBA_A, ...hold }];
+    if (sh.at === 2.3) return [{ at: 2.4, ...RUG_TBA_B, ...hold }];
+    if (sh.at === 2.48) return [{ at: 2.75, ...RUG_TBA_C, ...hold, exposure: 0.97 }];
+    return [sh];
+  });
+}
+
 
 /* ------------------------------------------------------------------------- */
 /* Resolution and sampling                                                   */
@@ -385,10 +459,13 @@ export function resolveShot(s: Shot): ResolvedShot {
     micToWorld(target, target);
   }
   const up = s.up ? new Vector3(...s.up).normalize() : mic ? MIC_AXIS.clone() : WORLD_UP.clone();
+  const off = pos.clone().sub(target);
   return {
     at: s.at,
     pos,
     target,
+    dir: off.clone().normalize(),
+    logDist: Math.log(Math.max(1e-4, off.length())),
     up,
     fov: s.fov,
     exposure: s.exposure,
@@ -418,15 +495,40 @@ export function resolveShot(s: Shot): ResolvedShot {
 
 export const resolveShots = (shots: Shot[]) => shots.map(resolveShot);
 
-function catmull(p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, t: number, out: Vector3) {
-  const t2 = t * t;
-  const t3 = t2 * t;
-  out.set(0, 0, 0)
-    .addScaledVector(p0, -0.5 * t3 + t2 - 0.5 * t)
-    .addScaledVector(p1, 1.5 * t3 - 2.5 * t2 + 1)
-    .addScaledVector(p2, -1.5 * t3 + 2 * t2 + 0.5 * t)
-    .addScaledVector(p3, 0.5 * t3 - 0.5 * t2);
-  return out;
+/**
+ * Centripetal Catmull-Rom (Barry-Goldman). Unlike the uniform form it never
+ * overshoots or loops when neighbouring shots are very different distances
+ * apart (a 4 cm macro move next to a 6 m crane move).
+ */
+const cr = {
+  q0: new Vector3(),
+  q3: new Vector3(),
+  a1: new Vector3(),
+  a2: new Vector3(),
+  a3: new Vector3(),
+  b1: new Vector3(),
+  b2: new Vector3(),
+};
+function lerpKnots(a: Vector3, b: Vector3, ta: number, tb: number, u: number, out: Vector3) {
+  const d = tb - ta;
+  return out.copy(a).multiplyScalar((tb - u) / d).addScaledVector(b, (u - ta) / d);
+}
+function centripetal(p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, t: number, out: Vector3) {
+  const d12 = p1.distanceTo(p2);
+  if (d12 < 1e-7) return out.copy(p1);
+  // A repeated end point (first / last shot, or a hold) continues the segment in a straight line.
+  const q0 = p0.distanceTo(p1) < 1e-7 ? cr.q0.copy(p1).multiplyScalar(2).sub(p2) : cr.q0.copy(p0);
+  const q3 = p3.distanceTo(p2) < 1e-7 ? cr.q3.copy(p2).multiplyScalar(2).sub(p1) : cr.q3.copy(p3);
+  const t1 = Math.sqrt(q0.distanceTo(p1));
+  const t2 = t1 + Math.sqrt(d12);
+  const t3 = t2 + Math.sqrt(q3.distanceTo(p2));
+  const u = t1 + (t2 - t1) * t;
+  const A1 = lerpKnots(q0, p1, 0, t1, u, cr.a1);
+  const A2 = lerpKnots(p1, p2, t1, t2, u, cr.a2);
+  const A3 = lerpKnots(p2, q3, t2, t3, u, cr.a3);
+  const B1 = lerpKnots(A1, A2, 0, t2, u, cr.b1);
+  const B2 = lerpKnots(A2, A3, t1, t3, u, cr.b2);
+  return lerpKnots(B1, B2, t1, t2, u, out);
 }
 
 const scalarKeys = [
@@ -468,8 +570,11 @@ export function sampleShots(shots: ResolvedShot[], J: number, out: ResolvedShot)
   const t = raw + (smooth - raw) * 0.7;
   const p0 = shots[Math.max(0, i - 1)];
   const p3 = shots[Math.min(n - 1, i + 2)];
-  catmull(p0.pos, a.pos, b.pos, p3.pos, t, out.pos);
-  catmull(p0.target, a.target, b.target, p3.target, t, out.target);
+  centripetal(p0.target, a.target, b.target, p3.target, t, out.target);
+  // Offset: direction lerped on the sphere, distance in log space; the camera never crosses its target.
+  out.dir.copy(a.dir).lerp(b.dir, t).normalize();
+  out.logDist = a.logDist + (b.logDist - a.logDist) * t;
+  out.pos.copy(out.target).addScaledVector(out.dir, Math.exp(out.logDist));
   out.up.copy(a.up).lerp(b.up, t).normalize();
   out.keyDir.copy(a.keyDir).lerp(b.keyDir, t);
   for (const k of scalarKeys) out[k] = a[k] + (b[k] - a[k]) * t;
@@ -480,6 +585,8 @@ export function sampleShots(shots: ResolvedShot[], J: number, out: ResolvedShot)
 function copyShot(s: ResolvedShot, out: ResolvedShot) {
   out.pos.copy(s.pos);
   out.target.copy(s.target);
+  out.dir.copy(s.dir);
+  out.logDist = s.logDist;
   out.up.copy(s.up);
   out.keyDir.copy(s.keyDir);
   for (const k of scalarKeys) out[k] = s[k];

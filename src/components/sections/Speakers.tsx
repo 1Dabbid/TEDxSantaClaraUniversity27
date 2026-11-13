@@ -140,10 +140,10 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
           <div className="speakers-head-inner shell">
             <SectionLabel index={2}>Speakers</SectionLabel>
             <div data-speakers-title className="origin-[0%_100%]">
-              {/* The longer "to be announced" line wraps before the microphone (right of frame): at full
+              {/* The longer empty-state line wraps before the microphone (right of frame): at full
                   width its last letters ran over the mic's highlights (under 2:1 in the stills and the live scene). */}
               <SectionTitle id="speakers" className={any ? '' : 'max-w-[11ch]'}>
-                {any ? 'Meet the speakers.' : 'Speakers to be announced.'}
+                {any ? 'Meet the speakers.' : settings.copy.speakersEmptyHeading}
               </SectionTitle>
             </div>
             <div data-speakers-meta className="speakers-meta mt-6 flex flex-col items-start gap-y-3 sm:mt-8">

@@ -230,6 +230,9 @@ function revealRule(el: HTMLElement): Rec {
 function revealStagger(el: HTMLElement, onScreen: ((c: Element) => boolean) | null): Rec {
   // Cold load: children already painted on screen stay as they are (see scanReveals).
   const children = (Array.from(el.children) as HTMLElement[]).filter((c) => !onScreen?.(c));
+  // All painted on screen already (or no children): nothing to arm, and gsap would warn
+  // about an empty target.
+  if (!children.length) return { el, now: () => {}, kill: () => {} };
   const wipe = el.dataset.revealVariant === 'wipe';
   const delay = delayOf(el);
   // transition:none so CSS hover transitions on the children never smear the reveal.
@@ -319,24 +322,45 @@ export function scanReveals(root: ParentNode = document) {
       arm(el);
     } else own.push(el);
   }
-  for (const el of own) {
-    // Everything a reveal creates (tweens, ScrollTriggers, batch delayedCalls, the
-    // split) is recorded by its context, so kill() can let go of all of it.
-    let r!: Rec;
-    const ctx = gsap.context(() => {
-      r = create(el, onScreen);
-    });
-    arm(el);
-    records.push({
-      el,
-      now: r.now,
-      kill: () => {
-        r.kill();
-        ctx.revert();
-      },
-    });
+  try {
+    for (const el of own) {
+      // Everything a reveal creates (tweens, ScrollTriggers, batch delayedCalls, the
+      // split) is recorded by its context, so kill() can let go of all of it.
+      let r = null as Rec | null;
+      const ctx = gsap.context(() => {
+        // Caught in here: a throw inside a gsap.context function would leave it the
+        // active context for everything created afterwards.
+        try {
+          r = create(el, onScreen);
+        } catch (err) {
+          console.error('[reveal]', el, err);
+        }
+      });
+      try {
+        if (r) {
+          const rec = r;
+          records.push({
+            el,
+            now: rec.now,
+            kill: () => {
+              rec.kill();
+              ctx.revert();
+            },
+          });
+        } else {
+          // This one failed: undo whatever it set up and leave it as rendered. The others still run.
+          ctx.revert();
+        }
+      } catch (err) {
+        console.error('[reveal]', el, err);
+      } finally {
+        // Armed either way, which lifts the CSS pre-reveal hide.
+        arm(el);
+      }
+    }
+  } finally {
+    html.setAttribute(READY_ATTR, '');
   }
-  html.setAttribute(READY_ATTR, '');
 }
 
 /** Kills reveals whose elements left the document (route change). */

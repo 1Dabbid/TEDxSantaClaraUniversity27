@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { Suspense } from 'react';
 import { NeutralToneMapping } from 'three';
 import type { Quality } from '@/lib/quality';
+import type { EngravingFacts } from './engraving';
 import Experience from './Experience';
 
 /**
@@ -16,7 +17,14 @@ import Experience from './Experience';
  * next/dynamic (ssr: false) after first paint, so three.js stays out of the
  * initial bundle.
  */
-export default function SceneCanvas({ quality }: { quality: Exclude<Quality, 'static'> }) {
+export default function SceneCanvas({
+  quality,
+  engraving,
+}: {
+  quality: Exclude<Quality, 'static'>;
+  /** Optional facts engraved on the microphone barrel; defaults to src/scene/engraving.ts. */
+  engraving?: Partial<EngravingFacts>;
+}) {
   const pathname = usePathname();
   return (
     <div className="scene-canvas" aria-hidden="true">
@@ -38,7 +46,7 @@ export default function SceneCanvas({ quality }: { quality: Exclude<Quality, 'st
       >
         <color attach="background" args={['#000000']} />
         <Suspense fallback={null}>
-          <Experience quality={quality} pathname={pathname} />
+          <Experience quality={quality} pathname={pathname} engraving={engraving} />
         </Suspense>
       </Canvas>
     </div>

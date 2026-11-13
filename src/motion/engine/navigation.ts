@@ -90,7 +90,8 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
   // We restore positions ourselves; the browser's own restoration would jump first.
   const prevRestoration = history.scrollRestoration;
   history.scrollRestoration = 'manual';
-  let pending: { url: URL; at: number } | null = null;
+  type Pending = { url: URL; at: number; cancelled?: boolean };
+  let pending: Pending | null = null;
   let popped = false;
   let fallback: ReturnType<typeof setTimeout> | undefined;
   let tl: gsap.core.Timeline | null = null;
@@ -130,20 +131,32 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
       .to(curtain, { clipPath: 'inset(0% 0% 100% 0%)', duration: OUT, ease: 'power4.inOut' }, 0.2);
   };
 
-  const finish = () => {
+  // The one way out of a navigation, whichever way it ends (rendered, back/forward
+  // under the curtain, the fallback timer, teardown): nothing pending, no traversal
+  // flag left behind, no timer, no `nav-pending`.
+  const reset = () => {
     clearTimeout(fallback);
+    fallback = undefined;
     pending = null;
+    popped = false;
     html.classList.remove('nav-pending');
+  };
+
+  const finish = () => {
+    reset();
     uncover();
   };
 
   const navigate = async (url: URL) => {
     if (pending) return;
-    pending = { url, at: performance.now() };
+    const nav: Pending = { url, at: performance.now() };
+    pending = nav;
     positions.set(currentKey, lenisRef.current?.scroll ?? window.scrollY);
     html.classList.add('nav-pending');
     lenisRef.current?.stop();
     await cover();
+    // Superseded while the curtain came down (back/forward, teardown): do not push.
+    if (pending !== nav || nav.cancelled) return;
     // If the route never changes (error, identical path), never leave the curtain down.
     fallback = setTimeout(() => {
       lenisRef.current?.start();
@@ -217,9 +230,11 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     requestAnimationFrame(() => whenMenuClosed(fn, frames + 1));
   };
 
-  // Track the position on the current page continuously (cheap: one number).
+  // Track the position on the current page continuously (cheap: one number). The
+  // window's own offset, not lenis.scroll: for a native scroll (keyboard, scrollbar,
+  // focus) this listener can run before Lenis has adopted the new position.
   const onScroll = () => {
-    if (!pending && !popped) positions.set(currentKey, lenisRef.current?.scroll ?? window.scrollY);
+    if (!pending && !popped) positions.set(currentKey, window.scrollY);
   };
 
   // Where the Navigation API exists the router renders a traversal *before* popstate
@@ -229,7 +244,21 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
   const onNavigate = (e: Event) => {
     const ev = e as NavEvent;
     if (ev.navigationType !== 'traverse' || !ev.destination) return;
-    if (keyOf(new URL(ev.destination.url)) !== currentKey) popped = true;
+    if (keyOf(new URL(ev.destination.url)) !== currentKey) traversed();
+  };
+
+  // Back/forward to another page. If one of our transitions is under way, it must not
+  // push once its curtain is down (the traversal wins); onRoute lifts the curtain, and
+  // the fallback does if the traversal never renders.
+  const traversed = () => {
+    popped = true;
+    if (!pending || pending.cancelled) return;
+    pending.cancelled = true;
+    clearTimeout(fallback);
+    fallback = setTimeout(() => {
+      lenisRef.current?.start();
+      finish();
+    }, 5000);
   };
 
   // Set while a route change has just been rendered in the current task. Without the
@@ -240,7 +269,7 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
   const onPop = () => {
     if (popped) return; // route change already in progress (see onNavigate)
     if (justRouted) {
-      popped = true; // the router got there first; onRoute reads this in its frame
+      traversed(); // the router got there first; onRoute reads this in its frame
       return;
     }
     if (keyOf(location) === currentKey) {
@@ -250,16 +279,19 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
       });
       return;
     }
-    popped = true;
+    traversed();
   };
 
   // Cold load on a deep link (/#tickets): the browser jumps before web fonts, the
   // Theme runway and section scripts have settled, so the target drifts. Re-land
   // on it once layout is final, unless the visitor has already moved on.
+  let cancelSettle = () => {};
   const settleColdHash = () => {
     const hash = location.hash;
     if (!hash || !findHashTarget(hash)) return;
     let userMoved = false;
+    let live = true;
+    const timers: ReturnType<typeof setTimeout>[] = [];
     const moved = () => {
       userMoved = true;
     };
@@ -267,8 +299,13 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     window.addEventListener('wheel', moved, opts);
     window.addEventListener('touchstart', moved, opts);
     window.addEventListener('keydown', moved, opts);
+    const unlisten = () => {
+      window.removeEventListener('wheel', moved, true);
+      window.removeEventListener('touchstart', moved, true);
+      window.removeEventListener('keydown', moved, true);
+    };
     const land = () => {
-      if (userMoved || location.hash !== hash) return;
+      if (!live || userMoved || location.hash !== hash) return;
       lenisRef.current?.resize();
       const el = findHashTarget(hash);
       if (!el) return;
@@ -277,19 +314,24 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
       else el.scrollIntoView({ block: 'start', behavior: 'instant' as ScrollBehavior });
       focusTarget(el);
     };
+    const onLoad = () => void timers.push(setTimeout(land, 50));
     const afterLayout = () => requestAnimationFrame(() => requestAnimationFrame(land));
     const fontsReady = document.fonts?.ready ?? Promise.resolve();
     void fontsReady.then(() => {
+      if (!live) return;
       afterLayout();
       // Section scripts refresh ScrollTrigger (and the Theme fit) a little later.
-      setTimeout(land, 400);
-      if (document.readyState !== 'complete') window.addEventListener('load', () => setTimeout(land, 50), { once: true });
-      setTimeout(() => {
-        window.removeEventListener('wheel', moved, true);
-        window.removeEventListener('touchstart', moved, true);
-        window.removeEventListener('keydown', moved, true);
-      }, 3000);
+      timers.push(setTimeout(land, 400));
+      if (document.readyState !== 'complete') window.addEventListener('load', onLoad, { once: true });
+      timers.push(setTimeout(unlisten, 3000));
     });
+    // Teardown (quality drop, unmount): no late landings, no listeners left behind.
+    cancelSettle = () => {
+      live = false;
+      timers.forEach(clearTimeout);
+      unlisten();
+      window.removeEventListener('load', onLoad);
+    };
   };
 
   const onRoute = (initial: boolean) => {
@@ -305,36 +347,36 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     const main = document.getElementById('main');
     const lenis = lenisRef.current;
     lenis?.start();
-    if (pending) {
-      const hash = pending.url.hash;
-      // Wait one frame so the new page has laid out (and section scripts mounted).
-      requestAnimationFrame(() => {
-        lenis?.resize();
+    // Read the saved position now: scroll events fired while the new page settles
+    // must not overwrite it. Everything else is read in the frame (the new page has
+    // laid out, section scripts have mounted, and popstate may arrive after us).
+    const saved = positions.get(currentKey);
+    requestAnimationFrame(() => {
+      const wasPop = popped;
+      const nav = pending;
+      reset();
+      lenis?.resize();
+      if (wasPop && saved !== undefined) {
+        // Back/forward, also when it interrupted one of our own transitions.
+        if (lenis) lenis.scrollTo(saved, { immediate: true, force: true });
+        else window.scrollTo(0, saved);
+        main?.focus({ preventScroll: true });
+      } else if (nav && !wasPop) {
+        // The transition we started: top of the page, or its hash target.
+        const hash = nav.url.hash;
         if (!(hash && scrollToHash(hash, true))) {
           scrollTop(true);
           main?.focus({ preventScroll: true });
         }
-        finish();
-      });
-      return;
-    }
-    // Back/forward or a router navigation we did not start. Read the saved position
-    // now: scroll events fired while the new page settles must not overwrite it.
-    // Whether it was a traversal is read in the frame (popstate may arrive after us).
-    const saved = positions.get(currentKey);
-    requestAnimationFrame(() => {
-      const wasPop = popped;
-      popped = false;
-      lenis?.resize();
-      if (wasPop && saved !== undefined) {
-        if (lenis) lenis.scrollTo(saved, { immediate: true, force: true });
-        else window.scrollTo(0, saved);
-      } else if (location.hash) {
-        scrollToHash(location.hash, true);
       } else {
-        scrollTop(true);
+        // A traversal to a page we never left, or a router navigation we did not start.
+        if (location.hash) scrollToHash(location.hash, true);
+        else scrollTop(true);
+        main?.focus({ preventScroll: true });
       }
-      main?.focus({ preventScroll: true });
+      // Our curtain is down (or on its way): lift it. This also stops a cover that has
+      // not finished from pushing the route the visitor just went back from.
+      if (nav) uncover();
     });
   };
 
@@ -357,7 +399,8 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
       document.removeEventListener('pointerover', onIntent);
       document.removeEventListener('focusin', onIntent);
       history.scrollRestoration = prevRestoration;
-      clearTimeout(fallback);
+      reset();
+      cancelSettle();
       tl?.kill();
       if (curtain) gsap.set(curtain, { clearProps: 'all' });
       html.classList.remove('nav-pending');
