@@ -8,12 +8,18 @@ import { TEDX_MAX_CAPACITY } from './src/lib/site';
  * the code. Each save writes a YAML file under /content (or an image under
  * public/images/...). Pages read content only through src/lib/content.ts.
  *
- * Storage: local files by default. When the Keystatic GitHub App env vars are
- * present (NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG is the one visible to the
- * browser), storage switches to GitHub so editors on the deployed site commit
- * straight to the repo. See README.md.
+ * Storage: local files by default, which only ever run under `npm run dev`
+ * (src/lib/admin.ts switches the admin off everywhere else). GitHub storage is
+ * used only when all four Keystatic variables are set at build time
+ * (KEYSTATIC_GITHUB_CLIENT_ID, KEYSTATIC_GITHUB_CLIENT_SECRET, KEYSTATIC_SECRET,
+ * NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG); editors on the deployed site then sign
+ * in with GitHub and commit straight to the repo. The secrets are not visible to
+ * the browser, so next.config.ts turns "all four present" into the build-time
+ * flag KEYSTATIC_GITHUB_MODE, which both the server and the admin UI read. A
+ * slug on its own keeps local storage, except under `npm run dev`, where it opens
+ * Keystatic's GitHub App setup flow (/keystatic/setup). See docs/DEPLOY.md.
  */
-const useGithub = Boolean(process.env.NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG);
+const useGithub = process.env.KEYSTATIC_GITHUB_MODE === '1';
 
 const LEAVE_BLANK = 'Leave blank until it is confirmed. The site shows “to be announced” instead.';
 const EMAIL = /^$|^[^\s@]+@[^\s@]+\.[^\s@]+$/;

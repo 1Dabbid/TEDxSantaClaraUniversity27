@@ -54,14 +54,37 @@ test.describe('speaker pages', () => {
   }
 });
 
-test('/keystatic loads the admin app shell', async ({ page }) => {
-  const res = await page.goto('/keystatic');
-  expect(res?.status()).toBe(200);
-  // Headers: the admin is never cached or indexed.
-  expect(res?.headers()['x-robots-tag']).toContain('noindex');
-  // No site chrome on the admin.
-  await expect(page.locator('[data-site-header]')).toHaveCount(0);
-  // The Keystatic UI renders its navigation with the configured brand and the singletons.
-  await expect(page.getByText('TEDxSantaClaraUniversity').first()).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole('link', { name: 'Event basics' }).first()).toBeVisible();
+/**
+ * The suite runs against a production build without the Keystatic GitHub variables,
+ * so the admin must not exist at all (src/lib/admin.ts): Keystatic's local mode has no
+ * authentication and would otherwise list, read and write the deployment's files.
+ * The working admin is checked by hand under `npm run dev` (see README, "Tests").
+ */
+test.describe('the admin is switched off in a production build without GitHub mode', () => {
+  test('/keystatic is a 404 that never loads the Keystatic UI', async ({ page }) => {
+    const res = await page.goto('/keystatic');
+    expect(res?.status()).toBe(404);
+    expect(res?.headers()['x-robots-tag']).toContain('noindex');
+    expect(res?.headers()['cache-control']).toContain('no-store');
+    await expect(page.getByRole('link', { name: 'Event basics' })).toHaveCount(0);
+    expect((await page.goto('/keystatic/singleton/settings'))?.status()).toBe(404);
+  });
+
+  test('the Keystatic API answers 404 to reads and writes', async ({ request }) => {
+    const tree = await request.get('/api/keystatic/tree', { headers: { 'no-cors': '1' } });
+    expect(tree.status()).toBe(404);
+    expect(tree.headers()['cache-control']).toContain('no-store');
+    expect(await tree.text()).toBe('Not Found');
+
+    const blob = await request.get('/api/keystatic/blob/0000000000000000000000000000000000000000/content/settings.yaml', {
+      headers: { 'no-cors': '1' },
+    });
+    expect(blob.status()).toBe(404);
+
+    const update = await request.post('/api/keystatic/update', {
+      headers: { 'no-cors': '1', 'content-type': 'application/json' },
+      data: { additions: [], deletions: [{ path: 'content/faq.yaml' }] },
+    });
+    expect(update.status()).toBe(404);
+  });
 });

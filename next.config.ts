@@ -36,6 +36,23 @@ function frameOrigins(): string[] {
 
 const frames = frameOrigins();
 
+/**
+ * Keystatic storage mode, decided once at build time and inlined into both the
+ * server and the admin's browser bundle as `process.env.KEYSTATIC_GITHUB_MODE`
+ * (read by keystatic.config.ts; the secrets themselves never reach the browser).
+ * GitHub mode needs all four variables. Under `next dev` the app slug alone is
+ * enough, so Keystatic's GitHub App setup flow (/keystatic/setup) can run before
+ * the other three exist. See src/lib/admin.ts and docs/DEPLOY.md.
+ */
+const keystaticGithubMode =
+  Boolean(
+    process.env.NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG &&
+      process.env.KEYSTATIC_GITHUB_CLIENT_ID &&
+      process.env.KEYSTATIC_GITHUB_CLIENT_SECRET &&
+      process.env.KEYSTATIC_SECRET,
+  ) ||
+  (process.env.NODE_ENV === 'development' && Boolean(process.env.NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG));
+
 const csp = (directives: Record<string, string[]>) =>
   Object.entries(directives)
     .map(([k, v]) => (v.length ? `${k} ${v.join(' ')}` : k))
@@ -118,6 +135,7 @@ const noStore = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: { KEYSTATIC_GITHUB_MODE: keystaticGithubMode ? '1' : '' },
   poweredByHeader: false,
   // `ANALYZE=1 next build` emits browser source maps so first-load chunks can be attributed per module.
   productionBrowserSourceMaps: process.env.ANALYZE === '1',
