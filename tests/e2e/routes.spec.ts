@@ -91,9 +91,14 @@ test.describe('the admin is switched off in a production build without GitHub mo
 
 test('speaker share images exist only for known speakers', async ({ request }) => {
   const [first] = publishedSpeakers();
-  const real = await request.get(`/speakers/${first.slug}/opengraph-image`);
+  // The image URL carries a hash suffix (the route sits in the (site) route group), so read it from the page.
+  const html = await (await request.get(`/speakers/${first.slug}`)).text();
+  const og = html.match(/<meta property="og:image" content="([^"]+)"/)?.[1] ?? '';
+  const path = new URL(og).pathname;
+  expect(path).toMatch(new RegExp(`^/speakers/${first.slug}/opengraph-image`));
+  const real = await request.get(path);
   expect(real.status()).toBe(200);
   expect(real.headers()['content-type']).toContain('image/png');
   // Unknown slugs are not generated on demand (dynamicParams = false).
-  expect((await request.get('/speakers/random-slug/opengraph-image')).status()).toBe(404);
+  expect((await request.get(path.replace(`/speakers/${first.slug}/`, '/speakers/random-slug/'))).status()).toBe(404);
 });
