@@ -30,7 +30,7 @@ console.warn = (...args) => {
 const content = await import('../src/lib/content.ts');
 const { contentWarnings } = await import('../src/lib/content-checks.ts');
 
-const loaders = ['getSettings', 'getSpeakers', 'getSchedule', 'getFaq', 'getTeam', 'getTiers', 'getSponsors', 'getPartnerBenefits', 'getTedLanguage'];
+const loaders = ['getSettings', 'getSpeakers', 'getSchedule', 'getFaq', 'getTeam', 'getTiers', 'getSponsors', 'getPartnerBenefits', 'getPartnerNotes', 'getTedLanguage'];
 const errors = [];
 for (const name of loaders) {
   try {

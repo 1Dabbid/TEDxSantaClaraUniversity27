@@ -15,7 +15,15 @@ import {
 } from './content-checks';
 import { checkImage } from './content-images';
 import { formatCalendarDate } from './dates';
-import { EMAIL_PATTERN, SITE_NAME, TED_LANGUAGE_DEFAULTS, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './site';
+import {
+  BENEFIT_GROUP_LABEL,
+  type BenefitGroup,
+  EMAIL_PATTERN,
+  SITE_NAME,
+  TED_LANGUAGE_DEFAULTS,
+  TED_TEXT_MIN_LENGTH,
+  TEDX_MAX_CAPACITY,
+} from './site';
 import type { ThemeCopy } from './theme-copy';
 
 /**
@@ -378,8 +386,18 @@ export type Sponsor = {
 /** TED's required "About TEDx" / "About TED" texts, pasted verbatim by Compliance. */
 export type TedLanguage = { aboutTedx: string; aboutTed: string };
 
-/** A row of the partner benefits comparison: which tier slugs include it. */
-export type PartnerBenefit = { benefit: string; tiers: string[] };
+/**
+ * A row of the partner benefits comparison. `tiers`: the slugs of the tiers that
+ * include it; `details`: what each of those tiers gets, by slug ('' = a plain
+ * "included"). `group` is the heading it sits under (BENEFIT_GROUP_LABEL).
+ */
+export type PartnerBenefit = {
+  benefit: string;
+  group: BenefitGroup;
+  tiers: string[];
+  details: Record<string, string>;
+  toBeConfirmed: boolean;
+};
 
 export const PLACEHOLDER_SPEAKER_NAME = 'Speaker to be announced';
 
@@ -622,11 +640,39 @@ export const getSponsors = cache(async (): Promise<Sponsor[]> => {
     .sort((a, b) => a.name.localeCompare(b.name));
 });
 
+const BENEFIT_GROUPS = Object.keys(BENEFIT_GROUP_LABEL) as BenefitGroup[];
+
+/**
+ * Partner benefits, grouped by heading (web, event, year) and in list order within
+ * each. A tier picked twice for the same benefit keeps its first detail, with a warning.
+ */
 export const getPartnerBenefits = cache(async (): Promise<PartnerBenefit[]> => {
   const b = await readSingleton('benefits');
-  return (b?.items ?? [])
-    .map((i) => ({ benefit: str(i.benefit), tiers: i.tiers.filter(isValidSlug) }))
-    .filter((i) => i.benefit);
+  const rows = (b?.items ?? []).map((i, n) => {
+    const details: Record<string, string> = {};
+    for (const inc of i.included ?? []) {
+      const tier = inc.tier ?? '';
+      if (!isValidSlug(tier)) continue;
+      if (tier in details) {
+        contentWarning(
+          'content/benefits.yaml',
+          `Benefits comparison › item ${n + 1} › Tiers that include it`,
+          `${tier} is listed twice; the site uses the first one.`,
+        );
+        continue;
+      }
+      details[tier] = str(inc.detail);
+    }
+    const group: BenefitGroup = BENEFIT_GROUPS.includes(i.group as BenefitGroup) ? (i.group as BenefitGroup) : 'event';
+    return { benefit: str(i.benefit), group, tiers: Object.keys(details), details, toBeConfirmed: Boolean(i.toBeConfirmed) };
+  });
+  return BENEFIT_GROUPS.flatMap((g) => rows.filter((r) => r.benefit && r.group === g));
+});
+
+/** The small print under the tiers on /partners (Partner benefits > Small print under the tiers). */
+export const getPartnerNotes = cache(async (): Promise<string[]> => {
+  const b = await readSingleton('benefits');
+  return (b?.notes ?? []).map((t) => str(t)).filter(Boolean);
 });
 
 export const getTedLanguage = cache(async (): Promise<TedLanguage> => {

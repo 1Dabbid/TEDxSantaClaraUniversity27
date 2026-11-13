@@ -45,6 +45,18 @@ export const TEDX_MAX_CAPACITY = 100;
 export const SCHEDULE_KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', other: 'Program' } as const;
 
 /**
+ * Headings of the partner benefits table (/partners), in this order. The admin's
+ * "Heading" options use the same words; the site writes the event one with the
+ * date ("At the April 23 event").
+ */
+export const BENEFIT_GROUP_LABEL = {
+  web: 'On the website and in video',
+  event: 'At the event',
+  year: 'During the year',
+} as const;
+export type BenefitGroup = keyof typeof BENEFIT_GROUP_LABEL;
+
+/**
  * TED's required "About TEDx" / "About TED" texts, as pasted from the TEDx
  * organizer guide. The footer must always carry them, so the loader falls back to
  * these when the admin fields are blank or too short to be the real text.

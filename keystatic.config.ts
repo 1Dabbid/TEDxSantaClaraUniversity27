@@ -1,6 +1,6 @@
 import { collection, config, fields, singleton } from '@keystatic/core';
 import { HTTPS_URL_MESSAGE, HTTPS_URL_PATTERN, SLUG_MESSAGE, SLUG_PATTERN, TIME_PATTERN } from './src/lib/content-checks';
-import { EMAIL_PATTERN, SCHEDULE_KIND_LABEL, SITE_NAME, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './src/lib/site';
+import { BENEFIT_GROUP_LABEL, EMAIL_PATTERN, SCHEDULE_KIND_LABEL, SITE_NAME, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './src/lib/site';
 import { THEME_COPY_DEFAULTS as COPY } from './src/lib/theme-copy';
 
 /**
@@ -331,7 +331,7 @@ export default config({
         showYearRound: fields.checkbox({
           label: 'Show the “All year, not one night” card on the Partners page',
           description:
-            'Only turn on if TED has confirmed the club’s year-round events may use the TEDx name. The licence covers the mainstage event; general-meeting events are not automatically TEDx events.',
+            'Says the student club runs a speaker workshop series and general-meeting events through the year (it never calls them TEDx events). Keep it on while the partner tiers include year-round benefits. The licence covers the April event; general-meeting events are not automatically TEDx events, so check with the Director of Compliance before changing that wording.',
           defaultValue: false,
         }),
       },
@@ -423,13 +423,46 @@ export default config({
             benefit: fields.text({
               label: 'Benefit',
               description:
-                'One line, e.g. “Logo on the thank-you slide”. Only list benefits allowed by TEDx rules (no stage time, no say over the programme).',
+                'One line, e.g. “Reserved seats” or “Logo on the thank-you slide”. Only list benefits allowed by TEDx rules (no stage time, no say over the programme).',
               validation: { isRequired: true },
             }),
-            tiers: fields.multiRelationship({
-              label: 'Included in these tiers',
-              description: 'Click the box and pick each tier; tiers are listed by their slug, e.g. cornerstone-partner.',
-              collection: 'tiers',
+            group: fields.select({
+              label: 'Heading',
+              description: 'Which heading of the comparison table this benefit sits under. Benefits keep the order of this list within each heading.',
+              options: [
+                { label: BENEFIT_GROUP_LABEL.web, value: 'web' },
+                { label: `${BENEFIT_GROUP_LABEL.event} (the site adds the date, e.g. “At the April 23 event”)`, value: 'event' },
+                { label: BENEFIT_GROUP_LABEL.year, value: 'year' },
+              ],
+              defaultValue: 'event',
+            }),
+            included: fields.array(
+              fields.object({
+                tier: fields.relationship({
+                  label: 'Tier',
+                  description: 'Click the box and pick the tier; tiers are listed by their slug, e.g. cornerstone-partner.',
+                  collection: 'tiers',
+                }),
+                detail: fields.text({
+                  label: 'What this tier gets (optional)',
+                  description:
+                    'A word or two shown in the table for this tier, e.g. “Largest logo”, “Named”, “4”. Leave blank for a plain “included” dot.',
+                  validation: { length: { max: 40 } },
+                }),
+              }),
+              {
+                label: 'Tiers that include it',
+                description:
+                  'Click Add once for each tier that gets this benefit. A tier that is not listed shows a dash (not included).',
+                itemLabel: (props) =>
+                  [props.fields.tier.value ?? 'Tier', props.fields.detail.value].filter(Boolean).join(': '),
+              },
+            ),
+            toBeConfirmed: fields.checkbox({
+              label: 'Still to be confirmed',
+              description:
+                'Tick while the benefit still needs a yes from TED or the venue (ask the Director of Compliance). The table then shows a small “to be confirmed” note next to it.',
+              defaultValue: false,
             }),
           }),
           {
@@ -437,6 +470,20 @@ export default config({
             description:
               'Rows of the comparison table on /partners. While this list is empty, the page says the schedule of benefits is being finalized.',
             itemLabel: (props) => props.fields.benefit.value || 'Benefit',
+          },
+        ),
+        notes: fields.array(
+          fields.text({
+            label: 'Line',
+            description: 'One short sentence, e.g. “Amounts are per academic year.”',
+            multiline: true,
+            validation: { length: { max: 300 } },
+          }),
+          {
+            label: 'Small print under the tiers',
+            description:
+              'Short sentences shown as numbered terms under the partnership tiers on /partners: what the amounts cover, deadlines, in-kind support. Leave the list empty to show none.',
+            itemLabel: (props) => props.value || 'Line',
           },
         ),
       },
@@ -548,7 +595,8 @@ export default config({
         }),
         slots: fields.integer({
           label: 'Number of slots (optional)',
-          description: 'How many partners this tier can have. Leave blank to hide.',
+          description:
+            'How many partners this tier can have, shown as “1 available”. Leave blank for no limit: once a Contribution is filled in, the site then shows “Open”.',
           validation: { min: 1 },
         }),
         order: fields.integer({ label: 'Order', description: 'Lower numbers come first.', defaultValue: 0 }),

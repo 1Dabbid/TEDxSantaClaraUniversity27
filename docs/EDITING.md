@@ -116,10 +116,16 @@ Search engines only receive ticket details (price, sale start, link) while the s
 
 Tiers and benefits first, then the partner:
 
-1. **Partners > Partner tiers**: each tier has **Tier name**, a **Slug** (made from the name, e.g. `cornerstone-partner`: leave it as generated), **Description**, **Contribution (optional)** (e.g. $2,500; hidden while blank), **Number of slots (optional)** and **Order**. The list of tiers in the admin is sorted by slug; on the site they follow **Order**.
-2. **Partners > Partner benefits > Benefits comparison**: click **Add** for each row. In the box, write the **Benefit**, then click into **Included in these tiers** and pick each tier from the list; tiers are listed by their page address (e.g. `cornerstone-partner`), not their name. Click **Add** (or **Done**), then **Save**. While the list is empty the page says the benefits for each tier are being finalized. Only benefits TEDx allows (no stage time, no say over the programme).
-3. **Partners > Partners (logos)** > **Add**: **Organization name** (leave the **File name (slug)** under it as generated), **Tier** (again listed by page address, e.g. `cornerstone-partner`), **Logo**, **Website** (full address starting with `https://`). The logo is shown at most 24px tall and 72px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED's prohibited sponsors. Sponsors can never be speakers.
-4. Tick **Published** only once the partnership is signed and the logo approved, then **Save**. Partners appear on `/partners` only, never on the home page.
+1. **Partners > Partner tiers**: each tier has **Tier name**, a **Slug** (made from the name, e.g. `cornerstone-partner`: leave it as generated), **Description**, **Contribution (optional)** (e.g. $1,500; hidden while blank), **Number of slots (optional)** (shown as "Available: 4"; blank means no limit and shows "Available: Open" once a Contribution is filled in) and **Order**. The list of tiers in the admin is sorted by slug; on the site they follow **Order**. The 2027 tiers are Cornerstone Partner ($5,000, 1), Headline Partner ($1,500, 4), Bold Print Partner ($500, 6) and Fine Print Supporter ($150, open).
+2. **Partners > Partner benefits > Benefits comparison**: one row of the comparison table per benefit. Click **Add** (or open a row), then:
+   - **Benefit**: one line, e.g. "Reserved seats".
+   - **Heading**: which of the three headings it sits under: **On the website and in video**, **At the event** (the site writes "At the April 23 event", with the date from Event basics) or **During the year**. Within a heading, rows keep the order of the list.
+   - **Tiers that include it**: click **Add** once per tier that gets the benefit, pick the **Tier** (listed by page address, e.g. `cornerstone-partner`) and, if the tiers get different things, type **What this tier gets (optional)** in a word or two: "Largest logo", "Named", "Group", "4". Leave it blank for a plain "included" dot. A tier that is not listed shows a dash.
+   - **Still to be confirmed**: tick it while TED (or the venue) has not said yes yet; the table then shows a small "to be confirmed" note next to the benefit. Untick it once the Director of Compliance confirms.
+   Click **Done**, then **Save**. On computers the rows are a table (one column per tier); on phones each benefit is listed with the tiers that include it. While the list is empty the page says the benefits for each tier are being finalized. Only benefits TEDx allows (no stage time, no say over the programme).
+3. **Partners > Partner benefits > Small print under the tiers**: short sentences shown as lettered terms under the tiers, e.g. "Amounts are per academic year." or the commitment deadline. **Add** one line per sentence, **Save**. Update the dates each year.
+4. **Partners > Partners (logos)** > **Add**: **Organization name** (leave the **File name (slug)** under it as generated), **Tier** (again listed by page address, e.g. `cornerstone-partner`), **Logo**, **Website** (full address starting with `https://`). The logo is shown at most 24px tall and 72px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED's prohibited sponsors. Sponsors can never be speakers.
+5. Tick **Published** only once the partnership is signed and the logo approved, then **Save**. Partners appear on `/partners` only, never on the home page.
 
 ### Show team names
 
@@ -131,7 +137,7 @@ The Team section stays hidden until at least one person has a public name; then 
 
 ### The "All year, not one night" card (Partners page)
 
-**Contact & site > Show / hide sections > Show the “All year, not one night” card on the Partners page** is off by default. Only turn it on if TED has confirmed the club's year-round events may use the TEDx name: the licence covers the mainstage event, and general-meeting events are not automatically TEDx events.
+**Contact & site > Show / hide sections > Show the “All year, not one night” card on the Partners page** is on for 2027, because the partner tiers include year-round items (the speaker workshop series, a named general-meeting event). The card speaks of "the student club behind it", not of TEDx events: the licence covers the April event, and general-meeting events are not automatically TEDx events. The Director of Compliance should confirm with TED how those year-round events may be described and named; untick the box to hide the card.
 
 ### Edit the FAQ
 
