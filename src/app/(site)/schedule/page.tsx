@@ -1,15 +1,14 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
 import { getSchedule, getSettings } from '@/lib/content';
 import { jsonLdString, pageJsonLd } from '@/lib/jsonld';
 import { topicPageMetadata } from '@/lib/page-meta';
 import { SITE_NAME, seatsLabel, venueLine } from '@/lib/site';
 import { ticketCta } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
-import { ClauseNo, JsonLd, Tba } from '@/components/print/Print';
+import { ClauseNo, JsonLd } from '@/components/print/Print';
 import { ScheduleTimeline } from '@/components/sections/ScheduleTimeline';
 import { ClosingBand } from '@/components/pages/ClosingBand';
-import { PageHeader, TopicPage } from '@/components/pages/PageHeader';
+import { PageHeader, TopicPage, timeFacts } from '@/components/pages/PageHeader';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [s, schedule] = await Promise.all([getSettings(), getSchedule()]);
@@ -22,8 +21,6 @@ export async function generateMetadata(): Promise<Metadata> {
     path: '/schedule',
   });
 }
-
-const timeOr = (t: string): ReactNode => t || <Tba />;
 
 /**
  * /schedule. Published: the evening's times at the top, then the running order
@@ -61,9 +58,7 @@ export default async function SchedulePage() {
           }
           facts={[
             { k: 'Date', v: <time dateTime={settings.dateISO}>{settings.dateLong}</time> },
-            { k: 'Doors open', v: timeOr(settings.doorsTime) },
-            { k: 'Talks start', v: timeOr(settings.talksTime) },
-            { k: 'Event ends', v: timeOr(settings.endTime) },
+            ...timeFacts(settings),
           ]}
         />
       </section>

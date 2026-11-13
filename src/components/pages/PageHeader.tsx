@@ -2,8 +2,24 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import type { Settings } from '@/lib/content';
 import { EventName } from '@/components/ui/KeepCase';
+import { Tba } from '@/components/print/Print';
 
 export type Fact = { k: string; v: ReactNode };
+
+/**
+ * The evening's times as facts (/venue, /schedule). While all three are blank they
+ * collapse into one "Times" fact instead of three identical markers; once any is
+ * set, each gets its own fact and the rest show as to be announced.
+ */
+export function timeFacts(s: Settings): Fact[] {
+  const times: [string, string][] = [
+    ['Doors open', s.doorsTime],
+    ['Talks start', s.talksTime],
+    ['Event ends', s.endTime],
+  ];
+  if (times.every(([, t]) => !t)) return [{ k: 'Times', v: <Tba>Doors and talk times to follow</Tba> }];
+  return times.map(([k, t]) => ({ k, v: t || <Tba /> }));
+}
 
 /**
  * The page wrapper of every topic page (/speakers, /schedule, /venue, /partners,

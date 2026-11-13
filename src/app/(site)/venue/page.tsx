@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import type { ReactNode } from 'react';
 import type { Settings, VenueNote } from '@/lib/content';
 import { getSettings } from '@/lib/content';
 import { jsonLdString, pageJsonLd, venuePlaceJsonLd } from '@/lib/jsonld';
@@ -12,7 +11,7 @@ import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, CropMarks, JsonLd, Tba } from '@/components/print/Print';
 import { Reticle } from '@/components/sections/Venue';
 import { ClosingBand } from '@/components/pages/ClosingBand';
-import { PageHeader, TopicPage } from '@/components/pages/PageHeader';
+import { PageHeader, TopicPage, timeFacts } from '@/components/pages/PageHeader';
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -119,8 +118,6 @@ function CoordinatePlate({ settings }: { settings: Settings }) {
   );
 }
 
-const timeOr = (t: string): ReactNode => t || <Tba />;
-
 /**
  * /venue: everything needed to get there. The address and a large map action
  * first, the coordinate plate beside them, then Directions, Parking and
@@ -163,9 +160,7 @@ export default async function VenuePage() {
           }
           facts={[
             { k: 'Date', v: <time dateTime={settings.dateISO}>{settings.dateLong}</time> },
-            { k: 'Doors open', v: timeOr(settings.doorsTime) },
-            { k: 'Talks start', v: timeOr(settings.talksTime) },
-            { k: 'Event ends', v: timeOr(settings.endTime) },
+            ...timeFacts(settings),
           ]}
         />
       </section>
