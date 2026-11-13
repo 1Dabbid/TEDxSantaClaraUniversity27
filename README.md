@@ -1,155 +1,126 @@
 # TEDxSantaClaraUniversity · Fine Print
 
-Event site for **TEDxSantaClaraUniversity**, theme **Fine Print**, on Friday, April 23, 2027 at the Locatelli Student Activity Center, Santa Clara University. Deploys to `fineprint.tedxscu.com`.
+The event site for **TEDxSantaClaraUniversity**, theme **Fine Print**: Friday, April 23, 2027, Locatelli Student Activity Center, Santa Clara University. Live at **https://fineprint.tedxscu.com** (Vercel, from the GitHub repo `1Dabbid/TEDxSantaClaraUniversity27`).
 
-Stack: Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS v4 · three / @react-three/fiber / drei · GSAP (ScrollTrigger, SplitText) + Lenis · Keystatic CMS. Node 22, npm.
+Three public pages: the home page (`/`), `/partners`, and one page per speaker (`/speakers/<slug>`). Every word, date, link and photo is edited in a content admin at `/keystatic`; nobody needs to touch code to run the event.
 
-## Run it
+| You want to… | Read |
+| --- | --- |
+| Change words, speakers, tickets, sponsors, FAQ | [docs/EDITING.md](docs/EDITING.md) |
+| Put the site on Vercel, connect the domain, turn on the online admin | [docs/DEPLOY.md](docs/DEPLOY.md) |
+| Re-theme the site for next year's event | [docs/NEXT-YEAR.md](docs/NEXT-YEAR.md) |
+| Work on the code | the rest of this file |
+
+Stack: Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind CSS 4 · Keystatic (content in `/content`) · GSAP (ScrollTrigger, SplitText) + Lenis · three.js via @react-three/fiber, loaded lazily · Playwright + axe-core for tests. Node 22 (`.nvmrc`), npm.
+
+## Quick start
 
 ```bash
-npm install
-npm run dev        # http://localhost:3000
-npm run build      # production build (all public pages are statically generated)
-npm run start      # serve the production build
-npm run lint       # ESLint (flat config, next/core-web-vitals + typescript)
+npm ci             # install exactly what package-lock.json says
+npm run dev        # http://localhost:3000 (admin: http://localhost:3000/keystatic)
+npm run build      # production build: every public page is statically generated
+npm run start      # serve the production build on :3000
+npm run lint       # ESLint
 npm run typecheck  # next typegen && tsc --noEmit
+npm run test:e2e   # Playwright end-to-end suite (see Testing)
 ```
 
-## Editing content (a guide for non-coders)
+## The content admin
 
-You never need to touch code to change what the site says. All words, dates, links and photos live in an admin screen called **Keystatic**.
+`/keystatic` is a Keystatic admin generated from `keystatic.config.ts`. Each save writes a YAML file in `content/` (or an image in `public/images/speakers|team|sponsors/`).
 
-### Opening the editor
-- **On the live site** (once the GitHub app is set up, see “Deploying” below): go to `https://fineprint.tedxscu.com/keystatic`, sign in with GitHub, edit, press **Save**. The site rebuilds itself within a few minutes.
-- **On your own computer**: run `npm install` once, then `npm run dev`, and open `http://localhost:3000/keystatic`.
+- **Local mode** (default): edits write straight to files on your computer. Use it with `npm run dev`.
+- **GitHub mode**: switched on when `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` is set (see `.env.example` and [docs/DEPLOY.md](docs/DEPLOY.md)). Editors sign in with GitHub on the live site; each save is a commit to the repo, and Vercel rebuilds.
 
-Every save writes a small text file in the `content/` folder (or a photo in `public/images/...`), so there is always a history of who changed what, and anything can be undone.
+Pages read content only through `src/lib/content.ts` (Keystatic's reader, at build time); components never import Keystatic. The admin splits event settings into five singletons (Event basics, Venue & directions, Tickets & speaker applications, Contact, Show / hide sections) and `getSettings()` merges them into one `Settings` object. The canonical site URL, club URL and share-image alt text are constants in `src/lib/site.ts`, not content.
 
-### What is where
-The left-hand menu is grouped the same way the site is.
-
-**The event**
-| Menu item | What it controls |
-| --- | --- |
-| Event basics | Event name (always the full TEDxSantaClaraUniversity), theme name, tagline, theme story, date, doors and end time, accent colour. Leave times blank until confirmed: the site shows “To be announced”. |
-| Venue & directions | Building name, campus, the address (with a short label saying what it is, currently “University main address”), the map link, optional coordinates for the design, and the **Getting there** notes (Directions, Parking, Accessibility). A note with empty details shows “To be announced”. This is the only place the address is stored: search engines read it from here too. |
-| Tickets & speaker applications | The ticket status switch (**Coming soon / On sale / Sold out / Closed**), the ticket link, an optional checkout embed link, the price note, and the speaker-application status, link and deadline. Changing the status updates every Tickets button on the site. |
-| Schedule | The running order. Hidden (“schedule coming soon”) until **Show the running order** is ticked. |
-| FAQ | Questions and answers. Drag to reorder; they are numbered automatically. |
-
-**People**
-| Menu item | What it controls |
-| --- | --- |
-| Speakers | One entry per speaker slot. While **Announced** is unticked the slot shows as “To be announced” everywhere, with a redacted page that search engines ignore. To announce someone: fill in name, role, talk title, bios, portrait (4:5, at least 1200×1500 px) and optional link, set the page address (slug) once, then tick **Announced**. |
-| Team | The nine board roles. A name (and photo) only appears when **Show name publicly** is ticked and a name is filled in. Ask the person first. |
-
-**Partners**
-| Menu item | What it controls |
-| --- | --- |
-| Partner tiers | Tier names and descriptions on `/partners`. Contribution and number of slots stay hidden while blank. |
-| Partner benefits | Rows of the benefits comparison table. Tick which tiers include each benefit. While empty, the page says the schedule of benefits is being finalized. Only list benefits TEDx rules allow (no stage time, no say over the programme). |
-| Partners (logos) | Signed partners. Shown on `/partners` only (never on the home page), always smaller than the event logo. Only tick **Published** once the partnership is signed and the logo approved. Upload a white or light logo on a transparent background. |
-
-**Contact & site**
-| Menu item | What it controls |
-| --- | --- |
-| Contact, newsletter & socials | The SendFox newsletter link, the general contact email, the partnerships email (used by every “Become a partner” button; falls back to tedxscu.com when blank) and social links. Blank links are simply hidden. |
-| Show / hide sections | Switch the Team section, FAQ section and the speaker-applications band on or off. If you hide Team or FAQ, also tell the web team so the menu link can be removed. |
-
-### Rules of thumb
-- Always write the name in full: **TEDxSantaClaraUniversity**.
-- If something is not confirmed, leave it blank. The site is designed to show a tidy “To be announced” instead. Never put guesses on the site.
-- Tickets may not cost more than $100 (TEDx rule).
-- Sponsor logos never go on the home page, and partners never speak from the stage.
-
-### For developers
-Pages read content only through `src/lib/content.ts` (the Keystatic reader API, at build time); components never import Keystatic directly. In the admin, settings are split across the *Event basics*, *Venue*, *Tickets*, *Contact* and *Sections* singletons; `getSettings()` merges them into the single `Settings` object components receive. The content model lives in `keystatic.config.ts`.
-
-## Architecture: the scene and scroll contracts
+## Architecture
 
 ```
 src/
-  app/                    routes: /, /speakers/[slug], /partners, /keystatic, api/keystatic, sitemap, robots, OG image
-  components/sections/    Hero, Theme, Speakers, Schedule, Venue, Tickets, Team, Faq, Newsletter
-  components/ui/          Button, SectionLabel, ComingSoon, VisuallyHidden, FootnoteMark
-  components/             Header, Footer, MobileMenu, Logo
-  components/print/       fine-print primitives: clause numbers, TBA marker, redaction bars, status register, JSON-LD
-  lib/content.ts          typed content loader
-  lib/jsonld.ts           Event, FAQPage and speaker Person/Event JSON-LD
-  lib/links.ts            partner CTA, coordinate and clause formatting
-  lib/quality.ts          quality tier store + useQuality()
-  motion/                 MotionRoot, SmoothScroll (Lenis + ScrollTrigger), SceneGate, gsap.ts, lenisRef
-  motion/engine/          reveal, cursor, magnetic, navigation, chrome, focus (the global motion engine)
-  motion/sections/        Hero, Theme, Speakers, Schedule, Venue, Tickets, Team, Faq, Newsletter, Footer, Partners
-                          moments (*Motion.tsx) and kit.ts (shared masks, fold checks)
-  scene/                  scrollState, SceneLoader, SceneCanvas, Experience
+  app/                  routes: /, /partners, /speakers/[slug], /keystatic, /api/keystatic,
+                        sitemap.ts, robots.ts, opengraph-image.tsx (built at build time), not-found.tsx
+  components/           Header, Footer, MobileMenu, Logo, SkipLink, ChromeGate (no chrome on /keystatic), nav.ts
+  components/sections/  Hero, Theme, Speakers, Schedule, Venue, Tickets, Team, Faq, Newsletter
+  components/print/     the "fine print" primitives: clause numbers, TBA marker, redaction bars, crop marks, JSON-LD
+  lib/                  content.ts (loader), quality.ts (tiers), site.ts (constants), jsonld.ts, links.ts, tickets.ts
+  motion/               MotionRoot, SmoothScroll (Lenis), SceneGate, gsap.ts, lenisRef.ts, useSectionMotion.ts
+  motion/engine/        reveal, cursor, magnetic, navigation (page transitions), chrome (header), focus
+  motion/sections/      one scroll moment per section (*Motion.tsx) + kit.ts
+  scene/                the WebGL scene (see below)
 ```
 
-### `src/scene/scrollState.ts`
-A plain mutable singleton. Read it freely in `useFrame` or GSAP callbacks; it never triggers React renders.
+**The HTML is the design.** The server always renders the static, reduced-motion version: everything readable and visible without JavaScript. Motion and the 3D scene are layered on top in the browser and never carry content.
 
-- `progress`: whole page, 0 to 1.
-- `sections[id]`: one value per entry in `SECTION_IDS` (`hero, theme, speakers, schedule, venue, tickets, team, faq, newsletter`). 0 when the section top reaches the viewport bottom, 1 when its bottom reaches the viewport top. Sections not on the current route stay 0.
-- `pointer.{x,y}`: -1 to 1, y up (three.js NDC convention). Mouse/pen only.
-- `velocity`: signed px per frame (Lenis velocity), positive when scrolling down.
+### Scene contracts (`src/scene/`)
 
-`src/motion/SmoothScroll.tsx` is the only writer. Section elements are found by `[data-section="<id>"]` and measured on mount, route change, resize and document size changes (not every frame).
+- `scrollState.ts`: a plain mutable singleton (no React renders): `progress` (page 0..1), `sections[id]` for each entry of `SECTION_IDS` (`hero, theme, speakers, schedule, venue, tickets, team, faq, newsletter`; 0 when the section top meets the viewport bottom, 1 when its bottom meets the viewport top), `pointer` (-1..1, y up), `velocity`. `src/motion/SmoothScroll.tsx` is its only writer; sections are found by `[data-section="<id>"]`. The order of sections in `src/app/page.tsx` must match `SECTION_IDS`.
+- `SceneCanvas.tsx`: the single fixed, full-viewport, `aria-hidden`, `pointer-events: none` canvas. DPR `[1,2]` on high, `[1,1.5]` on low. Never import it statically: `SceneLoader` loads it with `next/dynamic({ ssr: false })` after `load` + idle.
+- `Experience.tsx`: the scene itself (microphone, rug, spotlight, 100 seats, one scroll-driven camera); keeps its default export and `quality` prop. It steps resolution and post-processing down by itself when the frame rate stays low.
+- **Tuning points**: `choreography.ts` is the camera choreography as data (`DESKTOP_SHOTS`, `PORTRAIT_SHOTS`, `AWAY_SHOT`: one shot per point of the scroll journey, where section k spans J = k..k+1). `engraving.ts` is the text laser-etched around the microphone (event name, theme, date, venue, license line, numbered clauses). Both are meant to be edited.
+- `SceneGate` (`src/motion/SceneGate.tsx`, in the root layout) decides whether the scene exists: mounted on `/` when `useSceneEnabled()`; on other routes only if the home page was already shown in this visit (then the canvas is hidden and paused, so going back home is instant). A cold load of `/partners` or a speaker page never downloads three.js.
+- Readability never depends on the canvas: sections carry their own scrims (`scrim-*`, `hero-scrim`, `theme-scrim`, … in `globals.css`).
 
-### `src/lib/quality.ts`
-`Quality = 'high' | 'low' | 'static'`, read with `useQuality()`.
-- `static`: prefers-reduced-motion, Save-Data, or no WebGL. No canvas, no Lenis, native scroll. The server always renders `static`, so the HTML *is* the reduced-motion design.
-- `low`: coarse pointer, viewport under 768px wide (or under 600px on the short side), `deviceMemory <= 4` or `hardwareConcurrency <= 4`.
-- `high`: everything else.
+### Motion engine (`src/motion/`)
 
-### Canvas
-`SceneGate` (in the root layout) decides whether the scene exists on the current route: it is mounted on `/`; on `/partners`, `/speakers/*` and the 404 page it is not mounted, unless the home page was already shown in this browsing session, in which case the live canvas is kept hidden and paused (R3F `frameloop: 'never'`) so returning home is instant. A cold load of a secondary page never downloads three.js. Inside the gate, `SceneLoader` mounts `SceneCanvas` via `next/dynamic({ ssr: false })` only when quality is not `static`, after `load` + `requestIdleCallback`. three.js is therefore never in the initial bundle. `SceneCanvas` is fixed, full viewport, `aria-hidden`, `pointer-events: none`, at `z-index: var(--z-canvas)` (0). Page content sits at `var(--z-content)` (10) and the header at `var(--z-header)` (50). DPR is `[1,2]` on high and `[1,1.5]` on low. `Experience.tsx` holds the scene; keep its default export and the `quality` prop.
+- `html.motion` is set by an inline script before first paint (JS on, no reduced motion, no Save-Data, not on `/keystatic`) and removed by `MotionRoot` if the tier resolves to `static`. All pre-reveal CSS is scoped to `html.motion`.
+- `MotionRoot` lazy-loads the engine (`src/motion/engine/index.ts`): `reveal.ts` (the `data-reveal="lines|chars|fade|rule|stagger"` attribute API, CSS failsafe if the engine never arrives), `cursor.ts` (`data-cursor="link|loupe"`), `magnetic.ts` (`data-magnetic`), `navigation.ts` (smooth anchors with header offset, a curtain between routes, focus moved to `#main`, scroll position restored on back/forward), `chrome.ts` (header hides on scroll down; red reading-progress hairline), `focus.ts`.
+- `SmoothScroll` dynamically imports GSAP and Lenis only when motion is on; Lenis runs on the GSAP ticker. Always import GSAP from `@/motion/gsap`.
+- Section moments live in `src/motion/sections/*Motion.tsx`, run through `useSectionMotion` (lazy GSAP, scoped context, reverted on route change). Gate any new animation on `useQuality() !== 'static'` and animate *from* the static layout.
 
-Readability never depends on the canvas: each section has its own gradient scrim (`scrim-y`, `scrim-left`, `scrim-solid` in `globals.css`). Hero, Theme, Speakers and Schedule use targeted scrims instead (`hero-scrim`, `theme-scrim`, `speakers-scrim`, `schedule-scrim`): a soft gradient behind the text block only, so the shot stays visible. Small text is checked at 4.5:1 against the brightest scene pixel behind it.
+### Quality tiers (`src/lib/quality.ts`)
 
-### Motion
-- Always import GSAP from `@/motion/gsap` (registers ScrollTrigger and SplitText once). `@gsap/react` (`useGSAP`) is installed.
-- `SmoothScroll` dynamically imports gsap and Lenis, so they load only when motion is on. Lenis runs on the GSAP ticker and calls `ScrollTrigger.update` on scroll. `lenisRef.current` gives programmatic scrolling (null in `static` mode).
-- `html.motion` is set by an inline script before first paint (JS on, no reduced motion, no Save-Data) and removed again by `MotionRoot` if quality resolves to `static`. All pre-reveal CSS is scoped to it, so the server HTML is the complete, fully visible design.
-- `MotionRoot` loads the engine (`src/motion/engine/index.ts`) on demand, never in the first-load bundle:
-  - `reveal.ts`: the attribute API for entrance animations, scanned on every route.
-    - `data-reveal="lines"` (SplitText lines, masked; `data-reveal-variant="shear"` for display headlines), `"chars"` (per character), `"fade"`, `"rule"` (a hairline drawn left to right), `"stagger"` (direct children one after another; add `data-reveal-variant="wipe"` for a clip-path wipe). `data-reveal-delay="0.2"` delays in seconds.
-    - Nested reveals: the outermost owns the animation. Splits are reverted when done, and keyboard focus landing inside a pending reveal finishes it at once. A CSS failsafe shows everything after 3s if the engine never arrives.
-  - `cursor.ts`: custom dot + ring for fine pointers. `data-cursor="link"` gives the link state to non-link elements (e.g. a whole row); `data-cursor="loupe"` (optionally `data-cursor-zoom="2.4"`) turns the cursor into a magnifying glass over fine print.
-  - `magnetic.ts`: elements with `data-magnetic` lean toward the pointer (fine pointers only). `Button` opts in by default (`magnetic={false}` to opt out).
-  - `navigation.ts`: smooth in-page anchors with header offset, a curtain transition between routes, focus moved to the target or `#main`.
-  - `chrome.ts`: the header hides on scroll down and returns on scroll up or focus; the red hairline tracks reading progress.
-  - `focus.ts`: keyboard focus cancels any Lenis glide in flight and nudges the focused element clear of the header.
-- Plain CSS link style: `link-draw` draws a 1px underline from the left on hover/focus. Bare `<a>` inside running text (`p`, `li`, `dd`) gets a resting underline automatically.
-- Gate any new animation on `useQuality() !== 'static'` and animate from the static layout (e.g. `gsap.from`) so the no-JS and reduced-motion look stays correct.
-- Theme: on viewports at least 768px wide and 44rem tall it is a 250vh runway with a sticky stage (the phrase scrub in `ThemeMotion`); smaller or shorter viewports get a natural-height section with masked line reveals. The right ~45% of the pinned frame is kept free of DOM text for the engraving shot.
-- Speakers: on viewports at least 1024px wide and 44rem tall it is a 340vh runway with a sticky stage: the heading holds over the lit rug, then a strip of cards travels sideways in the lower edge (`SpeakersMotion`; keyboard focus scrolls the runway to the focused card). Smaller or shorter viewports hold the heading for half a screen, then a vertical list. Static: a grid on black.
-- Section moments: each lower section has one scroll-linked moment in `src/motion/sections/*Motion.tsx`, mounted inside its section and run through `useSectionMotion` (lazy gsap, scoped `gsap.context`, reverted on route change). Mouse/trackpad at 768px+ gets the scrubbed version (`FULL` in `kit.ts`); touch and small screens get a shorter one played once (`COMPACT`).
-  - Venue: crop marks draw from their corners, the plate settles, the coordinates resolve digit by digit (odometer wheels); the reticle's bezel turns a few degrees with scroll.
-  - Tickets: the seat ruler prints tick by tick (scrubbed) while "001 – 100" counts the seats on detented counter wheels; the status cross is stamped.
-  - Team: signature lines draw in sequence (scrubbed) and the "00 of 09 signed" register ticks with them (visual copy; screen readers get the final count).
-  - FAQ: pure CSS. `::details-content` + `interpolate-size` ease the height open and shut (instant where unsupported or with reduced motion); the plus turns into a minus. `FaqMotion` only refreshes triggers after a toggle.
-  - Newsletter: the signature line inks across as it reaches mid-viewport; the headline scales up to full size as it enters.
-  - Footer: the date's figures rise from masks, the red points are set last; a small parallax settles it on the last pixel of scroll.
-  - /partners: the hero headline rises with a shear (`data-reveal-variant="shear"`), the tier ledger is ruled row by row, the address is set character by character.
-  - Rules they share: nothing is hidden unless it is still below the fold at setup (a deep link or reload mid-section just shows the static design); splits are visual `aria-hidden` copies with an sr-only twin, removed when the moment ends; masks clip with `clip-path` on glyph-sized inline-blocks, so baselines and widths never move; keyboard focus inside a pending moment finishes it.
+`useQuality()` returns `'high' | 'low' | 'static'` (the server and hydration always see `static`).
+
+| Tier | When | What runs |
+| --- | --- | --- |
+| `static` | `prefers-reduced-motion`, Save-Data, a 2G/slow-2G connection, or no WebGL | no canvas, no Lenis, native scroll, no scroll animation |
+| `low` | touch-only pointer, viewport under 768 px wide or under 600 px on its short side, ≤ 2 GB memory or ≤ 2 cores, ≤ 4 GB **and** ≤ 4 cores, a GPU on the weak list, or a software renderer | motion, smooth scroll, cheaper scene |
+| `high` | everything else (a 4-core laptop with a real GPU and a mouse) | everything |
+
+Separately, `sceneEnabled()` / `useSceneEnabled()` is **false when WebGL only runs on a software rasterizer** (SwiftShader, llvmpipe, Microsoft Basic Render Driver, or a "major performance caveat"): such a device keeps motion (`low`) but never downloads the scene. The WebGL probe runs at the first idle moment after hydration; until then the scene stays off and the probe may lower the tier.
+
+### Debug switches (query string on the first URL of a visit)
+
+| Switch | Effect |
+| --- | --- |
+| `?quality=high`, `?quality=low`, `?quality=static` | force the tier; `high`/`low` also force the scene on, even on software WebGL |
+| `?perf` | exposes `window.__fpPerf` (`gsap`, `ScrollTrigger`, `lenis`, `refreshes` count) for performance and leak audits |
+| `?perf=off` | turns off the scene's automatic quality step-down (also exposes `__fpPerf`) |
+| `?post=0` | scene without post-processing |
+| `?scene-debug=1` | writes per-frame camera/quality state to `window.__scene`; enables the `envrot` and `keymul` lighting parameters |
+
+Build and environment switches: `ANALYZE=1 npm run build` emits browser source maps so first-load chunks can be attributed per module. `CSP_FRAME_SRC` (space-separated origins) adds extra allowed frame origins for a ticket checkout embed that nests a second frame; the embed URL's own origin is read from `content/tickets.yaml` at build time. See `next.config.ts` for the full Content-Security-Policy and headers.
+
+### Performance budget
+
+- Initial JavaScript on `/`: **≈148 KB gzip** actually downloaded. The framework floor (Next.js + React runtime) is ≈138–140 KB, so the site's own code adds about 10 KB.
+- The 3D chunk (three.js, @react-three/fiber and the scene) is **≈260 KB gzip, lazy**: requested only after `load` + idle, only on `/`, only when the scene is enabled.
+- GSAP, Lenis and the motion engine load on demand and never in static mode. The stylesheet is inlined into the HTML (`experimental.inlineCss`). Fonts are self-hosted; there is no analytics and no third-party request on public pages.
+- To check: `ANALYZE=1 npm run build`, then load the production build with DevTools' network panel (JS filter, "transferred" column).
+
+## Testing
+
+`tests/e2e` holds a Playwright suite (Chromium) that runs against a production build (`npm run build && npm run start` on port 3100, configured in `playwright.config.ts`). It covers: every public route (status 200, exactly one `h1`, a title and description, no console errors or failed requests), the no-JavaScript home page (full event name, date, venue, Tickets link, the TEDx license sentence), no sponsor logos on the home page, anchors that resolve, the mobile menu (focus trap, Escape), reduced motion, the `?quality=` overrides (the canvas mounts with `?quality=low`), scroll restoration across a page transition, the FAQ by keyboard, horizontal overflow at 320/390/768/1440 px, robots.txt, the sitemap, noindex on unannounced speakers, the Keystatic shell, and axe-core accessibility checks on `/`, `/partners` and a speaker page. `known-issues.spec.ts` holds `test.fixme` cases for known bugs.
+
+```bash
+npm run test:e2e                                         # builds, serves, tests
+PW_SKIP_BUILD=1 npm run test:e2e                         # reuse the existing .next build
+PW_CHROMIUM_PATH=/path/to/chromium npm run test:e2e      # use a Chromium already on disk
+npx playwright install chromium                          # or download the matching browser once
+npm run test:e2e:report                                  # open the last HTML report
+```
+
+CI (`.github/workflows/ci.yml`) runs lint, typecheck and build in one job, and the e2e suite in a second job (`npx playwright install --with-deps chromium`); the HTML report is uploaded as an artifact when it fails.
+
+## Deployment
+
+Vercel builds the production branch (the repo's default branch; rename it to `main` before importing, see the guide) on every push (including every save in the admin in GitHub mode); pull requests and other branches get preview URLs. Step-by-step setup, the domain, the Keystatic GitHub App and rollback are in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Brand rules baked in
+
 - Always write **TEDxSantaClaraUniversity** in full.
-- The logo (`public/brand/logo-on-black.png`, `logo-on-white.png`) only sits on solid black (header, footer, OG image) with clear space. Never place it over the canvas, recolour, distort it or combine it with other marks. The favicon is a plain black square on purpose.
-- The footer includes the required line: “This independent TEDx event is operated under license from TED.”
-- Sponsor logos appear only on `/partners` and are capped at 32px tall, smaller than the header logo.
-- Accent red `#EB0028` (overridable in settings) is used sparingly.
-
-## Deploying on Vercel
-1. Import the repo. Framework: Next.js. Node 22. No build settings to change.
-2. Point `fineprint.tedxscu.com` at the project.
-3. **Keystatic GitHub mode** (so editors can use `/keystatic` on the live site): create a Keystatic GitHub App for `1Dabbid/TEDxSantaClaraUniversity27` (open `/keystatic` locally once in GitHub mode and follow the setup flow, or see the Keystatic docs), then set these environment variables on Vercel:
-   - `KEYSTATIC_GITHUB_CLIENT_ID`
-   - `KEYSTATIC_GITHUB_CLIENT_SECRET`
-   - `KEYSTATIC_SECRET`
-   - `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG`
-
-   When `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` is set, `keystatic.config.ts` switches storage from `local` to `github`. Each save commits to the repo, and Vercel rebuilds the static site. Without these variables, `/keystatic` only works in local dev. See `.env.example`, and never commit real values.
-4. `robots.txt` disallows `/keystatic` and `/api/`.
-
-The public site makes no runtime requests to third parties: fonts are self-hosted and there is no analytics. The OG image is rendered at build time in Inter from OTF copies in `src/app/_og/` (the renderer cannot read woff2; SIL OFL, license alongside). The Keystatic admin UI loads its own fonts from Google Fonts, which affects editors only.
+- The logo (`public/brand/logo-on-black.png`, `logo-on-white.png`) only sits on solid black (header, footer, OG image) with clear space. Never place it over the canvas, recolour, distort or combine it with other marks.
+- The footer carries the required line: "This independent TEDx event is operated under license from TED."
+- Sponsor logos appear only on `/partners`, capped at 32 px tall (smaller than the event logo).
+- Accent red `#EB0028` (editable in Event basics), used sparingly.
