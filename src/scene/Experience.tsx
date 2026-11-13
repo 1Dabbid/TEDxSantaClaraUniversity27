@@ -395,11 +395,16 @@ export default function Experience({
     camera.position.copy(o.position);
     camera.up.copy(o.up);
     camera.lookAt(target);
-    if (Math.abs(camera.near - o.near) > 1e-5 || Math.abs(camera.fov - look.fov) > 1e-3) {
+    // The subject's fixed place on screen is a lens shift (an off-centre frustum), never a turn.
+    const ox = 0.5 - o.shiftX;
+    const oy = 0.5 - o.shiftY;
+    const v = camera.view;
+    const shiftChanged = !v || !v.enabled || Math.abs(v.offsetX - ox) > 1e-6 || Math.abs(v.offsetY - oy) > 1e-6;
+    if (shiftChanged || Math.abs(camera.near - o.near) > 1e-5 || Math.abs(camera.fov - look.fov) > 1e-3) {
       camera.near = o.near;
       camera.far = 90;
       camera.fov = look.fov;
-      camera.updateProjectionMatrix();
+      camera.setViewOffset(1, 1, ox, oy, 1, 1);
     }
 
     // Key light: in wide shots it sweeps slowly on the camera side of the mic
