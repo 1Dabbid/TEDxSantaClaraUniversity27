@@ -93,6 +93,47 @@ export function StatusRegister<T extends string>({
   );
 }
 
+type ArrowDir = 'right' | 'left' | 'up-right' | 'down';
+const ARROW_PATH: Record<ArrowDir, string> = {
+  right: 'M2 8h11M9 4l4 4-4 4',
+  left: 'M14 8H3M7 4L3 8l4 4',
+  'up-right': 'M4.5 11.5l7-7M5.5 4.5h6v6',
+  down: 'M8 2v11M4 9l4 4 4-4',
+};
+
+/**
+ * The one arrow used across the content pages: a 1.25px hairline stroke in a
+ * 16-unit box, sized in em so it follows the text it sits in. Decorative.
+ */
+export function Arrow({ dir = 'right', className = '' }: { dir?: ArrowDir; className?: string }) {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.25"
+      strokeLinecap="square"
+      className={`inline-block size-[1em] shrink-0 ${className}`}
+    >
+      <path d={ARROW_PATH[dir]} />
+    </svg>
+  );
+}
+
+/** Four corner crop marks around a figure, as on a printer's proof. Decorative. */
+export function CropMarks({ className = '' }: { className?: string }) {
+  const c = 'absolute size-3 border-white/40';
+  return (
+    <span aria-hidden="true" className={`pointer-events-none absolute inset-0 ${className}`}>
+      <span className={`${c} left-0 top-0 border-l border-t`} />
+      <span className={`${c} right-0 top-0 border-r border-t`} />
+      <span className={`${c} bottom-0 left-0 border-b border-l`} />
+      <span className={`${c} bottom-0 right-0 border-b border-r`} />
+    </span>
+  );
+}
+
 /** Renders a JSON-LD <script>. `json` must already be escaped with jsonLdString(). */
 export function JsonLd({ json }: { json: string }) {
   return <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: json }} />;

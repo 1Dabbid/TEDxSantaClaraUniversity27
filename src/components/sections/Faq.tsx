@@ -16,7 +16,7 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
     <SectionShell id="faq" scrim="solid" className="py-32 sm:py-44">
       <JsonLd json={jsonLdString(faqJsonLd(items))} />
       <div className="shell grid grid-cols-1 gap-14 md:grid-cols-12">
-        <div className="md:col-span-4">
+        <div className="min-w-0 md:col-span-4">
           <div className="md:sticky md:top-[calc(var(--header-h)+3rem)]">
             <div data-reveal="fade">
               <SectionLabel index={7}>FAQ</SectionLabel>
@@ -26,45 +26,48 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
                 Questions, answered.
               </span>
             </SectionTitle>
-            <p data-reveal="fade" className="mt-8 max-w-xs text-mute">
+            <p data-reveal="fade" className="mt-8 max-w-xs text-mute [overflow-wrap:anywhere] [&>a]:text-white">
               {items.length} clauses, in plain language.
               {settings.contactEmail ? (
                 <>
                   {' '}
                   Anything else:{' '}
-                  <a
-                    href={`mailto:${settings.contactEmail}`}
-                    className="text-white underline decoration-white/40 underline-offset-4 hover:decoration-white"
-                  >
-                    {settings.contactEmail}
-                  </a>
+                  <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
                 </>
               ) : null}
             </p>
           </div>
         </div>
 
-        <ol data-reveal="stagger" className="border-t border-white/15 md:col-span-8">
+        <ol data-reveal="stagger" className="min-w-0 border-t border-white/15 md:col-span-8">
           {items.map((item, i) => (
-            <li key={i} className="border-b border-white/15">
+            <li key={i} className="min-w-0 border-b border-white/15">
               <details className="group">
                 <summary
-                  className="grid cursor-pointer list-none grid-cols-[3.75rem_minmax(0,1fr)_2rem] items-baseline gap-2 py-7 text-lg font-medium text-white transition-colors hover:text-mute focus-visible:outline-2 focus-visible:outline-offset-[-2px] sm:grid-cols-[5rem_minmax(0,1fr)_2.5rem] sm:text-2xl sm:tracking-tight [&::-webkit-details-marker]:hidden"
+                  className="group/q grid min-h-11 cursor-pointer list-none grid-cols-[3.75rem_minmax(0,1fr)_2rem] items-baseline gap-2 py-7 text-lg font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] sm:grid-cols-[5rem_minmax(0,1fr)_2.5rem] sm:text-2xl sm:tracking-tight [&::-webkit-details-marker]:hidden"
                 >
-                  <span aria-hidden="true" className="fine-print text-white tabular-nums">
+                  <span
+                    aria-hidden="true"
+                    className="fine-print text-mute tabular-nums transition-colors duration-300 group-hover/q:text-white group-open:text-white"
+                  >
                     §&nbsp;{clause(7, i + 1)}
                   </span>
                   {/* overflow-wrap: the long event name must not push the page sideways at 320px. */}
-                  <span className="text-balance [overflow-wrap:anywhere]">{item.question}</span>
+                  <span className="min-w-0 text-balance [overflow-wrap:anywhere] transition-transform duration-500 ease-[var(--ease-cinema)] pointer-fine:group-hover/q:translate-x-1">
+                    {item.question}
+                  </span>
                   {/* Plus that turns into a minus: shape change, not colour. */}
-                  <span aria-hidden="true" className="relative ml-auto block size-4 self-center">
+                  <span
+                    aria-hidden="true"
+                    className="relative ml-auto block size-4 self-center text-mute transition-colors duration-300 group-hover/q:text-white group-open:text-white"
+                  >
                     <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-current" />
                     <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-current transition-transform duration-300 group-open:scale-y-0" />
                   </span>
                 </summary>
                 <div className="grid grid-cols-[3.75rem_minmax(0,1fr)_2rem] gap-2 pb-9 sm:grid-cols-[5rem_minmax(0,1fr)_2.5rem]">
                   <span aria-hidden="true" />
-                  <p className="max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{item.answer}</p>
+                  <p className="min-w-0 max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{item.answer}</p>
                 </div>
               </details>
             </li>

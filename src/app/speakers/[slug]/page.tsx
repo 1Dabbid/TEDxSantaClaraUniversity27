@@ -8,7 +8,7 @@ import { jsonLdString, speakerJsonLd } from '@/lib/jsonld';
 import { OG_ALT, SITE_NAME } from '@/lib/site';
 import { ticketCta } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
-import { ClauseNo, JsonLd, Redaction } from '@/components/print/Print';
+import { Arrow, ClauseNo, JsonLd, Redaction } from '@/components/print/Print';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -69,10 +69,11 @@ function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; ne
         <div className={prev ? 'border-b border-white/15 sm:border-b-0' : 'hidden sm:block'}>
           {prev ? (
             <Link href={`/speakers/${prev.s.slug}`} data-cursor="link" className="group block py-8 sm:pr-8">
-              <span aria-hidden="true" className="fine-print text-mute">
-                ← Previous · {num(prev.i)}
+              <span aria-hidden="true" className="fine-print flex items-center gap-2 text-mute">
+                <Arrow dir="left" className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:-translate-x-1" />
+                Previous · {num(prev.i)}
               </span>
-              <span className="mt-3 block text-2xl font-semibold tracking-tight group-hover:text-mute sm:text-3xl">
+              <span className="mt-3 block text-2xl font-semibold tracking-tight transition-colors group-hover:text-mute sm:text-3xl">
                 <span className="sr-only">Previous speaker, number {prev.i + 1}: </span>
                 {label(prev.s)}
               </span>
@@ -80,17 +81,18 @@ function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; ne
           ) : null}
         </div>
         <div className="flex items-center border-b border-white/15 py-6 sm:border-x sm:border-b-0 sm:px-8">
-          <Link href="/#speakers" className="fine-print inline-block py-1.5 text-white underline-offset-4 hover:underline">
+          <Link href="/#speakers" className="fine-print link-draw inline-block py-1.5 text-white">
             All speakers
           </Link>
         </div>
         <div>
           {next ? (
             <Link href={`/speakers/${next.s.slug}`} data-cursor="link" className="group block py-8 text-right sm:pl-8">
-              <span aria-hidden="true" className="fine-print text-mute">
-                {num(next.i)} · Next →
+              <span aria-hidden="true" className="fine-print flex items-center justify-end gap-2 text-mute">
+                {num(next.i)} · Next
+                <Arrow className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-1" />
               </span>
-              <span className="mt-3 block text-2xl font-semibold tracking-tight group-hover:text-mute sm:text-3xl">
+              <span className="mt-3 block text-2xl font-semibold tracking-tight transition-colors group-hover:text-mute sm:text-3xl">
                 <span className="sr-only">Next speaker, number {next.i + 1}: </span>
                 {label(next.s)}
               </span>
@@ -189,7 +191,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
               <h2 id="talk-title" className="fine-print text-mute">
                 <ClauseNo>1</ClauseNo> <span className="ml-2">The talk</span>
               </h2>
-              <p data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight text-balance">
+              <p data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight text-balance [text-indent:-0.42em]">
                 “{speaker.talkTitle}”
               </p>
             </section>
@@ -207,10 +209,13 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
                   href={speaker.link}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-white underline decoration-white/40 underline-offset-4 hover:decoration-white"
+                  data-cursor="link"
+                  className="group tap inline-flex min-h-11 items-center gap-2 text-white"
                 >
-                  {speaker.name}: {speaker.linkLabel}
-                  <span aria-hidden="true"> ↗</span>
+                  <span className="bg-[linear-gradient(currentColor,currentColor),linear-gradient(rgb(255_255_255/0.35),rgb(255_255_255/0.35))] bg-[length:0%_1px,100%_1px] bg-[position:0_100%] bg-no-repeat transition-[background-size] duration-700 ease-[var(--ease-cinema)] group-hover:bg-[length:100%_1px,100%_1px] group-focus-visible:bg-[length:100%_1px,100%_1px]">
+                    {speaker.name}: {speaker.linkLabel}
+                  </span>
+                  <Arrow dir="up-right" className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </p>
@@ -242,15 +247,15 @@ function Unannounced({ index, settings }: { index: number; settings: Settings })
       <div className="shell pt-12 sm:pt-16">
         <Breadcrumb index={index} />
       </div>
-      <div className="shell grid gap-16 py-16 sm:py-24 md:grid-cols-12 md:items-end">
-        <div className="md:col-span-7">
+      <div className="shell grid gap-16 py-16 sm:py-24 md:grid-cols-12 md:items-end md:gap-10">
+        <div className="min-w-0 md:col-span-7">
           <p className="fine-print text-mute">
             Speaker {num(index)} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
           </p>
           <h1
             id="speaker-title"
             data-reveal="lines"
-            className="mt-6 text-[clamp(3.25rem,11vw,10rem)] leading-[0.86] font-semibold tracking-[-0.06em]"
+            className="mt-6 text-[clamp(3.25rem,9.6vw,8.75rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance"
           >
             <span className="sr-only">Speaker {index + 1}: </span>
             To be announced.

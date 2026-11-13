@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
 import { getSettings } from '@/lib/content';
 import { OG_ALT } from '@/lib/site';
@@ -9,9 +11,19 @@ export const contentType = 'image/png';
 /**
  * Typographic card: black, the theme, date and venue, and the event name set
  * in plain text. Deliberately no TEDx logo or imitation of it.
+ *
+ * Set in Inter (the site face): the OG renderer cannot read woff2, so OTF
+ * copies live next to this file in `_og/` (SIL OFL, see LICENSE-Inter.txt).
+ * Rendered once at build time.
  */
+const fontFile = (name: string) => readFile(join(process.cwd(), 'src/app/_og', name));
+
 export default async function OpenGraphImage() {
-  const s = await getSettings();
+  const [s, regular, display] = await Promise.all([
+    getSettings(),
+    fontFile('Inter-Regular.otf'),
+    fontFile('InterDisplay-SemiBold.otf'),
+  ]);
   const grey = '#8c8c8c';
   const line = '#2a2a2a';
   const mono = { fontSize: 18, letterSpacing: 4, textTransform: 'uppercase' as const, color: grey };
@@ -27,6 +39,7 @@ export default async function OpenGraphImage() {
           justifyContent: 'space-between',
           background: '#000',
           color: '#fff',
+          fontFamily: 'Inter',
           padding: '56px 72px',
         }}
       >
@@ -36,9 +49,30 @@ export default async function OpenGraphImage() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <div style={{ display: 'flex', alignItems: 'flex-start', fontSize: 196, letterSpacing: -11, lineHeight: 0.9 }}>
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              fontFamily: 'Inter Display',
+              fontWeight: 600,
+              fontSize: 208,
+              letterSpacing: -11,
+              lineHeight: 0.9,
+            }}
+          >
             {s.themeName}
-            <div style={{ display: 'flex', fontSize: 40, color: s.accentColor, marginLeft: 10, marginTop: 18, letterSpacing: 0 }}>
+            <div
+              style={{
+                display: 'flex',
+                fontFamily: 'Inter',
+                fontWeight: 400,
+                fontSize: 40,
+                color: s.accentColor,
+                marginLeft: 12,
+                marginTop: 20,
+                letterSpacing: 0,
+              }}
+            >
               1
             </div>
           </div>
@@ -61,6 +95,12 @@ export default async function OpenGraphImage() {
         </div>
       </div>
     ),
-    size,
+    {
+      ...size,
+      fonts: [
+        { name: 'Inter', data: regular, weight: 400, style: 'normal' },
+        { name: 'Inter Display', data: display, weight: 600, style: 'normal' },
+      ],
+    },
   );
 }

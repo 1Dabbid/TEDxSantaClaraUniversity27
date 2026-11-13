@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import type { ReactNode } from 'react';
 import Image from 'next/image';
 import type { PartnerBenefit, Sponsor, Tier } from '@/lib/content';
 import { getPartnerBenefits, getSettings, getSponsors, getTiers } from '@/lib/content';
@@ -6,7 +7,7 @@ import { partnerCta } from '@/lib/links';
 import { OG_ALT, SITE_NAME } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { ClauseNo, Tba } from '@/components/print/Print';
+import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 
 const DESCRIPTION =
   'Partner with TEDxSantaClaraUniversity: support the first mainstage event at Santa Clara University, up to 100 guests, with talks published on the TEDx YouTube channel.';
@@ -27,26 +28,50 @@ export const metadata: Metadata = {
   twitter: { card: 'summary_large_image', title: `Partners · ${SITE_NAME}`, description: DESCRIPTION },
 };
 
-const REASONS = [
+/** Play mark and loop mark for the recitals: drawn, so they match the arrow set. */
+function PlayMark() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 48 48" className="mb-[0.06em] h-[0.72em] w-auto" fill="currentColor">
+      <path d="M8 4l36 20L8 44z" />
+    </svg>
+  );
+}
+function LoopMark() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 48 48"
+      className="mb-[0.04em] h-[0.76em] w-auto"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="5.5"
+      strokeLinecap="square"
+    >
+      <path d="M40 24a16 16 0 1 1-4.7-11.3" />
+      <path d="M37 4v9.5h-9.5" />
+    </svg>
+  );
+}
+
+const REASONS: { figure: ReactNode; title: string; body: string }[] = [
   {
     figure: '1st',
-    title: 'The first mainstage event.',
-    body: 'This is the first TEDxSantaClaraUniversity mainstage event. Founding partners are there from the very first clause.',
+    title: 'The first mainstage.',
+    body: 'This is the first TEDxSantaClaraUniversity mainstage event. Founding partners are named from the very first clause.',
   },
   {
     figure: '100',
-    title: 'Up to 100 guests.',
-    body: 'One room, one evening, an audience that chose to be there. Small enough that support is noticed.',
+    title: 'A room of 100.',
+    body: 'One evening, an audience that chose to be there. Small enough that support is noticed.',
   },
   {
-    figure: '▶',
+    figure: <PlayMark />,
     title: 'Talks that travel.',
     body: 'Talks are recorded and published on the TEDx YouTube channel, so the ideas outlast the evening.',
   },
   {
-    figure: '12',
-    figureNote: 'months',
-    title: 'A year-round community.',
+    figure: <LoopMark />,
+    title: 'All year, not one night.',
     body: 'Beyond the mainstage, TEDxSantaClaraUniversity runs general-meeting events throughout the year.',
   },
 ];
@@ -70,60 +95,101 @@ const RULES = [
   },
 ];
 
-function TierCard({ tier, index, benefits }: { tier: Tier; index: number; benefits: string[] }) {
+/** A tier as a schedule in the agreement: an open ledger row, not a boxed card. */
+function TierRow({ tier, index, benefits, href }: { tier: Tier; index: number; benefits: string[]; href: string }) {
+  const letter = String.fromCharCode(65 + index);
   const terms = [
     tier.amount ? { k: 'Contribution', v: tier.amount } : null,
     tier.slots ? { k: 'Slots', v: String(tier.slots) } : null,
   ].filter((x): x is { k: string; v: string } => x !== null);
 
   return (
-    <li className="flex flex-col border border-white/15 bg-black/80 p-6 sm:p-8">
-      <div className="flex items-baseline justify-between gap-4">
+    <li className="grid gap-x-8 gap-y-6 border-b border-white/15 py-10 sm:py-12 md:grid-cols-12 md:items-start">
+      <div className="flex items-baseline gap-4 md:col-span-2 md:flex-col md:gap-3">
         <ClauseNo>2.{index + 1}</ClauseNo>
-        <span className="fine-print text-mute">Schedule {String.fromCharCode(65 + index)}</span>
+        <span className="fine-print text-mute">Schedule {letter}</span>
       </div>
-      <h3 className="mt-10 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{tier.name}</h3>
-      {tier.description ? <p className="mt-4 max-w-md text-mute">{tier.description}</p> : null}
-      {benefits.length ? (
-        <ul className="mt-6 space-y-2 text-sm text-white">
-          {benefits.map((b) => (
-            <li key={b} className="flex gap-3">
-              <span aria-hidden="true" className="text-subtle">
-                —
-              </span>
-              {b}
-            </li>
-          ))}
-        </ul>
-      ) : null}
-      <div className="mt-auto pt-10">
+      <div className="md:col-span-6">
+        <h3 className="text-[clamp(2rem,4vw,3.5rem)] leading-[0.95] font-semibold tracking-[-0.04em] text-balance">
+          {tier.name}
+        </h3>
+        {tier.description ? <p className="mt-4 max-w-md text-lg text-mute">{tier.description}</p> : null}
+        {benefits.length ? (
+          <ul className="mt-6 space-y-2 text-white">
+            {benefits.map((b) => (
+              <li key={b} className="grid grid-cols-[1.25rem_1fr]">
+                <span aria-hidden="true" className="text-subtle">
+                  ·
+                </span>
+                {b}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+      <div className="md:col-span-4 md:pt-2">
         {terms.length ? (
-          <dl className="grid grid-cols-2 gap-4 border-t border-white/15 pt-4">
+          <dl className="grid grid-cols-2 gap-4">
             {terms.map((t) => (
               <div key={t.k}>
                 <dt className="fine-print text-mute">{t.k}</dt>
-                <dd className="mt-1 text-xl font-semibold tracking-tight tabular-nums">{t.v}</dd>
+                <dd className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{t.v}</dd>
               </div>
             ))}
           </dl>
         ) : (
-          <p className="border-t border-white/15 pt-4">
-            <Tba>Terms on request</Tba>
-          </p>
+          <dl>
+            <dt className="fine-print text-mute">Terms</dt>
+            <dd className="mt-1 text-2xl font-light tracking-tight text-white">By arrangement</dd>
+          </dl>
         )}
+        <a
+          href={href}
+          data-cursor="link"
+          className="group tap mt-5 inline-flex min-h-11 items-center gap-2 text-white"
+        >
+          <span className="link-draw group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]">
+            Request {terms.length ? 'the full terms' : 'terms'}
+          </span>
+          <Arrow className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-1" />
+          <span className="sr-only"> for {tier.name}</span>
+        </a>
       </div>
     </li>
   );
 }
 
-function BenefitsComparison({ tiers, benefits }: { tiers: Tier[]; benefits: PartnerBenefit[] }) {
+function BenefitsComparison({
+  tiers,
+  benefits,
+  draftHref,
+}: {
+  tiers: Tier[];
+  benefits: PartnerBenefit[];
+  draftHref: string | null;
+}) {
   if (!benefits.length || !tiers.length) {
     return (
-      <div className="mt-12 border border-dashed border-white/25 p-6 sm:p-10">
-        <p className="text-2xl font-semibold tracking-tight sm:text-3xl">The schedule of benefits is being finalized.</p>
-        <p className="mt-3 max-w-xl text-mute">
-          Ask us for the current draft and we will walk you through what each tier includes, within TEDx rules.
+      <div className="mt-12 grid gap-6 border-t border-white/15 pt-8 md:grid-cols-12">
+        <p className="fine-print text-mute md:col-span-2">
+          <span className="border-b border-dotted border-white/40 pb-0.5">In draft</span>
         </p>
+        <div className="md:col-span-10">
+          <p className="max-w-3xl text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
+            The schedule of benefits is being finalized.
+          </p>
+          <p className="mt-3 max-w-xl text-lg text-mute">
+            Ask for the current draft and we will walk you through what each tier includes, within TEDx rules.
+          </p>
+          {draftHref ? (
+            <a href={draftHref} data-cursor="link" className="group tap mt-6 inline-flex min-h-11 items-center gap-2 text-white">
+              <span className="link-draw group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]">
+                Ask for the draft
+              </span>
+              <Arrow className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-1" />
+            </a>
+          ) : null}
+        </div>
       </div>
     );
   }
@@ -229,26 +295,38 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
 
   if (!groups.length && !untiered.length) {
     return (
-      <div className="mt-12 grid gap-px border border-white/10 bg-white/10 sm:grid-cols-3 sm:grid-rows-2">
-        <a
-          href={cta}
-          data-cursor="link"
-          className="group flex min-h-56 flex-col justify-between border border-dashed border-white/30 bg-black p-6 transition-colors hover:bg-white/[0.03] sm:col-span-2 sm:row-span-2 sm:min-h-80 sm:p-10"
-        >
-          <span className="fine-print text-mute">Vacant</span>
-          <span className="block text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
-            {founding}: this space is open.
-          </span>
-          <span className="fine-print text-white group-hover:underline">
-            Claim it <span aria-hidden="true">→</span>
-          </span>
-        </a>
-        {[0, 1].map((i) => (
-          <div key={i} aria-hidden="true" className="hidden min-h-36 flex-col justify-between bg-black p-6 sm:flex">
-            <span className="fine-print text-mute">Reserved</span>
-            <span className="block h-px w-full border-t border-dashed border-white/20" />
-          </div>
-        ))}
+      <div className="relative mt-12 grid gap-12 p-6 sm:p-10 md:grid-cols-12 md:gap-8 lg:p-14">
+        <CropMarks />
+        <div className="md:col-span-6">
+          <p className="fine-print text-mute">Vacant</p>
+          <p className="mt-6 max-w-[14ch] text-[clamp(2rem,4.4vw,3.75rem)] leading-[0.98] font-semibold tracking-[-0.04em] text-balance">
+            The first signature is still open.
+          </p>
+          <p className="mt-5 max-w-sm text-mute">
+            Partners appear here once an agreement is signed, never before. The first line is reserved for a {founding}.
+          </p>
+          <a href={cta} data-cursor="link" className="group tap mt-8 inline-flex min-h-11 items-center gap-2 text-white">
+            <span className="link-draw group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]">
+              Claim the first line
+            </span>
+            <Arrow className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-1" />
+          </a>
+        </div>
+        {/* Blank signature lines, one per tier. Decorative. */}
+        <ul aria-hidden="true" className="flex flex-col justify-end gap-9 md:col-span-6">
+          {(tiers.length ? tiers.map((t) => t.name) : [founding]).map((name, i) => (
+            <li key={name}>
+              <span className="flex h-10 items-end pb-2 font-mono text-sm leading-none text-subtle">
+                {i === 0 ? <span className="text-accent">✕</span> : '✕'}
+              </span>
+              <span className={`block h-px ${i === 0 ? 'bg-white/60' : 'bg-white/25'}`} />
+              <span className="fine-print mt-2 flex justify-between gap-4 text-mute">
+                <span className={i === 0 ? 'text-white' : undefined}>{name}</span>
+                <span>Unsigned</span>
+              </span>
+            </li>
+          ))}
+        </ul>
       </div>
     );
   }
@@ -287,7 +365,12 @@ export default async function PartnersPage() {
     getPartnerBenefits(),
   ]);
   const cta = partnerCta(settings);
-  const ctaLabel = cta.kind === 'email' ? `Email ${cta.display}` : 'Contact us via tedxscu.com';
+  const mail = (subject: string) =>
+    cta.kind === 'email'
+      ? `mailto:${settings.partnershipsEmail}?subject=${encodeURIComponent(`${subject} · ${settings.eventName}`)}`
+      : cta.href;
+  const lastLetter = String.fromCharCode(64 + Math.max(tiers.length, 1));
+  const anyTerms = tiers.some((t) => t.amount || t.slots);
 
   return (
     <div className="relative isolate">
@@ -306,11 +389,9 @@ export default async function PartnersPage() {
           Put your name in the fine print.
         </h1>
         <div className="mt-12 grid gap-10 md:grid-cols-12 md:items-end">
-          <p data-reveal="fade" className="max-w-xl text-lg text-mute sm:text-xl md:col-span-7">
-            {settings.eventName} is an independently organized evening of ideas on{' '}
-            <time dateTime={settings.dateISO}>{settings.dateLong}</time> at the {settings.venueName},{' '}
-            {settings.venueCampus || 'Santa Clara University'}. We are inviting a small number of partners to make it
-            possible.
+          <p data-reveal="fade" className="max-w-xl text-lg text-pretty text-mute sm:text-xl md:col-span-7">
+            One evening of ideas, independently organized at Santa Clara University. We are inviting a small number of
+            partners to make the first {settings.eventName} mainstage possible.
           </p>
           <div className="flex flex-wrap gap-3 md:col-span-5 md:justify-end">
             <Button href={cta.href} size="lg">
@@ -318,19 +399,26 @@ export default async function PartnersPage() {
             </Button>
             <Button href="#tiers" variant="ghost" size="lg">
               See the tiers
+              <Arrow
+                dir="down"
+                className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-y-0.5"
+              />
             </Button>
           </div>
         </div>
-        <dl data-reveal="stagger" className="mt-16 grid grid-cols-2 gap-6 border-t border-white/15 pt-6 sm:grid-cols-4">
+        <dl
+          data-reveal="stagger"
+          className="mt-16 grid gap-x-6 gap-y-8 border-t border-white/15 pt-6 sm:grid-cols-2 lg:grid-cols-4"
+        >
           {[
             ['Party of the first part', settings.eventName],
-            ['Date', settings.dateShort],
-            ['Venue', settings.venueName],
+            ['Date', settings.dateLong],
+            ['Venue', `${settings.venueName}, ${settings.venueCampus || 'Santa Clara University'}`],
             ['Capacity', 'Up to 100 guests'],
-          ].map(([k, v], i) => (
-            <div key={k} className={i === 0 ? 'col-span-2 sm:col-span-1' : undefined}>
+          ].map(([k, v]) => (
+            <div key={k}>
               <dt className="fine-print text-mute">{k}</dt>
-              <dd className="mt-1.5 text-sm text-white break-words sm:text-base">{v}</dd>
+              <dd className="mt-2 text-base text-balance text-white [overflow-wrap:anywhere] sm:text-lg">{v}</dd>
             </div>
           ))}
         </dl>
@@ -341,23 +429,27 @@ export default async function PartnersPage() {
         <div data-reveal="fade">
           <SectionLabel index={1}>Why partner</SectionLabel>
         </div>
-        <h2 id="why-title" data-reveal="lines" className="mt-6 max-w-3xl text-title font-semibold tracking-tight">
+        <h2 id="why-title" data-reveal="lines" className="mt-6 max-w-3xl text-title font-semibold tracking-tight text-balance">
           Recitals.
           <span className="text-mute"> The facts on which this agreement rests.</span>
         </h2>
-        <ol data-reveal="stagger" className="mt-14 grid gap-px border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
+        <ol data-reveal="stagger" className="mt-14 grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-4">
           {REASONS.map((r, i) => (
-            <li key={r.title} className="flex flex-col bg-black p-6 sm:p-8">
-              <span className="fine-print text-mute">Whereas ({String.fromCharCode(97 + i)})</span>
+            <li
+              key={r.title}
+              className={`grid grid-cols-[5.25rem_minmax(0,1fr)] content-start gap-x-4 border-b border-white/15 py-8 sm:flex sm:flex-col sm:py-10 lg:border-b-0 ${
+                i % 2 === 1 ? 'sm:border-l sm:pl-8' : 'sm:pr-8'
+              } ${i > 0 ? 'lg:border-l lg:pl-8' : ''} ${i < REASONS.length - 1 ? 'lg:pr-8' : 'lg:pr-0'}`}
+            >
+              <span className="fine-print col-span-2 text-mute">Whereas ({String.fromCharCode(97 + i)})</span>
               <span
                 aria-hidden="true"
-                className="mt-8 block text-[clamp(3.5rem,6vw,5.5rem)] leading-none font-semibold tracking-[-0.05em] tabular-nums"
+                className="row-span-2 mt-5 flex h-[1em] items-end text-[2.75rem] leading-none font-semibold tracking-[-0.05em] tabular-nums sm:mt-8 sm:text-[clamp(3.5rem,6vw,5.5rem)]"
               >
                 {r.figure}
-                {r.figureNote ? <span className="fine-print ml-2 align-top tracking-[0.14em] text-mute">{r.figureNote}</span> : null}
               </span>
-              <h3 className="mt-8 text-xl font-semibold tracking-tight">{r.title}</h3>
-              <p className="mt-3 text-mute">{r.body}</p>
+              <h3 className="mt-5 text-xl font-semibold tracking-tight sm:mt-8">{r.title}</h3>
+              <p className="mt-2 max-w-xs text-mute sm:mt-3">{r.body}</p>
             </li>
           ))}
         </ol>
@@ -369,20 +461,23 @@ export default async function PartnersPage() {
           <SectionLabel index={2}>Tiers</SectionLabel>
         </div>
         <div className="mt-6 flex flex-wrap items-end justify-between gap-6">
-          <h2 id="tiers-title" data-reveal="lines" className="text-headline font-semibold tracking-[-0.045em]">
+          <h2 id="tiers-title" data-reveal="lines" className="text-headline font-semibold tracking-[-0.045em] text-balance">
             Partnership tiers.
           </h2>
-          {tiers.every((t) => !t.amount) ? (
-            <p className="fine-print max-w-xs text-mute">Packages in draft. Contributions and slots on request.</p>
+          {tiers.length && !anyTerms ? (
+            <p className="fine-print max-w-xs text-mute">
+              Schedules A–{lastLetter}. Contributions and slots are shared on request.
+            </p>
           ) : null}
         </div>
         {tiers.length ? (
-          <ol data-reveal="stagger" className="mt-14 grid gap-4 md:grid-cols-2">
+          <ol data-reveal="stagger" className="mt-14 border-t border-white/15">
             {tiers.map((tier, i) => (
-              <TierCard
+              <TierRow
                 key={tier.slug}
                 tier={tier}
                 index={i}
+                href={mail(tier.name)}
                 benefits={benefits.filter((b) => b.tiers.includes(tier.slug)).map((b) => b.benefit)}
               />
             ))}
@@ -402,7 +497,7 @@ export default async function PartnersPage() {
         <h2 id="benefits-title" data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight">
           Schedule of benefits.
         </h2>
-        <BenefitsComparison tiers={tiers} benefits={benefits} />
+        <BenefitsComparison tiers={tiers} benefits={benefits} draftHref={mail('Schedule of benefits')} />
       </section>
 
       {/* § 04 Current partners */}
@@ -413,7 +508,7 @@ export default async function PartnersPage() {
         <h2 id="current-title" data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight">
           Signed so far.
         </h2>
-        <CurrentPartners tiers={tiers} sponsors={sponsors} cta={cta.href} />
+        <CurrentPartners tiers={tiers} sponsors={sponsors} cta={mail(tiers[0]?.name ?? 'Founding Partner')} />
       </section>
 
       {/* § 05 How it works */}
@@ -423,7 +518,7 @@ export default async function PartnersPage() {
             <div data-reveal="fade">
               <SectionLabel index={5}>Terms</SectionLabel>
             </div>
-            <h2 id="rules-title" data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight">
+            <h2 id="rules-title" data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight text-balance">
               How TEDx partnerships work.
             </h2>
             <p data-reveal="fade" className="mt-6 max-w-sm text-mute">
@@ -433,7 +528,10 @@ export default async function PartnersPage() {
           </div>
           <ol data-reveal="stagger" className="border-t border-white/15 md:col-span-8">
             {RULES.map((r, i) => (
-              <li key={r.title} className="grid grid-cols-[3.75rem_1fr] gap-2 border-b border-white/15 py-7 sm:grid-cols-[5rem_1fr]">
+              <li
+                key={r.title}
+                className="grid grid-cols-[3.75rem_1fr] gap-2 border-b border-white/15 py-7 sm:grid-cols-[5rem_1fr]"
+              >
                 <ClauseNo>5.{i + 1}</ClauseNo>
                 <div>
                   <h3 className="text-xl font-semibold tracking-tight">{r.title}</h3>
@@ -445,40 +543,40 @@ export default async function PartnersPage() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* § 06 Execution: the address itself is the call to action. */}
       <section aria-labelledby="partner-cta-title" className="shell pb-32 pt-12 sm:pb-44">
-        <div className="border border-white/15 bg-black p-6 sm:p-14">
-          <p className="fine-print text-mute">§ 06 · Execution</p>
+        <div className="border-t border-white/15 pt-10 sm:pt-14">
+          <div className="flex flex-wrap items-baseline justify-between gap-4">
+            <SectionLabel index={6}>Execution</SectionLabel>
+            <p className="fine-print text-mute">Partnerships, sponsorships and corporate enquiries</p>
+          </div>
           <h2
             id="partner-cta-title"
             data-reveal="lines"
-            className="mt-6 max-w-4xl text-[clamp(2.5rem,6vw,5.5rem)] leading-[0.95] font-semibold tracking-[-0.045em] text-balance"
+            className="mt-8 max-w-4xl text-title font-semibold tracking-tight text-balance"
           >
             Become a partner.
           </h2>
-          <p data-reveal="fade" className="mt-6 max-w-xl text-lg text-mute">
+          <p data-reveal="fade" className="mt-4 max-w-xl text-lg text-mute sm:text-xl">
             Tell us a little about your organization and we will send the partnership details.
           </p>
-          <div className="mt-14 grid gap-10 sm:grid-cols-2 sm:items-end">
-            <div>
-              <div className="flex items-end gap-4 pb-3">
-                <span aria-hidden="true" className="font-mono text-sm text-subtle">
-                  ✕
-                </span>
-                <span className="text-xl font-light tracking-tight text-mute sm:text-2xl">Your organization</span>
-              </div>
-              <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/50" />
-              <p className="fine-print mt-3 text-mute">Party of the second part</p>
-            </div>
-            <div className="flex flex-col gap-3 sm:items-end">
-              <Button href={cta.href} size="lg" className="h-auto! min-h-14 py-3 text-center whitespace-normal! [overflow-wrap:anywhere]">
-                {ctaLabel}
-              </Button>
-              {cta.kind === 'email' ? (
-                <p className="fine-print text-mute">Partnerships, sponsorships and corporate enquiries</p>
-              ) : null}
-            </div>
-          </div>
+          <a
+            href={cta.href}
+            data-cursor="link"
+            className="group mt-14 flex items-end justify-between gap-6 border-b border-white/30 pb-5 transition-colors duration-500 hover:border-white focus-visible:border-white sm:mt-20"
+          >
+            <span className="min-w-0 text-[clamp(1.75rem,6.2vw,6rem)] leading-none font-semibold tracking-[-0.045em] [overflow-wrap:anywhere]">
+              <span className="sr-only">{cta.kind === 'email' ? 'Email ' : 'Contact us via '}</span>
+              {cta.display}
+            </span>
+            <span
+              aria-hidden="true"
+              className="mb-1 grid size-12 shrink-0 place-items-center rounded-full bg-accent text-white transition-colors duration-300 group-hover:bg-white group-hover:text-black sm:size-16"
+            >
+              <Arrow className="text-lg transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 sm:text-xl" />
+            </span>
+          </a>
+          <p className="fine-print mt-3 text-mute">Party of the second part: your organization</p>
         </div>
       </section>
     </div>

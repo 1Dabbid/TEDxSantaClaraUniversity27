@@ -1,9 +1,10 @@
 import Link from 'next/link';
 import type { Settings } from '@/lib/content';
+import { getFaq, getTeam } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
 import { CLUB_URL, TEDX_PROGRAM_URL } from '@/lib/site';
 import { Logo } from './Logo';
-import { NAV_ITEMS } from './nav';
+import { navItems } from './nav';
 
 const WHAT_IS_TEDX =
   'In the spirit of discovering and sharing ideas, TED has created a program called TEDx. TEDx is a program of local, self-organized events that bring people together to share a TED-like experience. Our event is called TEDxSantaClaraUniversity, where x = independently organized TED event. At our TEDxSantaClaraUniversity event, TED Talks video and live speakers will combine to spark deep discussion and connection in a small group. The TED Conference provides general guidance for the TEDx program, but individual TEDx events, including ours, are self-organized.';
@@ -17,7 +18,7 @@ const SOCIAL_LABELS: Record<keyof Settings['socials'], string> = {
 
 const ext = { target: '_blank', rel: 'noopener noreferrer' } as const;
 // inline-block + py-1 gives every footer link a target at least 24px tall (WCAG 2.5.8).
-const linkCls = 'inline-block py-1 text-mute underline-offset-4 transition-colors hover:text-white hover:underline';
+const linkCls = 'link-draw inline-block py-1 text-mute hover:text-white focus-visible:text-white';
 const NewTab = () => <span className="sr-only"> (opens in a new tab)</span>;
 
 /** "2027-04-23" -> ["04", "23", "27"] */
@@ -30,7 +31,13 @@ function dateParts(iso: string) {
  * Solid black sign-off. The logo only ever sits here (and in the header) on
  * pure black with clear space around it, unaltered.
  */
-export function Footer({ settings }: { settings: Settings }) {
+export async function Footer({ settings }: { settings: Settings }) {
+  // Same visibility rule as the header: never link to a section that is not rendered.
+  const [team, faq] = await Promise.all([getTeam(), getFaq()]);
+  const nav = navItems({
+    team: settings.sections.showTeam && team.length > 0,
+    faq: settings.sections.showFaq && faq.length > 0,
+  });
   const socials = (Object.keys(SOCIAL_LABELS) as (keyof Settings['socials'])[]).filter((k) => settings.socials[k]);
   const partner = partnerCta(settings);
   const parts = dateParts(settings.dateISO);
@@ -50,8 +57,12 @@ export function Footer({ settings }: { settings: Settings }) {
         </div>
 
         {/* The date as a sign-off */}
-        <p className="mt-16 sm:mt-24" aria-hidden="true">
-          <span className="block text-[clamp(4.5rem,21vw,21rem)] leading-[0.8] font-semibold tracking-[-0.065em] tabular-nums">
+        {/* Sized to the container so the eight characters always span the full measure. */}
+        <p className="@container mt-16 sm:mt-24" aria-hidden="true">
+          <span
+            className="-ml-[0.035em] block leading-[0.8] font-semibold tracking-[-0.065em] whitespace-nowrap tabular-nums"
+            style={{ fontSize: 'calc(100cqi / 3.92)' }}
+          >
             {parts.map((p, i) => (
               <span key={i}>
                 {i > 0 ? <span className="text-accent">.</span> : null}
@@ -60,16 +71,16 @@ export function Footer({ settings }: { settings: Settings }) {
             ))}
           </span>
         </p>
-        <p className="mt-6 flex flex-col gap-x-4 gap-y-1 border-b sm:flex-row sm:flex-wrap border-white/15 pb-6 text-sm text-white sm:text-base">
+        <p className="mt-8 flex flex-col gap-x-4 gap-y-1 border-b border-white/15 pb-6 text-base text-white sm:flex-row sm:flex-wrap">
           <time dateTime={settings.dateISO}>{settings.dateLong}</time>
           <span aria-hidden="true" className="hidden text-subtle sm:inline">
-            /
+            ·
           </span>
           <span>{settings.venueName}</span>
           {settings.venueCampus ? (
             <>
               <span aria-hidden="true" className="hidden text-subtle sm:inline">
-                /
+                ·
               </span>
               <span>{settings.venueCampus}</span>
             </>
@@ -97,7 +108,7 @@ export function Footer({ settings }: { settings: Settings }) {
               <span aria-hidden="true">§ B · </span>Site
             </h2>
             <ul className="mt-3 text-sm">
-              {NAV_ITEMS.map((i) => (
+              {nav.map((i) => (
                 <li key={i.href}>
                   <Link href={i.href} className={linkCls}>
                     {i.label}

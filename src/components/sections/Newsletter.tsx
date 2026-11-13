@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { Settings } from '@/lib/content';
-import { Button } from '@/components/ui/Button';
+import { Arrow } from '@/components/print/Print';
+import styles from './Newsletter.module.css';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { SectionShell, SectionTitle } from './SectionShell';
 
@@ -9,11 +10,20 @@ function instagramHandle(url: string): string | null {
   return m ? `@${m[1]}` : null;
 }
 
+function hostOf(url: string): string | null {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
 /** The closing call to action: a signature line you sign by joining the list. */
 export function Newsletter({ settings }: { settings: Settings }) {
   const open = Boolean(settings.newsletterUrl);
   const ig = settings.socials.instagram;
   const handle = ig ? instagramHandle(ig) : null;
+  const host = hostOf(settings.newsletterUrl);
 
   return (
     <SectionShell id="newsletter" scrim="solid" className="py-32 sm:py-48">
@@ -37,46 +47,65 @@ export function Newsletter({ settings }: { settings: Settings }) {
           Ticket releases, speaker announcements and applications go to the mailing list first.
         </p>
 
-        {/* Signature line */}
+        {/* Signature line: the line itself is the call to action. */}
         <div className="mt-16 sm:mt-24">
-          <div className="flex flex-col gap-8 sm:flex-row sm:items-end sm:gap-10">
-            <div className="flex-1">
-              <div className="flex items-end gap-4 pb-3">
-                <span aria-hidden="true" className="font-mono text-sm text-subtle">
+          {open ? (
+            <a
+              href={settings.newsletterUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-cursor="link"
+              className={`${styles.line} group block`}
+            >
+              <span className="flex items-end gap-4 pb-4 sm:gap-6">
+                <span aria-hidden="true" className="pb-[0.3em] font-mono text-sm leading-none text-subtle transition-colors duration-300 group-hover:text-accent group-focus-visible:text-accent">
                   ✕
                 </span>
-                <p className="text-xl font-light tracking-tight text-white sm:text-3xl">
-                  {open ? 'Your name here.' : 'The list opens soon.'}
+                <span className="flex-1 text-[clamp(1.75rem,4.4vw,3.75rem)] leading-[1.05] font-light tracking-[-0.035em] text-balance text-white">
+                  Sign here to join the list.
+                </span>
+                <span
+                  aria-hidden="true"
+                  className="mb-1 grid size-12 shrink-0 place-items-center rounded-full bg-accent text-white transition-colors duration-300 group-hover:bg-white group-hover:text-black sm:size-16"
+                >
+                  <Arrow dir="up-right" className="text-lg transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 sm:text-xl" />
+                </span>
+              </span>
+              <span aria-hidden="true" className={styles.rule} data-reveal="rule" />
+              <span className="fine-print mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1 text-mute">
+                <span>Mailing list · one form, no account</span>
+                {host ? <span className="text-subtle">Opens {host} in a new tab</span> : null}
+              </span>
+              {host ? null : <span className="sr-only"> (opens in a new tab)</span>}
+            </a>
+          ) : (
+            <div>
+              <div className="flex items-end gap-4 pb-4 sm:gap-6">
+                <span aria-hidden="true" className="pb-[0.3em] font-mono text-sm leading-none text-subtle">
+                  ✕
+                </span>
+                <p className="text-[clamp(1.75rem,4.4vw,3.75rem)] leading-[1.05] font-light tracking-[-0.035em] text-balance text-mute">
+                  The list opens soon.
                 </p>
               </div>
-              <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/50" />
+              <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/30" />
               <p className="fine-print mt-3 text-mute">
-                {open ? 'Sign up · one form, no account' : 'Mailing list · not yet open'}
+                Mailing list · not yet open
+                {settings.contactEmail ? (
+                  <>
+                    {' '}
+                    · until then, write to{' '}
+                    <a
+                      href={`mailto:${settings.contactEmail}?subject=Mailing%20list`}
+                      className="link-draw inline-block py-1.5 tracking-normal text-white normal-case"
+                    >
+                      {settings.contactEmail}
+                    </a>
+                  </>
+                ) : null}
               </p>
             </div>
-            <div className="shrink-0">
-              {open ? (
-                <Button href={settings.newsletterUrl} size="lg">
-                  Join the mailing list
-                  <span aria-hidden="true">↗</span>
-                </Button>
-              ) : (
-                <p className="fine-print max-w-[16rem] border border-dashed border-white/30 px-5 py-4 text-white">
-                  Sign-up opens here shortly.
-                  {settings.contactEmail ? (
-                    <>
-                      {' '}
-                      Until then, write to{' '}
-                      <a href={`mailto:${settings.contactEmail}?subject=Mailing%20list`} className="tracking-normal normal-case underline underline-offset-4">
-                        {settings.contactEmail}
-                      </a>
-                      .
-                    </>
-                  ) : null}
-                </p>
-              )}
-            </div>
-          </div>
+          )}
         </div>
 
         <div className="mt-20 grid gap-8 border-t border-white/15 pt-6 sm:grid-cols-2 sm:mt-28">
@@ -87,14 +116,14 @@ export function Newsletter({ settings }: { settings: Settings }) {
           <ul className="fine-print -my-1.5 flex flex-wrap gap-x-6 sm:justify-end text-mute">
             {ig ? (
               <li>
-                <a href={ig} target="_blank" rel="noopener noreferrer" className="inline-block py-1.5 text-white hover:text-mute">
+                <a href={ig} target="_blank" rel="noopener noreferrer" className="link-draw inline-block py-1.5 text-white">
                   Instagram {handle ? <span className="tracking-normal normal-case">{handle}</span> : null}
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </li>
             ) : null}
             <li>
-              <Link href="/partners" className="inline-block py-1.5 text-white hover:text-mute">
+              <Link href="/partners" className="link-draw inline-block py-1.5 text-white">
                 Organizations: partner with us
               </Link>
             </li>
