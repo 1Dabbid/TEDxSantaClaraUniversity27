@@ -7,7 +7,9 @@ import type { FaqItem } from '@/lib/content';
  *
  * `ids` (on /faq only): each question gets its own address (`/faq#<id>`, ids from
  * lib/faq-ids.ts) and a "Link to this question" anchor under its answer. The home
- * section leaves them out, so the page never has two elements with one id.
+ * section leaves them out, so the page never has two elements with one id. The
+ * linked question is marked with `data-linked` (FaqHashOpen), not `:target`, which
+ * the motion engine's pushState navigation never updates.
  */
 const answer = (text: string) => (
   <p className="min-w-0 max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{text}</p>
@@ -19,7 +21,7 @@ export function FaqList({ items, ids, className = '' }: { items: FaqItem[]; ids?
       {items.map((item, i) => {
         const id = ids?.[i];
         return (
-          <li key={i} id={id} className="min-w-0 border-b border-white/15 target:border-b-accent">
+          <li key={i} id={id} className="min-w-0 border-b border-white/15 data-linked:border-b-accent">
             <details className="faq-clause group">
               <summary
                 className="group/q grid min-h-11 cursor-pointer list-none grid-cols-[2.5rem_minmax(0,1fr)_2rem] items-baseline gap-2 py-6 text-lg font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] sm:grid-cols-[4rem_minmax(0,1fr)_2.5rem] sm:text-2xl sm:tracking-tight [&::-webkit-details-marker]:hidden"

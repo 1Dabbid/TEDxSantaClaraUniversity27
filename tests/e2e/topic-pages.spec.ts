@@ -141,6 +141,9 @@ test.describe('FAQ deep links', () => {
     const target = page.locator(`[id="${id}"]`);
     await expect(target.locator('details')).toHaveAttribute('open', '');
     await expect(target).toBeInViewport();
+    // Marked as the linked one (and only it): data-linked, which follows pushState unlike :target.
+    await expect(page.locator('[data-linked]')).toHaveCount(1);
+    await expect(target).toHaveAttribute('data-linked', '');
     const header = await page.locator('header').first().boundingBox();
     const box = await target.boundingBox();
     expect(box!.y, 'question below the header').toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
