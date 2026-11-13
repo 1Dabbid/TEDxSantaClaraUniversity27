@@ -7,21 +7,28 @@ import { expect, test, type Page } from '@playwright/test';
  * visible as rendered: no waiting for the 3s CSS failsafe.
  */
 
-/** Fails the lazily loaded chunk that carries gsap, whatever its hashed name. Resolves once it has failed. */
-async function failGsapChunk(page: Page): Promise<{ failed: Promise<string> }> {
+/**
+ * Fails the lazily loaded chunk that carries gsap, whatever its hashed name, every
+ * time it is requested. `failed` resolves on the first failure; `lastFailure` is the
+ * time of the latest one (the chunk loader retries a failed chunk once, a few hundred
+ * ms later, and only then rejects the import).
+ */
+async function failGsapChunk(page: Page): Promise<{ failed: Promise<string>; lastFailure: () => number }> {
   let failed!: (url: string) => void;
+  let last = 0;
   const done = new Promise<string>((r) => (failed = r));
   await page.route(/\/_next\/static\/chunks\/.*\.js(\?.*)?$/, async (route) => {
     const res = await route.fetch();
     const body = await res.text();
     if (body.includes('scrollerProxy') && body.includes('autoSplit')) {
       await route.abort('failed');
+      last = Date.now();
       return failed(route.request().url());
     }
     return route.fulfill({ response: res, body });
   });
   // Wrapped: an async function returning a bare promise would wait for it.
-  return { failed: done };
+  return { failed: done, lastFailure: () => last };
 }
 
 /** Reveal targets and every element a section moment animates, with anything hidden on them. */
@@ -73,12 +80,14 @@ const hiddenMoments = (page: Page) =>
 
 for (const path of ['/', '/partners']) {
   test(`gsap chunk fails to load on ${path}: everything is visible within 1s`, async ({ page }) => {
-    const { failed } = await failGsapChunk(page);
+    const { failed, lastFailure } = await failGsapChunk(page);
     await page.goto(path, { waitUntil: 'load' });
     await failed;
-    // Within 1s of the failure (the CSS failsafe alone would take 3s).
-    const deadline = Date.now() + 1_000;
-    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('motion')), { timeout: 1_000 }).toBe(false);
+    // Motion goes off, and everything shows, within 1s of the final failed attempt
+    // (without the fix motion stays on and only the CSS failsafe acts, after 3s).
+    await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('motion')), { timeout: 2_500 }).toBe(false);
+    const deadline = lastFailure() + 1_000;
+    expect(Date.now(), 'motion off within 1s of the failure').toBeLessThanOrEqual(deadline);
     await expect.poll(() => hiddenMoments(page), { timeout: Math.max(100, deadline - Date.now()) }).toEqual([]);
 
     // Further down the page as well (nothing is armed later on).
@@ -86,5 +95,7 @@ for (const path of ['/', '/partners']) {
     await page.waitForTimeout(300);
     expect(await hiddenMoments(page)).toEqual([]);
     expect(await page.evaluate(() => document.documentElement.hasAttribute('data-reveals'))).toBe(false);
+    // Chunk requests still in flight when the test ends must not fail it.
+    await page.unrouteAll({ behavior: 'ignoreErrors' });
   });
 }

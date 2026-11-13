@@ -90,7 +90,8 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
   // We restore positions ourselves; the browser's own restoration would jump first.
   const prevRestoration = history.scrollRestoration;
   history.scrollRestoration = 'manual';
-  let pending: { url: URL; at: number } | null = null;
+  type Pending = { url: URL; at: number; cancelled?: boolean };
+  let pending: Pending | null = null;
   let popped = false;
   let fallback: ReturnType<typeof setTimeout> | undefined;
   let tl: gsap.core.Timeline | null = null;
@@ -148,13 +149,14 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
 
   const navigate = async (url: URL) => {
     if (pending) return;
-    const nav = (pending = { url, at: performance.now() });
+    const nav: Pending = { url, at: performance.now() };
+    pending = nav;
     positions.set(currentKey, lenisRef.current?.scroll ?? window.scrollY);
     html.classList.add('nav-pending');
     lenisRef.current?.stop();
     await cover();
     // Superseded while the curtain came down (back/forward, teardown): do not push.
-    if (pending !== nav) return;
+    if (pending !== nav || nav.cancelled) return;
     // If the route never changes (error, identical path), never leave the curtain down.
     fallback = setTimeout(() => {
       lenisRef.current?.start();
@@ -242,7 +244,21 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
   const onNavigate = (e: Event) => {
     const ev = e as NavEvent;
     if (ev.navigationType !== 'traverse' || !ev.destination) return;
-    if (keyOf(new URL(ev.destination.url)) !== currentKey) popped = true;
+    if (keyOf(new URL(ev.destination.url)) !== currentKey) traversed();
+  };
+
+  // Back/forward to another page. If one of our transitions is under way, it must not
+  // push once its curtain is down (the traversal wins); onRoute lifts the curtain, and
+  // the fallback does if the traversal never renders.
+  const traversed = () => {
+    popped = true;
+    if (!pending || pending.cancelled) return;
+    pending.cancelled = true;
+    clearTimeout(fallback);
+    fallback = setTimeout(() => {
+      lenisRef.current?.start();
+      finish();
+    }, 5000);
   };
 
   // Set while a route change has just been rendered in the current task. Without the
@@ -253,7 +269,7 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
   const onPop = () => {
     if (popped) return; // route change already in progress (see onNavigate)
     if (justRouted) {
-      popped = true; // the router got there first; onRoute reads this in its frame
+      traversed(); // the router got there first; onRoute reads this in its frame
       return;
     }
     if (keyOf(location) === currentKey) {
@@ -263,7 +279,7 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
       });
       return;
     }
-    popped = true;
+    traversed();
   };
 
   // Cold load on a deep link (/#tickets): the browser jumps before web fonts, the
