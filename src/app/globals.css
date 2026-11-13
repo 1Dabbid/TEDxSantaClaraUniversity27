@@ -1428,3 +1428,17 @@ html.save-data #main:has(> [data-scene-stills]) > [data-section]:not([data-secti
     display: none;
   }
 }
+
+/* Section scrims meet at section edges with different strengths (a strong
+   left-hand column over a weak right-hand side, say), which drew hard
+   horizontal seams across the stills and the live scene. Feathered to nothing
+   over the outer 5rem, inside every section's 6rem padding, so neighbouring
+   scrims hand over through the bare frame instead of a step. */
+.scrim-y,
+.scrim-left,
+.schedule-scrim {
+  mask-image: linear-gradient(to bottom, transparent, #000 5rem, #000 calc(100% - 5rem), transparent);
+}
+.speakers-scrim {
+  mask-image: linear-gradient(to top, transparent, #000 5rem);
+}
