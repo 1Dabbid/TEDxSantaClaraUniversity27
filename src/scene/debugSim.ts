@@ -56,7 +56,7 @@ type Frame = {
   dev: number;
 };
 
-const r3 = (v: Vector3): [number, number, number] => [+v.x.toFixed(5), +v.y.toFixed(5), +v.z.toFixed(5)];
+const r3 = (v: Vector3): [number, number, number] => [+v.x.toFixed(8), +v.y.toFixed(8), +v.z.toFixed(8)];
 
 export function installSim(getShots: () => { shots: ResolvedShot[]; away: ResolvedShot }) {
   const api = {

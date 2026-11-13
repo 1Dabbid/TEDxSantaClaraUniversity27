@@ -329,7 +329,7 @@ export function createGrilleMaterial(cheap: boolean) {
     uInner: { value: 1.3 },
     uFoam: { value: lin('#030304') },
   };
-  const m = new MeshStandardMaterial({ color: lin('#7a7f87'), metalness: 1, roughness: 0.12, envMapIntensity: 0.32 });
+  const m = new MeshStandardMaterial({ color: lin('#6d7178'), metalness: 1, roughness: 0.12, envMapIntensity: 0.24 });
   patch(m, `mic-grille-${cheap ? 1 : 0}`, {
     uniforms,
     fragmentHead: `uniform float uGC; uniform float uGR; uniform float uSquash; uniform float uPitch; uniform float uWire; uniform float uAmp; uniform float uInner; uniform vec3 uFoam;`,
