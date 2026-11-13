@@ -30,7 +30,7 @@ const COPY: Record<TicketState, Copy> = {
   'on-sale': {
     title: 'Tickets are on sale.',
     subtitle: 'One room, one evening.',
-    body: 'When the room is full, it is full.',
+    body: 'Seats are limited. When the room is full, it is full.',
   },
   'sold-out': {
     title: 'Every seat is taken.',
@@ -193,7 +193,7 @@ export async function Tickets({ settings }: { settings: Settings }) {
               </span>
             </SectionTitle>
             <p data-reveal="fade" className="mt-8 max-w-xl text-lg text-mute">
-              {state === 'on-sale' && settings.ticketPriceNote ? `${settings.ticketPriceNote} ${copy.body}` : copy.body}
+              {copy.body}
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <TicketAction settings={settings} showFaq={showFaq} />

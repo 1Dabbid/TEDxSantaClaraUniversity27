@@ -17,22 +17,23 @@ const cardBase = `speaker-card group relative flex min-w-0 flex-col ${glass}`;
 export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
   const clause = `§ 2.${index + 1}`;
   return (
-    <li className={cardBase} data-cursor="loupe" data-cursor-zoom="2.2">
-      <div className="speaker-photo relative aspect-[4/5] overflow-hidden bg-black">
+    // Phones: portrait beside the text (a column of full-width portraits is six screens long).
+    <li className={`${cardBase} max-sm:flex-row`} data-cursor="loupe" data-cursor-zoom="2.2">
+      <div className="speaker-photo relative aspect-[4/5] overflow-hidden bg-black max-sm:w-28 max-sm:shrink-0">
         {speaker.photo ? (
           <Image
             src={speaker.photo}
             alt=""
             fill
-            sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 100vw"
+            sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 112px"
             className="object-cover grayscale transition-[filter,transform] duration-1000 ease-[var(--ease-cinema)] group-hover:scale-[1.03] group-hover:grayscale-0"
           />
         ) : null}
-        <span aria-hidden="true" className="fine-print absolute left-4 top-4 text-white">
+        <span aria-hidden="true" className="fine-print absolute left-4 top-4 text-white max-sm:left-2 max-sm:top-2">
           {clause}
         </span>
       </div>
-      <div className="speaker-text p-6">
+      <div className="speaker-text min-w-0 p-6 max-sm:self-center max-sm:p-4">
         <h3 className="text-xl font-semibold tracking-tight">
           <Link href={`/speakers/${speaker.slug}`} className="after:absolute after:inset-0 after:content-['']">
             {speaker.name}
