@@ -2,7 +2,7 @@
 
 The event site for **TEDxSantaClaraUniversity**, theme **Fine Print**: Friday, April 23, 2027, Locatelli Student Activity Center, Santa Clara University. Live at **https://fineprint.tedxscu.com** (Vercel, from the GitHub repo `1Dabbid/TEDxSantaClaraUniversity27`).
 
-Three public pages: the home page (`/`), `/partners`, and one page per speaker (`/speakers/<slug>`). Every word, date, link and photo is edited in a content admin at `/keystatic`; nobody needs to touch code to run the event.
+Public pages: the home page (`/`), `/partners`, `/speakers` (all speakers) and one page per speaker (`/speakers/<slug>`). Every word, date, link and photo is edited in a content admin at `/keystatic`; nobody needs to touch code to run the event.
 
 | You want to… | Read |
 | --- | --- |
@@ -38,13 +38,15 @@ Pages read content only through `src/lib/content.ts` (Keystatic's reader, at bui
 
 ```
 src/
-  app/                  routes: /, /partners, /speakers/[slug], /keystatic, /api/keystatic,
-                        sitemap.ts, robots.ts, opengraph-image.tsx (built at build time), not-found.tsx,
+  app/                  routes: /, /partners, /speakers, /speakers/[slug], /keystatic, /api/keystatic,
+                        sitemap.ts, robots.ts (noindex on Vercel previews), manifest.ts, icons (icon.svg,
+                        favicon.ico, apple-icon.png; rasters from scripts/generate-icons.mjs),
+                        opengraph-image.tsx and speakers/[slug]/opengraph-image.tsx (built at build time), not-found.tsx,
                         error.tsx (page error boundary), global-error.tsx (self-contained, root layout failures)
   components/           Header, Footer, MobileMenu, Logo, SkipLink, ChromeGate (no chrome on /keystatic), nav.ts
   components/sections/  Hero, Theme, Speakers, Schedule, Venue, Tickets, Team, Faq, Newsletter
   components/print/     the "fine print" primitives: clause numbers, TBA marker, redaction bars, crop marks, JSON-LD
-  lib/                  content.ts (loader), quality.ts (tiers), site.ts (constants), jsonld.ts, links.ts, tickets.ts
+  lib/                  content.ts (loader), quality.ts (tiers), site.ts (constants), dates.ts (fixed-timezone dates), jsonld.ts, links.ts, tickets.ts
   motion/               MotionRoot, SmoothScroll (Lenis), SceneGate, gsap.ts, lenisRef.ts, useSectionMotion.ts
   motion/engine/        reveal, cursor, magnetic, navigation (page transitions), chrome (header), focus
   motion/sections/      one scroll moment per section (*Motion.tsx) + kit.ts

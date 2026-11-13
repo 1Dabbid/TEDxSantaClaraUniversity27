@@ -40,6 +40,12 @@ The repo's default branch is currently `claude/keen-tesla-m8scyh`. Vercel uses t
 
 There is **no environment variable** for it: the code does not read `NEXT_PUBLIC_SITE_URL` or similar. The canonical address is the constant `SITE_URL = 'https://fineprint.tedxscu.com'` in `src/lib/site.ts`, used for canonical links, Open Graph and share previews (`metadataBase`), `robots.txt`, `sitemap.xml` and the structured data. If the domain ever changes, edit that one line (and update the Keystatic GitHub App's callback URL, step d.8).
 
+### Search engines and preview URLs
+
+Only the production deployment may be indexed. The rule (`isIndexable()` in `src/lib/site.ts`, read at build time): when Vercel's `VERCEL_ENV` is set to anything other than `production` (preview and development deployments), `robots.txt` disallows everything and every page carries `<meta name="robots" content="noindex, nofollow">`. Production deployments, and builds outside Vercel (no `VERCEL_ENV`, e.g. `npm run build && npm run start` locally or in CI), are indexable. Nothing needs to be set: Vercel provides `VERCEL_ENV` itself. If the site is ever hosted somewhere other than Vercel, set `VERCEL_ENV=preview` on that host's non-production builds.
+
+The production deployment is also reachable at its `*.vercel.app` address, which would duplicate the site. Redirect it: Project > **Settings > Domains** > the `*.vercel.app` domain > **Edit** > **Redirect to** `fineprint.tedxscu.com` (308, permanent) **(verify on first deploy)**. The canonical links already point at the custom domain, so this only keeps the duplicate out of sight.
+
 ## d. Turn on the online admin (Keystatic GitHub mode)
 
 Without this, `/keystatic` only works on someone's computer with `npm run dev`. With it, editors sign in with GitHub on the live site and every save is a commit.
@@ -72,14 +78,14 @@ Saves go to the repo's **default branch** (`main`), which Vercel deploys: live i
 
 ## e. Post-deploy checklist
 
-- [ ] `https://fineprint.tedxscu.com` loads over HTTPS; `http://` and the `*.vercel.app` URL redirect or work.
+- [ ] `https://fineprint.tedxscu.com` loads over HTTPS; `http://` and the `*.vercel.app` URL redirect to it (see "Search engines and preview URLs").
 - [ ] **Real iPhone, Safari**: home page scrolls smoothly, the menu opens and closes, the 3D scene appears after a moment (or the static design shows on Low Power Mode / Reduce Motion), no sideways scrolling, Tickets button works.
 - [ ] **Firefox** (desktop): same checks.
 - [ ] **A mid-range laptop** (not your fastest machine): scrolling stays smooth with the scene on; add `?quality=low` and `?quality=static` to compare.
 - [ ] **Reduce motion** turned on in the OS: no animation, everything readable.
 - [ ] **Lighthouse** (Chrome DevTools > Lighthouse, mobile, on the live URL): Performance, Accessibility, Best Practices, SEO all green; note the scores for next year.
 - [ ] **Share preview**: paste the URL into iMessage/WhatsApp/Slack/LinkedIn (LinkedIn Post Inspector, or opengraph.xyz) and check the image, title and description.
-- [ ] `https://fineprint.tedxscu.com/robots.txt` and `/sitemap.xml` load; search for the site in Google Search Console once it is set up (optional).
+- [ ] `https://fineprint.tedxscu.com/robots.txt` and `/sitemap.xml` load (robots.txt must allow `/` on production; a preview URL's robots.txt says `Disallow: /`); search for the site in Google Search Console once it is set up (optional).
 - [ ] `/keystatic`: sign in, change a harmless FAQ answer, save, and see it live within a couple of minutes; change it back.
 - [ ] The footer shows "This independent TEDx event is operated under license from TED."
 
