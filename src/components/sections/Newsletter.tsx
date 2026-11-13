@@ -38,20 +38,8 @@ export function Newsletter({ settings }: { settings: Settings }) {
         <div data-reveal="fade">
           <SectionLabel>Stay informed</SectionLabel>
         </div>
-        {/* A fade, not a line split: the heading holds the note link, and a split is
-            reverted by replacing its markup, which would drop keyboard focus from the
-            link if it lands there mid-reveal. */}
-        <SectionTitle id="newsletter" reveal={false} className="max-w-[14ch] text-[clamp(3rem,10vw,9.5rem)]! leading-[0.9]!">
-          <span data-reveal="fade" className="block">
-            {settings.copy.newsletterHeading}
-            <a
-              href="#newsletter-note"
-              className="relative ml-[0.08em] align-super font-mono text-[0.22em] font-normal tracking-normal text-accent no-underline after:absolute after:-inset-3 after:content-[''] hover:text-white"
-            >
-              <span aria-hidden="true">1</span>
-              <span className="sr-only"> (see note 1)</span>
-            </a>
-          </span>
+        <SectionTitle id="newsletter" className="max-w-[14ch] text-[clamp(3rem,10vw,9.5rem)]! leading-[0.9]!">
+          {settings.copy.newsletterHeading}
         </SectionTitle>
         <p data-reveal="fade" className="mt-8 max-w-xl text-lg text-mute sm:text-xl">
           Ticket releases, speaker announcements and applications go to the mailing list first.
@@ -119,8 +107,8 @@ export function Newsletter({ settings }: { settings: Settings }) {
         </div>
 
         <div className="mt-16 grid gap-8 border-t border-white/15 pt-6 sm:grid-cols-2 sm:mt-24">
-          <p id="newsletter-note" data-cursor="loupe" className="fine-print max-w-md text-mute">
-            <span className="text-accent">1.</span> The list is only used for <EventName /> event news. You can
+          <p data-cursor="loupe" className="fine-print max-w-md text-mute">
+            The list is only used for <EventName /> event news. You can
             unsubscribe at any time.
           </p>
           <ul className="fine-print -my-1.5 flex flex-wrap gap-x-6 sm:justify-end text-mute">

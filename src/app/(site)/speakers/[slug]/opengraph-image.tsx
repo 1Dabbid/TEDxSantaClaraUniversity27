@@ -112,7 +112,7 @@ export default async function SpeakerImage({ params }: { params: Promise<{ slug:
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <div style={{ display: 'flex', fontSize: 30 }}>{`${s.dateMedium} · ${place}`}</div>
             <div style={{ display: 'flex', fontSize: 18, color: grey, marginTop: 14 }}>
-              Independently organized TEDx event, operated under license from TED
+              This independent TEDx event is operated under license from TED.
             </div>
           </div>
         </div>

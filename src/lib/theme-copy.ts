@@ -13,7 +13,7 @@
  * and {campus}, filled in from Event basics and Venue like FAQ answers.
  */
 export const THEME_COPY_DEFAULTS = {
-  /** Hero footnote (after the red "1."). Blank: no footnote marker in the hero or the share image. */
+  /** Hero caption, small capitals at the bottom of the first screen. Blank: left out. */
   heroFootnote: 'Terms and conditions apply. They are the whole point.',
   /** Hero scroll cue, bottom right on desktop. */
   heroScrollCue: 'Scroll to read the fine print',
