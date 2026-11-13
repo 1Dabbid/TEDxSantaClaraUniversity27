@@ -48,6 +48,35 @@ test.describe('mobile menu', () => {
     await expect(toggle).toBeFocused();
     expect(await page.locator('#main').evaluate((m) => m.parentElement?.hasAttribute('inert'))).toBe(false);
   });
+
+  test.describe('viewport crosses the lg breakpoint while it is open', () => {
+    // A tablet in portrait, then rotated to landscape (the toggle is lg:hidden).
+    test.use({ viewport: { width: 820, height: 1180 } });
+
+    test('the menu closes and the page is usable again', async ({ page }) => {
+      await page.goto('/');
+      await settle(page, 300);
+      await page.getByRole('button', { name: 'Open menu' }).click();
+      await expect(page.locator('[data-menu-panel]')).toBeVisible();
+      const locked = () =>
+        page.evaluate(() => ({
+          inert: Boolean(document.getElementById('main')?.parentElement?.hasAttribute('inert')),
+          overflow: document.documentElement.style.overflow,
+          menuOpen: document.documentElement.hasAttribute('data-menu-open'),
+          lenisStopped: document.documentElement.classList.contains('lenis-stopped'),
+        }));
+      expect((await locked()).inert).toBe(true);
+
+      await page.setViewportSize({ width: 1180, height: 820 });
+      await expect.poll(locked).toEqual({ inert: false, overflow: '', menuOpen: false, lenisStopped: false });
+
+      // Wheel scrolling works again, and so do clicks on the page.
+      await page.mouse.move(600, 400);
+      await page.mouse.wheel(0, 1200);
+      await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
+      await page.locator('main a[href]').first().click({ trial: true, timeout: 2_000 });
+    });
+  });
 });
 
 test.describe('reduced motion', () => {
