@@ -25,9 +25,18 @@ export type Engine = {
 
 const FINE = '(hover: hover) and (pointer: fine)';
 
-export function startEngine({ push, prefetch, cursorRoot, curtain }: EngineOptions): Engine {
+export function startEngine(options: EngineOptions): Engine {
   const cleanups: (() => void)[] = [];
+  try {
+    return build(options, cleanups);
+  } catch (err) {
+    // Half started: let go of whatever did start (ticker callbacks, listeners, the curtain).
+    cleanups.forEach((c) => c());
+    throw err;
+  }
+}
 
+function build({ push, prefetch, cursorRoot, curtain }: EngineOptions, cleanups: (() => void)[]): Engine {
   cleanups.push(initChrome());
   cleanups.push(initFocusScroll());
   const nav = initNavigation({ push, prefetch }, curtain);
@@ -67,17 +76,21 @@ export function startEngine({ push, prefetch, cursorRoot, curtain }: EngineOptio
   document.fonts?.addEventListener?.('loadingdone', onFonts);
   cleanups.push(() => document.fonts?.removeEventListener?.('loadingdone', onFonts));
 
+  let scanRaf = 0;
   return {
     route(initial) {
       pruneReveals();
       nav.onRoute(initial);
       // Scan after the route's scroll reset so above-the-fold elements play at once.
-      requestAnimationFrame(() => {
+      cancelAnimationFrame(scanRaf);
+      scanRaf = requestAnimationFrame(() => {
         scanReveals(document);
         refreshSoon();
       });
     },
     stop() {
+      // A scan still scheduled would arm reveals after killReveals(), with no engine left.
+      cancelAnimationFrame(scanRaf);
       cancelAnimationFrame(refreshRaf);
       cleanups.forEach((c) => c());
       killReveals();

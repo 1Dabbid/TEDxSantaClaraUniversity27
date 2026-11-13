@@ -1,7 +1,7 @@
 'use client';
 
 import { useSectionMotion, type MotionKit } from '../useSectionMotion';
-import { belowFold, COMPACT, FULL, maskText, scrubbable } from './kit';
+import { belowFold, COMPACT, FULL, maskText, moment, scrubbable } from './kit';
 
 /**
  * The sign-off date. The footer lives in the root layout, so this runs on every
@@ -20,9 +20,10 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const dots = Array.from(date.querySelectorAll<HTMLElement>('[data-footer-dot]'));
 
   const mm = gsap.matchMedia();
-  mm.add({ full: FULL, compact: COMPACT }, (ctx) => {
+  mm.add({ full: FULL, compact: COMPACT }, moment((ctx: gsap.Context, cleanup) => {
     const full = Boolean(ctx.conditions?.full);
     let undo: (() => void) | null = null;
+    cleanup.push(() => undo?.());
 
     if (belowFold(date)) {
       const m = maskText(date, { only: /\d/ });
@@ -64,8 +65,7 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       );
     }
 
-    return () => undo?.();
-  });
+  }));
   return () => mm.revert();
 }
 

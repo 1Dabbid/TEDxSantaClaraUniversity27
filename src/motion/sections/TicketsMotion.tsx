@@ -1,7 +1,7 @@
 'use client';
 
 import { useSectionMotion, type MotionKit } from '../useSectionMotion';
-import { belowFold, COMPACT, FULL, maskText, scrubbable } from './kit';
+import { belowFold, COMPACT, FULL, maskText, moment, scrubbable } from './kit';
 
 /** A counter wheel: 0-9 and a second 0, so 9 -> 0 rolls forward. */
 const WHEEL = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
@@ -34,9 +34,8 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const seats = Number(ruler?.dataset.seats) || cells.length;
 
   const mm = gsap.matchMedia();
-  mm.add({ full: FULL, compact: COMPACT }, (ctx) => {
+  mm.add({ full: FULL, compact: COMPACT }, moment((ctx: gsap.Context, undo) => {
     const full = Boolean(ctx.conditions?.full);
-    const undo: (() => void)[] = [];
 
     if (ruler && seats > 1 && cells.length === seats && (full ? scrubbable(ruler) : belowFold(ruler))) {
       // The counter: one wheel per glyph of the printed count ("100" -> three).
@@ -93,8 +92,7 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       }
     }
 
-    return () => undo.forEach((u) => u());
-  });
+  }));
   return () => mm.revert();
 }
 

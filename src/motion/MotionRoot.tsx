@@ -4,6 +4,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { getQuality, useQuality } from '@/lib/quality';
 import type { Engine } from './engine';
+import { MOTION_OFF } from './useSectionMotion';
 
 /**
  * Mounts the global motion system from the root layout.
@@ -18,11 +19,35 @@ import type { Engine } from './engine';
  */
 
 let enginePromise: Promise<typeof import('./engine')> | null = null;
-const loadEngine = () => (enginePromise ??= import('./engine'));
+// A rejected import is not kept around: after a failure the next call imports afresh.
+const loadEngine = () =>
+  (enginePromise ??= import('./engine').catch((err: unknown) => {
+    enginePromise = null;
+    throw err;
+  }));
+
+// Set when the engine failed to load or start: motion stays off for this page view.
+let engineFailed = false;
+
+/**
+ * The engine could not run (chunk failed to load, or it threw while starting):
+ * drop `html.motion` at once, so nothing waits for the 3s CSS failsafe, and let
+ * section moments that already ran revert to the static markup.
+ */
+function motionOff(err: unknown) {
+  console.error('[motion] engine unavailable, showing the static page:', err);
+  engineFailed = true;
+  const html = document.documentElement;
+  html.classList.remove('motion');
+  html.removeAttribute('data-reveals');
+  window.dispatchEvent(new Event(MOTION_OFF));
+}
 
 // Start fetching the engine chunk during hydration when motion is likely on.
 if (typeof window !== 'undefined' && document.documentElement.classList.contains('motion')) {
-  void loadEngine();
+  // Failed during hydration: show the static page now rather than after the effect's
+  // own attempt (which only starts once hydration is done).
+  loadEngine().catch(motionOff);
 }
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
@@ -45,23 +70,34 @@ export default function MotionRoot() {
 
   // Never trust the hydration-time 'static' snapshot here: read the live tier.
   useIsoLayoutEffect(() => {
-    const on = getQuality() !== 'static' && !admin;
+    const on = getQuality() !== 'static' && !admin && !engineFailed;
     document.documentElement.classList.toggle('motion', on);
   }, [quality, admin]);
 
   useEffect(() => {
-    if (!active) return;
+    // Motion stays off for this page view once the engine failed (a reload tries again).
+    if (!active || engineFailed) return;
     let cancelled = false;
-    loadEngine().then(({ startEngine }) => {
-      if (cancelled) return;
-      engineRef.current = startEngine({
-        push: (href) => routerRef.current.push(href, { scroll: false }),
-        prefetch: (href) => routerRef.current.prefetch(href),
-        cursorRoot: cursorRef.current,
-        curtain: curtainRef.current,
+    loadEngine()
+      .then(({ startEngine }) => {
+        if (cancelled) return;
+        engineRef.current = startEngine({
+          push: (href) => routerRef.current.push(href, { scroll: false }),
+          prefetch: (href) => routerRef.current.prefetch(href),
+          cursorRoot: cursorRef.current,
+          curtain: curtainRef.current,
+        });
+        engineRef.current.route(true);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        try {
+          engineRef.current?.stop();
+        } finally {
+          engineRef.current = null;
+          motionOff(err);
+        }
       });
-      engineRef.current.route(true);
-    });
     return () => {
       cancelled = true;
       engineRef.current?.stop();
