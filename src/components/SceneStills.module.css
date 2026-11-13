@@ -30,19 +30,21 @@
   object-fit: cover;
 }
 
-/* Everything but the hero waits for its section (below), so its image is not requested up front. */
+/* Everything but the hero waits for its section (below). `content-visibility:
+   hidden` keeps the lazy image out of layout, so it is not requested up front
+   (`display: none` would also stop the scroll-driven animation from running). */
 .layer:not(.hero) {
-  display: none;
+  opacity: 0;
+  content-visibility: hidden;
 }
 .end {
   background: #000;
 }
 
 /* Each still fades in over the previous one as its section's top passes the
-   middle of the viewport (between 65% and 35% of its height), and is displayed,
-   so its lazy image starts loading, from the moment the section enters at the
-   bottom. Scrolling back up reverses it. `forwards` only: before the range the
-   base `display: none` applies. */
+   middle of the viewport (between 65% and 35% of its height), and is rendered,
+   so its lazy image starts loading, once the section is 15% into the viewport. Scrolling back up reverses it. `forwards` only: before the range the
+   hidden base style applies. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     .layer:not(.hero) {
@@ -50,7 +52,7 @@
       animation-duration: auto;
       animation-timing-function: linear;
       animation-fill-mode: forwards;
-      animation-range: cover 0% cover 65vh;
+      animation-range: cover 15vh cover 65vh;
     }
     .theme {
       animation-timeline: --fp-still-theme;
@@ -72,15 +74,15 @@
 
 @keyframes still-in {
   0% {
-    display: block;
+    content-visibility: visible;
     opacity: 0;
   }
-  54% {
-    display: block;
+  40% {
+    content-visibility: visible;
     opacity: 0;
   }
   100% {
-    display: block;
+    content-visibility: visible;
     opacity: 1;
   }
 }
@@ -88,6 +90,9 @@
 /* No scroll-driven animations (and motion on): only the hero still, at the top
    of the page, scrolling away with it. */
 @supports not (animation-timeline: view()) {
+  .layer:not(.hero) {
+    display: none;
+  }
   .stack {
     position: absolute;
     inset: calc(-1 * var(--header-h)) 0 auto;

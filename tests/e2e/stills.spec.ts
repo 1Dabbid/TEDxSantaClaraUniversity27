@@ -49,7 +49,8 @@ test.describe('scene stills', () => {
     // Only the hero still is requested up front.
     expect(requested).toEqual(['/stills/hero-landscape.avif']);
     expect(await layer(page, 'hero').locator('img').evaluate((i: HTMLImageElement) => i.complete && i.naturalWidth > 0)).toBe(true);
-    expect(await display(page, '[data-still="theme"]')).toBe('none');
+    // The next still is not rendered yet (content-visibility keeps its lazy image unrequested).
+    expect(await layer(page, 'theme').evaluate((el) => getComputedStyle(el).contentVisibility)).toBe('hidden');
 
     await scrollToSection(page, 'theme', 0.2);
     await expect(layer(page, 'theme')).toHaveCSS('opacity', '1');
