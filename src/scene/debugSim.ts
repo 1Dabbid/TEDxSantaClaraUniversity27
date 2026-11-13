@@ -1,7 +1,7 @@
 import { Vector3 } from 'three';
 import { SPINE, journey, micPoint, type ResolvedShot } from './choreography';
 import { clearance } from './clearance';
-import { createRig, createRigOut, stepRig, type LookOut } from './rig';
+import { createRig, createRigOut, nearCorner, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
 
 /**
@@ -60,7 +60,21 @@ type Frame = {
   dev: number;
   /** Lens shift: where the target sits on screen (fractions from the left / top). */
   shift: [number, number];
+  /** Camera roll about the view axis relative to a level horizon (deg), as rendered. */
+  rollDeg: number;
+  /** Light: overhead spot, volumetric cone and dust motes multipliers. */
+  spot: number;
+  cone: number;
+  motes: number;
 };
+
+const WORLD_UP = new Vector3(0, 1, 0);
+/** Roll (deg) of an up vector about a view direction, relative to the level horizon. */
+function rollOf(fwd: Vector3, up: Vector3): number {
+  const u0 = WORLD_UP.clone().addScaledVector(fwd, -WORLD_UP.dot(fwd)).normalize();
+  const left = new Vector3().crossVectors(fwd, u0);
+  return (Math.atan2(up.dot(left), up.dot(u0)) * 180) / Math.PI;
+}
 
 /** Screen position (fractions from the left / top) of world point P for a frame. */
 function project(f: Frame, P: Vector3, aspect: number): [number, number, number] {
@@ -98,8 +112,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       seq.forEach((J, i) => {
         stepRig(rig, shots, away, { J, dt, t: opts.drift === false ? 10 : t, pointerX: 0, pointerY: 0, snap: i === 0, aspect }, look, out);
         t += dt;
-        const ty = Math.tan((look.fov * Math.PI) / 360);
-        const corner = out.near * Math.sqrt(1 + ty * ty * (1 + aspect * aspect));
+        // The same near-plane corner as the rig (lens shift included).
+        const corner = nearCorner(out.near, look.fov, out.shiftX, out.shiftY, aspect);
         const [gap, obj] = clearance(out.position);
         frames.push({
           J: +J.toFixed(5),
@@ -116,6 +130,10 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
           gap: +gap.toFixed(4),
           dev: +((Math.acos(Math.min(1, -out.fwd.dot(out.s.dir))) * 180) / Math.PI).toFixed(3),
           shift: [+out.shiftX.toFixed(5), +out.shiftY.toFixed(5)],
+          rollDeg: +rollOf(new Vector3().subVectors(out.target, out.position).normalize(), out.up).toFixed(4),
+          spot: +look.spot.toFixed(4),
+          cone: +look.cone.toFixed(4),
+          motes: +look.motes.toFixed(4),
         });
       });
       return frames;
@@ -124,7 +142,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
   const metrics = (opts: { from?: number; to?: number; outFrom?: number; step?: number } = {}) => {
     const from = opts.from ?? 2.0; // start of Speakers
     const to = opts.to ?? 6.0; // end of Tickets
-    const outFrom = opts.outFrom ?? 1.8; // the macro's last shot: the pull back starts here
+    const outFrom = opts.outFrom ?? 1.72; // the macro's last shot: the pull back starts here
     const step = opts.step ?? 0.001;
     const js: number[] = [];
     for (let J = 0; J <= to + 1e-9; J += step) js.push(+J.toFixed(5));
@@ -152,14 +170,22 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     const foot = new Vector3(SPINE.x, 0, SPINE.z);
     const drift = (P: Vector3, frames = sp) => {
       // Only frames where the point is in the picture (the foot is below the frame in the first close shots).
-      const q = frames.map((f) => project(f, P, aspect)).filter((v) => v[2] > 0 && v[0] >= 0 && v[0] <= 1 && v[1] >= 0 && v[1] <= 1);
+      const q = frames
+        .map((f) => [...project(f, P, aspect), f.J] as const)
+        .filter((v) => v[2] > 0 && v[0] >= 0 && v[0] <= 1 && v[1] >= 0 && v[1] <= 1);
       const xs = q.map((v) => v[0]);
       const ys = q.map((v) => v[1]);
+      const at = (arr: number[], v: number) => q[arr.indexOf(v)]?.[3] ?? -1;
+      const yMin = Math.min(...ys);
+      const yMax = Math.max(...ys);
       return {
         xMin: +Math.min(...xs).toFixed(4),
         xMax: +Math.max(...xs).toFixed(4),
-        yMin: +Math.min(...ys).toFixed(4),
-        yMax: +Math.max(...ys).toFixed(4),
+        yMin: +yMin.toFixed(4),
+        yMax: +yMax.toFixed(4),
+        /** Where the extremes of height happen (journey position): check those frames for a clipped subject. */
+        yMinAtJ: at(ys, yMin),
+        yMaxAtJ: at(ys, yMax),
         driftXPct: +((Math.max(...xs) - Math.min(...xs)) * 100).toFixed(2),
       };
     };
@@ -194,6 +220,32 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       const r = Math.max(d0, d1) / Math.max(1e-6, Math.min(d0, d1));
       if (r > zoomStep) [zoomStep, zoomAt] = [r, J];
     }
+    // Roll about the view axis across the pull back (the macro stands the barrel upright; the
+    // pull back must unwind that slowly, or the subject spins while it recedes).
+    const pull = F.filter((f) => f.J >= outFrom && f.J <= from + 0.3);
+    const rolls = pull.map((f) => f.rollDeg);
+    let rollStep = 0;
+    let rollStepAt = 0;
+    for (let J = outFrom; J <= from + 0.3 - 0.125 + 1e-9; J += 0.005) {
+      const f0 = byJ.get(J.toFixed(3));
+      const f1 = byJ.get((J + 0.125).toFixed(3));
+      if (!f0 || !f1) continue;
+      const r = Math.abs(f1.rollDeg - f0.rollDeg);
+      if (r > rollStep) [rollStep, rollStepAt] = [r, J];
+    }
+    // Light between filmstrip frames around the light-up (J 1.9..2.7): the largest change of the
+    // overhead spot and of the volumetric cone over one filmstrip step (J 0.125).
+    let spotStep = 0;
+    let spotAt = 0;
+    let coneStep = 0;
+    let coneAt = 0;
+    for (let J = 1.9; J <= 2.7 - 0.125 + 1e-9; J += 0.005) {
+      const f0 = byJ.get(J.toFixed(3));
+      const f1 = byJ.get((J + 0.125).toFixed(3));
+      if (!f0 || !f1) continue;
+      if (Math.abs(f1.spot - f0.spot) > spotStep) [spotStep, spotAt] = [Math.abs(f1.spot - f0.spot), J];
+      if (Math.abs(f1.cone - f0.cone) > coneStep) [coneStep, coneAt] = [Math.abs(f1.cone - f0.cone), J];
+    }
     let minClr = Infinity;
     let clrAt = '';
     for (const f of F) if (f.clr < minClr) [minClr, clrAt] = [f.clr, `${f.obj}@J${f.J}`];
@@ -205,7 +257,10 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       const id = SECTION_IDS[k];
       return (L.tops[id] ?? 0) + (J - k) * (L.heights[id] ?? 0) - L.vh / 2;
     };
-    const scroll: Record<string, { maxAngVelDegS: number; atJ: number; minClearance: number; clrObj: string }> = {};
+    const scroll: Record<
+      string,
+      { maxAngVelDegS: number; atJ: number; maxRollRateDegS: number; rollAtJ: number; minClearance: number; clrObj: string }
+    > = {};
     for (const speed of [1500, 4000]) {
       const y0 = yAt(1.0);
       const y1 = yAt(5.9999);
@@ -218,14 +273,25 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       let at = 0;
       let mc = Infinity;
       let mo = '';
+      let maxR = 0;
+      let rAt = 0;
       for (let i = 1; i < R.length; i++) {
+        const rr = Math.abs(R[i].rollDeg - R[i - 1].rollDeg) * 60;
+        if (rr > maxR) [maxR, rAt] = [rr, R[i].Js];
         const a = new Vector3(...R[i - 1].tgt).sub(new Vector3(...R[i - 1].pos)).normalize();
         const c = new Vector3(...R[i].tgt).sub(new Vector3(...R[i].pos)).normalize();
         const w = ((Math.acos(Math.min(1, a.dot(c))) * 180) / Math.PI) * 60;
         if (w > maxW) [maxW, at] = [w, R[i].J];
         if (R[i].clr < mc) [mc, mo] = [R[i].clr, R[i].obj];
       }
-      scroll[speed] = { maxAngVelDegS: +maxW.toFixed(1), atJ: at, minClearance: mc, clrObj: mo };
+      scroll[speed] = {
+        maxAngVelDegS: +maxW.toFixed(1),
+        atJ: at,
+        maxRollRateDegS: +maxR.toFixed(1),
+        rollAtJ: rAt,
+        minClearance: mc,
+        clrObj: mo,
+      };
     }
     return {
       headingChangeDeg: +(Math.max(...dy) - Math.min(...dy)).toFixed(3),
@@ -239,6 +305,14 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       minClearance: minClr,
       minClearanceAt: clrAt,
       maxZoomPerFilmStep: { ratio: +zoomStep.toFixed(2), atJ: +zoomAt.toFixed(3) },
+      /** Roll across the pull back: total range (deg) and the largest change over one filmstrip step. */
+      rollPullBack: {
+        totalDeg: +(Math.max(...rolls) - Math.min(...rolls)).toFixed(2),
+        maxPerFilmStepDeg: +rollStep.toFixed(2),
+        atJ: +rollStepAt.toFixed(3),
+      },
+      /** The light-up: largest change of spot / cone over one filmstrip step between J 1.9 and 2.7. */
+      lightPerFilmStep: { spot: +spotStep.toFixed(3), spotAtJ: +spotAt.toFixed(3), cone: +coneStep.toFixed(3), coneAtJ: +coneAt.toFixed(3) },
       scroll,
     };
   };

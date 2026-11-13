@@ -13,6 +13,20 @@ import type { look as lookState } from './look';
 
 export type LookOut = Omit<typeof lookState, 'dark'>;
 
+/**
+ * Distance from the camera to the far corner of the near plane, for a near
+ * distance, a vertical fov (degrees), a lens shift (where the optical axis
+ * lands on screen, fractions from the left / top) and an aspect. The shift
+ * moves the frustum off centre, so its far corner is further out on the
+ * shifted side. Shared by the rig (near plane) and the debug simulator.
+ */
+export function nearCorner(near: number, fov: number, shiftX: number, shiftY: number, aspect: number): number {
+  const ty = Math.tan((fov * Math.PI) / 360);
+  const kx = 1 + 2 * Math.abs(shiftX - 0.5);
+  const ky = 1 + 2 * Math.abs(shiftY - 0.5);
+  return near * Math.sqrt(1 + ty * ty * (ky * ky + (kx * aspect) ** 2));
+}
+
 export function createRig() {
   return {
     sample: emptyShot(),
@@ -234,10 +248,7 @@ export function stepRig(
   out.roll = roll;
   // Never let the near plane cut into a surface the camera grazes on a fast move. The lens shift
   // moves the frustum off centre: its far corner is further out on the shifted side.
-  const ty = Math.tan((look.fov * Math.PI) / 360);
-  const kx = 1 + 2 * Math.abs(out.shiftX - 0.5);
-  const ky = 1 + 2 * Math.abs(out.shiftY - 0.5);
-  const corner = Math.sqrt(1 + ty * ty * (ky * ky + (kx * (input.aspect ?? 1.6)) ** 2));
+  const corner = nearCorner(1, look.fov, out.shiftX, out.shiftY, input.aspect ?? 1.6);
   out.gap = clearance(out.position)[0];
   out.near = Math.max(0.0015, Math.min(nearFor(dist), (out.gap * 0.7) / corner));
   copyInto(out.s, s);
