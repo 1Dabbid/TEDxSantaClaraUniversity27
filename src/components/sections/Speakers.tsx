@@ -1,19 +1,65 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Settings, Speaker } from '@/lib/content';
-import { Button } from '@/components/ui/Button';
 import { ComingSoonBadge } from '@/components/ui/ComingSoon';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { SectionShell, SectionTitle } from './SectionShell';
 
-// Deterministic "name length" hints for redaction bars, so each placeholder differs.
-const BARS: [number, number][] = [
-  [64, 41],
-  [52, 70],
-  [73, 36],
-  [45, 58],
-  [68, 49],
-  [57, 33],
+/**
+ * Placeholder variety. Six "to be announced" cards should read as six different
+ * withheld documents, not one card repeated: each gets its own redaction layout
+ * (rows of segments, widths in %), status line and footnote. Deterministic, so
+ * server and client agree and the static HTML is the design.
+ */
+type Row = { h: 'lg' | 'md' | 'sm'; segs: number[] };
+const REDACTIONS: Row[][] = [
+  [
+    { h: 'lg', segs: [64] },
+    { h: 'lg', segs: [41] },
+    { h: 'sm', segs: [88] },
+    { h: 'sm', segs: [52] },
+  ],
+  [
+    { h: 'lg', segs: [28, 46] },
+    { h: 'sm', segs: [92] },
+    { h: 'sm', segs: [78] },
+    { h: 'sm', segs: [35] },
+  ],
+  [
+    { h: 'lg', segs: [73] },
+    { h: 'md', segs: [22, 18, 30] },
+    { h: 'sm', segs: [61] },
+  ],
+  [
+    { h: 'md', segs: [38] },
+    { h: 'lg', segs: [58] },
+    { h: 'sm', segs: [84] },
+    { h: 'sm', segs: [16, 44] },
+  ],
+  [
+    { h: 'lg', segs: [49, 19] },
+    { h: 'lg', segs: [33] },
+    { h: 'sm', segs: [70] },
+  ],
+  [
+    { h: 'lg', segs: [57] },
+    { h: 'sm', segs: [90] },
+    { h: 'md', segs: [26, 26] },
+    { h: 'sm', segs: [47] },
+  ],
+];
+const ROW_H = { lg: 'h-5', md: 'h-3', sm: 'h-2' } as const;
+const ROW_GAP = { lg: 'mt-2.5', md: 'mt-2', sm: 'mt-1.5' } as const;
+
+const STATUS = ['Clause pending', 'Under review', 'Withheld', 'Pending signature', 'Redacted', 'Subject to change'];
+
+const FOOTNOTES = [
+  'Name, affiliation and talk title withheld pending announcement. The speaker is under no obligation to be what you expect.',
+  'Identity on file. Disclosure deferred until the parties agree. No inference should be drawn from the length of the bars.',
+  'Talk title redacted at the request of no one in particular. Announcement subject to change without notice.',
+  'This clause becomes binding on announcement. Until then it is merely very likely.',
+  'Details withheld for the reader’s own suspense. See the mailing list for the unredacted copy.',
+  'Reserved. The red circle has been booked; the name is still in the envelope.',
 ];
 
 const cardBase =
@@ -24,25 +70,36 @@ function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
   const num = String(index + 1).padStart(2, '0');
 
   if (!speaker.announced) {
-    const [a, b] = BARS[index % BARS.length];
+    const rows = REDACTIONS[index % REDACTIONS.length];
     return (
-      <li className={`${cardBase} p-6 sm:aspect-[4/5] sm:p-7`} data-cursor="loupe" data-cursor-zoom="2.4">
-        <div className="flex items-baseline justify-between">
-          <span className="fine-print text-white">{clause.replace(' ', ' ')}</span>
-          <span className="fine-print">Clause pending</span>
+      <li
+        className={`${cardBase} speaker-card--tba p-6 sm:aspect-[4/5] sm:p-7`}
+        data-cursor="loupe"
+        data-cursor-zoom="2.4"
+      >
+        <div className="flex items-baseline justify-between gap-4">
+          <span className="fine-print text-white">{clause.replace(' ', '\u00a0')}</span>
+          <span className="fine-print text-right text-mute">{STATUS[index % STATUS.length]}</span>
         </div>
 
         <div aria-hidden="true" className="mt-8 sm:mt-auto">
-          <span className="block font-mono text-[clamp(4.5rem,9vw,7.5rem)] leading-none font-light tracking-[-0.06em] text-white/[0.07] tabular-nums">
+          <span
+            className={`block font-mono text-[clamp(4.5rem,9vw,7.5rem)] leading-none font-light tracking-[-0.06em] text-white/[0.07] tabular-nums ${index % 3 === 1 ? 'text-right' : ''}`}
+          >
             {num}
           </span>
-          <div className="mt-6 space-y-2.5">
-            <span className="redacted h-5" style={{ width: `${a}%` }} />
-            <span className="redacted h-5" style={{ width: `${b}%` }} />
-          </div>
-          <div className="mt-5 space-y-1.5">
-            <span className="redacted h-2" style={{ width: '88%' }} />
-            <span className="redacted h-2" style={{ width: `${30 + ((index * 17) % 40)}%` }} />
+          <div className="mt-6">
+            {rows.map((row, r) => {
+              const prev = rows[r - 1];
+              const gap = !prev ? '' : prev.h !== row.h && row.h !== 'lg' ? 'mt-4' : ROW_GAP[row.h];
+              return (
+                <div key={r} className={`flex gap-1.5 ${gap}`}>
+                  {row.segs.map((w, k) => (
+                    <span key={k} className={`redacted ${ROW_H[row.h]}`} style={{ width: `${w}%` }} />
+                  ))}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -56,9 +113,8 @@ function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
               <span className="sr-only">, speaker {index + 1}</span>
             </Link>
           </h3>
-          <p className="mt-2 font-mono text-[0.5625rem] leading-[1.6] tracking-[0.04em] text-subtle">
-            Name, affiliation and talk title withheld pending announcement. Announcement subject to change
-            without notice. The speaker is under no obligation to be what you expect.
+          <p className="mt-2 font-mono text-[0.5625rem] leading-[1.6] tracking-[0.04em] text-mute">
+            {FOOTNOTES[index % FOOTNOTES.length]}
           </p>
         </div>
       </li>
@@ -87,7 +143,7 @@ function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
         </h3>
         {speaker.role ? <p className="mt-1 text-sm text-mute">{speaker.role}</p> : null}
         {speaker.talkTitle ? <p className="mt-4 text-white">“{speaker.talkTitle}”</p> : null}
-        <p className="mt-5 border-t border-white/10 pt-4 font-mono text-[0.5625rem] tracking-[0.04em] text-subtle">
+        <p className="mt-5 border-t border-white/10 pt-4 font-mono text-[0.5625rem] tracking-[0.04em] text-mute">
           {clause}. Read the full clause on the speaker page.
         </p>
       </div>
@@ -97,9 +153,10 @@ function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
 
 export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings: Settings }) {
   const anyAnnounced = speakers.some((s) => s.announced);
-  const apps = settings.speakerApplicationsState;
+  // The applications band lives in Tickets (§ 5.5); only point to it when it is rendered.
+  const showApps = settings.sections.showSpeakerApplications;
   return (
-    <SectionShell id="speakers" className="py-32 sm:py-44">
+    <SectionShell id="speakers" className="py-24 sm:py-44">
       <div className="shell">
         <div className="flex flex-wrap items-end justify-between gap-6">
           <div>
@@ -114,7 +171,7 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
         </div>
 
         <ul
-          className="mt-16 grid gap-4 sm:grid-cols-2 lg:grid-cols-3"
+          className="mt-16 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3"
           data-reveal="stagger"
           data-reveal-variant="wipe"
         >
@@ -123,29 +180,16 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
           ))}
         </ul>
 
-        <div className="mt-16 grid gap-6 border-t border-white/15 pt-8 md:grid-cols-12">
-          <div className="md:col-span-7">
-            <h3 data-reveal="lines" className="text-title font-semibold tracking-tight">
-              Have an idea worth spreading?
-            </h3>
-            <p className="mt-3 max-w-xl text-mute">
-              {apps === 'open'
-                ? 'Speaker applications are open.'
-                : apps === 'closed'
-                  ? 'Speaker applications are closed for this event.'
-                  : 'Speaker applications open soon. Join the mailing list to hear first.'}
-            </p>
-          </div>
-          <div className="flex items-start md:col-span-5 md:justify-end">
-            {apps === 'open' && settings.speakerApplicationsUrl ? (
-              <Button href={settings.speakerApplicationsUrl}>Apply to speak</Button>
-            ) : apps === 'coming-soon' ? (
-              <Button href="#newsletter" variant="ghost">
-                Get notified
-              </Button>
-            ) : null}
-          </div>
-        </div>
+        {showApps ? (
+          <p data-reveal="fade" className="fine-print mt-10 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span>Want to stand on it yourself?</span>
+            <a href="#apply-title" className="group tap inline-flex min-h-11 items-center text-white">
+              <span className="link-draw group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]">
+                Speaker applications, §&nbsp;5.5
+              </span>
+            </a>
+          </p>
+        ) : null}
       </div>
     </SectionShell>
   );

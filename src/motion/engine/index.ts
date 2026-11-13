@@ -1,6 +1,7 @@
 import { ScrollTrigger } from '../gsap';
 import { initChrome } from './chrome';
 import { initCursor } from './cursor';
+import { initFocusScroll } from './focus';
 import { initMagnetic } from './magnetic';
 import { initNavigation } from './navigation';
 import { killReveals, pruneReveals, revealFocused, scanReveals } from './reveal';
@@ -28,6 +29,7 @@ export function startEngine({ push, prefetch, cursorRoot, curtain }: EngineOptio
   const cleanups: (() => void)[] = [];
 
   cleanups.push(initChrome());
+  cleanups.push(initFocusScroll());
   const nav = initNavigation({ push, prefetch }, curtain);
   cleanups.push(nav.destroy);
 

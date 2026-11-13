@@ -86,7 +86,7 @@ export default function MotionRoot() {
   return (
     <>
       <div ref={curtainRef} className="curtain" aria-hidden="true" inert>
-        <div className="shell flex h-full flex-col justify-end pb-10 sm:pb-14">
+        <div className="shell flex h-full flex-col justify-end pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:pb-14">
           <p data-curtain-caption className="fine-print text-mute">
             <span className="text-white">§</span>&nbsp;continuing<span className="text-accent">…</span>
           </p>

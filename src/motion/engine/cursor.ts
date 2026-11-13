@@ -1,9 +1,19 @@
 import { gsap } from '../gsap';
+import { lenisRef } from '../lenisRef';
 
 /**
  * Custom cursor: a dot, a trailing ring, and a glass loupe that truly magnifies
- * whatever `[data-cursor="loupe"]` element is beneath it (a static clone of the
- * target, scaled and offset every frame; only transforms are written).
+ * whatever `[data-cursor="loupe"]` element is beneath it.
+ *
+ * The lens content is a live copy of the target AND of the layers painted under
+ * it (ancestor backgrounds, decorative scrims), scaled and offset together, so
+ * the lens carries the real background instead of flat black. A MutationObserver
+ * keeps the copy in sync while hovered (inline style changes, e.g. the Theme
+ * scrub lighting phrases, are mirrored node for node; text changes re-copy).
+ *
+ * Idle cost is zero: there is no permanent ticker. Pointer moves, scrolls and
+ * target mutations wake a short rAF loop that stops itself once the ring has
+ * caught up with the pointer.
  *
  * Only for fine, hovering pointers. The native cursor is hidden (html.has-cursor)
  * only after the custom one has received a real mouse move.
@@ -12,8 +22,63 @@ import { gsap } from '../gsap';
 const LINKISH = 'a[href], button, summary, label[for], [role="button"], [data-cursor="link"]';
 const TEXTISH = 'input, textarea, select, [contenteditable="true"], iframe';
 const DEFAULT_ZOOM = 2.4;
+const MAX_LAYERS = 8;
 
 type State = 'default' | 'link' | 'loupe' | 'text';
+
+const transparent = (c: string) => c === 'transparent' || /rgba?\([^)]*,\s*0\)$/.test(c) || /\/\s*0\)$/.test(c);
+
+/** Copies the paint of an element's background into an absolutely placed div. */
+function backgroundLayer(el: Element, origin: DOMRect): HTMLElement | null {
+  const cs = getComputedStyle(el);
+  const img = cs.backgroundImage;
+  const color = cs.backgroundColor;
+  const hasImg = img && img !== 'none';
+  if (!hasImg && transparent(color)) return null;
+  if (cs.visibility === 'hidden' || cs.display === 'none') return null;
+  const r = el.getBoundingClientRect();
+  if (r.width === 0 || r.height === 0) return null;
+  const d = document.createElement('div');
+  Object.assign(d.style, {
+    position: 'absolute',
+    left: `${r.left - origin.left}px`,
+    top: `${r.top - origin.top}px`,
+    width: `${r.width}px`,
+    height: `${r.height}px`,
+    backgroundColor: color,
+    backgroundImage: hasImg ? img : 'none',
+    backgroundSize: cs.backgroundSize,
+    backgroundPosition: cs.backgroundPosition,
+    backgroundRepeat: cs.backgroundRepeat,
+    borderRadius: cs.borderRadius,
+    opacity: cs.opacity,
+  } satisfies Partial<CSSStyleDeclaration>);
+  return d;
+}
+
+/**
+ * Layers under `target`, bottom first: each ancestor's own background, then its
+ * decorative absolutely positioned siblings of the path (aria-hidden scrims),
+ * then the next ancestor down. Bounded to MAX_LAYERS.
+ */
+function underLayers(target: HTMLElement, origin: DOMRect): HTMLElement[] {
+  const chain: Element[] = [];
+  for (let a = target.parentElement; a && a !== document.documentElement; a = a.parentElement) chain.unshift(a);
+  const layers: HTMLElement[] = [];
+  chain.forEach((anc, depth) => {
+    const own = backgroundLayer(anc, origin);
+    if (own) layers.push(own);
+    const pathChild = chain[depth + 1] ?? target;
+    for (const sib of Array.from(anc.children)) {
+      if (sib === pathChild || sib.contains(target) || sib.getAttribute('aria-hidden') !== 'true') continue;
+      const pos = getComputedStyle(sib).position;
+      if (pos !== 'absolute' && pos !== 'fixed') continue;
+      const l = backgroundLayer(sib, origin);
+      if (l) layers.push(l);
+    }
+  });
+  return layers.slice(-MAX_LAYERS);
+}
 
 export function initCursor(root: HTMLElement): () => void {
   const html = document.documentElement;
@@ -31,6 +96,9 @@ export function initCursor(root: HTMLElement): () => void {
   let zoom = DEFAULT_ZOOM;
   let lensSize = 176;
   let visible = false;
+  let running = false;
+  let mirror = new Map<Node, HTMLElement>();
+  let recopy = false;
 
   const setDot = { x: gsap.quickSetter(dot, 'x', 'px'), y: gsap.quickSetter(dot, 'y', 'px') };
   const setRing = { x: gsap.quickSetter(ring, 'x', 'px'), y: gsap.quickSetter(ring, 'y', 'px') };
@@ -42,8 +110,27 @@ export function initCursor(root: HTMLElement): () => void {
     root.dataset.state = s;
   };
 
+  // Mirror inline style / class changes of the hovered target onto its copy.
+  const observer = new MutationObserver((records) => {
+    if (!loupeTarget) return;
+    for (const r of records) {
+      if (r.type === 'attributes' && r.attributeName) {
+        const copy = mirror.get(r.target);
+        const src = r.target as HTMLElement;
+        if (!copy) continue;
+        if (r.attributeName === 'style' && src !== loupeTarget) copy.setAttribute('style', src.getAttribute('style') ?? '');
+        else if (r.attributeName === 'class') copy.className = src.className;
+      } else {
+        recopy = true;
+      }
+    }
+    wake();
+  });
+
   const clearLoupe = () => {
     loupeTarget = null;
+    observer.disconnect();
+    mirror = new Map();
     content.replaceChildren();
   };
 
@@ -55,7 +142,11 @@ export function initCursor(root: HTMLElement): () => void {
     const r = target.getBoundingClientRect();
     const cs = getComputedStyle(target);
     const clone = target.cloneNode(true) as HTMLElement;
-    for (const n of [clone, ...Array.from(clone.querySelectorAll<HTMLElement>('*'))]) {
+    const srcNodes = [target, ...Array.from(target.querySelectorAll<HTMLElement>('*'))];
+    const copyNodes = [clone, ...Array.from(clone.querySelectorAll<HTMLElement>('*'))];
+    mirror = new Map();
+    srcNodes.forEach((n, i) => mirror.set(n, copyNodes[i]));
+    for (const n of copyNodes) {
       n.removeAttribute('id');
       n.removeAttribute('data-reveal');
       n.removeAttribute('data-cursor');
@@ -83,7 +174,9 @@ export function initCursor(root: HTMLElement): () => void {
       columnCount: cs.columnCount,
       columnGap: cs.columnGap,
     } satisfies Partial<CSSStyleDeclaration>);
-    content.replaceChildren(clone);
+    content.replaceChildren(...underLayers(target, r), clone);
+    observer.disconnect();
+    observer.observe(target, { subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['style', 'class'] });
   };
 
   const resolve = (el: Element | null): State => {
@@ -105,29 +198,7 @@ export function initCursor(root: HTMLElement): () => void {
     root.toggleAttribute('data-visible', v);
   };
 
-  const onMove = (e: PointerEvent) => {
-    if (e.pointerType === 'touch') return;
-    mx.x = e.clientX;
-    mx.y = e.clientY;
-    if (!html.classList.contains('has-cursor')) {
-      html.classList.add('has-cursor');
-      pos.x = mx.x;
-      pos.y = mx.y;
-    }
-    show(true);
-  };
-  const onOver = (e: PointerEvent) => {
-    if (e.pointerType === 'touch') return;
-    setState(resolve(e.target as Element));
-  };
-  const onLeaveDoc = (e: MouseEvent) => {
-    if (!e.relatedTarget) show(false);
-  };
-  const onDown = () => root.setAttribute('data-pressed', '');
-  const onUp = () => root.removeAttribute('data-pressed');
-
-  // After scrolling, the element under a still pointer changes: re-resolve occasionally.
-  let lastResolve = 0;
+  let needsResolve = false;
 
   const tick = () => {
     const ease = state === 'loupe' ? 0.22 : 0.18;
@@ -140,9 +211,9 @@ export function initCursor(root: HTMLElement): () => void {
     setLens.x(pos.x);
     setLens.y(pos.y);
 
-    const now = performance.now();
-    if (visible && now - lastResolve > 150) {
-      lastResolve = now;
+    // The page moved under a still pointer: the element beneath may have changed.
+    if (needsResolve && visible) {
+      needsResolve = false;
       setState(resolve(document.elementFromPoint(mx.x, mx.y)));
     }
 
@@ -150,14 +221,59 @@ export function initCursor(root: HTMLElement): () => void {
       if (!loupeTarget.isConnected) {
         clearLoupe();
         setState('default');
-        return;
+      } else {
+        if (recopy) {
+          recopy = false;
+          fillLoupe(loupeTarget);
+        }
+        const r = loupeTarget.getBoundingClientRect();
+        const half = lensSize / 2;
+        const tx = half - (pos.x - r.left) * zoom;
+        const ty = half - (pos.y - r.top) * zoom;
+        content.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${zoom})`;
       }
-      const r = loupeTarget.getBoundingClientRect();
-      const half = lensSize / 2;
-      const tx = half - (pos.x - r.left) * zoom;
-      const ty = half - (pos.y - r.top) * zoom;
-      content.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${zoom})`;
     }
+
+    // Sleep once the ring has caught up and nothing else is pending.
+    if (Math.abs(mx.x - pos.x) < 0.1 && Math.abs(mx.y - pos.y) < 0.1 && !needsResolve && !recopy) {
+      pos.x = mx.x;
+      pos.y = mx.y;
+      gsap.ticker.remove(tick);
+      running = false;
+    }
+  };
+
+  function wake() {
+    if (running) return;
+    running = true;
+    gsap.ticker.add(tick);
+  }
+
+  const onMove = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') return;
+    mx.x = e.clientX;
+    mx.y = e.clientY;
+    if (!html.classList.contains('has-cursor')) {
+      html.classList.add('has-cursor');
+      pos.x = mx.x;
+      pos.y = mx.y;
+    }
+    show(true);
+    wake();
+  };
+  const onOver = (e: PointerEvent) => {
+    if (e.pointerType === 'touch') return;
+    setState(resolve(e.target as Element));
+  };
+  const onLeaveDoc = (e: MouseEvent) => {
+    if (!e.relatedTarget) show(false);
+  };
+  const onDown = () => root.setAttribute('data-pressed', '');
+  const onUp = () => root.removeAttribute('data-pressed');
+  const onScroll = () => {
+    if (!visible) return;
+    needsResolve = true;
+    wake();
   };
 
   window.addEventListener('pointermove', onMove, { passive: true });
@@ -165,7 +281,9 @@ export function initCursor(root: HTMLElement): () => void {
   document.addEventListener('mouseout', onLeaveDoc);
   window.addEventListener('pointerdown', onDown, { passive: true });
   window.addEventListener('pointerup', onUp, { passive: true });
-  gsap.ticker.add(tick);
+  window.addEventListener('scroll', onScroll, { passive: true });
+  const lenis = lenisRef.current;
+  lenis?.on('scroll', onScroll);
 
   return () => {
     window.removeEventListener('pointermove', onMove);
@@ -173,7 +291,10 @@ export function initCursor(root: HTMLElement): () => void {
     document.removeEventListener('mouseout', onLeaveDoc);
     window.removeEventListener('pointerdown', onDown);
     window.removeEventListener('pointerup', onUp);
+    window.removeEventListener('scroll', onScroll);
+    lenis?.off('scroll', onScroll);
     gsap.ticker.remove(tick);
+    running = false;
     clearLoupe();
     html.classList.remove('has-cursor');
     root.removeAttribute('data-visible');

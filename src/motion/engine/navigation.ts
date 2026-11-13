@@ -19,8 +19,15 @@ import { lenisRef } from '../lenisRef';
 type Push = (href: string) => void;
 type Router = { push: Push; prefetch: (href: string) => void };
 
-const IN = 0.55;
-const OUT = 0.85;
+// Curtain timings: snappier on touch / small screens.
+const compact = () => window.matchMedia('(max-width: 767.98px), (pointer: coarse)').matches;
+let IN = 0.55;
+let OUT = 0.85;
+const tuneCurtain = () => {
+  const c = compact();
+  IN = c ? 0.42 : 0.55;
+  OUT = c ? 0.62 : 0.85;
+};
 
 export type Navigation = {
   onRoute: (initial: boolean) => void;
@@ -89,6 +96,7 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
   const cover = () =>
     new Promise<void>((resolve) => {
       if (!curtain) return resolve();
+      tuneCurtain();
       tl?.kill();
       tl = gsap
         .timeline()
@@ -173,8 +181,10 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     if (samePage) {
       e.preventDefault();
       if (url.hash) {
+        // Keyboard activation (detail 0) jumps: focus-driven scrolling is never animated.
+        const instant = e.detail === 0;
         const go = () => {
-          if (scrollToHash(url.hash) && url.hash !== location.hash) {
+          if (scrollToHash(url.hash, instant) && url.hash !== location.hash) {
             history.pushState(history.state, '', url.hash);
           }
         };
@@ -182,7 +192,7 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
         if (html.hasAttribute('data-menu-open')) whenMenuClosed(go);
         else go();
       } else {
-        scrollTop(false);
+        scrollTop(e.detail === 0);
         const main = document.getElementById('main');
         if (main) main.focus({ preventScroll: true });
       }
@@ -216,8 +226,17 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     if (keyOf(new URL(ev.destination.url)) !== currentKey) popped = true;
   };
 
+  // Set while a route change has just been rendered in the current task. Without the
+  // Navigation API (Firefox, Safari) the router may render the traversal inside its
+  // own popstate listener, before ours runs: then currentKey is already the new page.
+  let justRouted = false;
+
   const onPop = () => {
     if (popped) return; // route change already in progress (see onNavigate)
+    if (justRouted) {
+      popped = true; // the router got there first; onRoute reads this in its frame
+      return;
+    }
     if (keyOf(location) === currentKey) {
       // Same page, different hash entry: the router will not re-render, scroll here.
       requestAnimationFrame(() => {
@@ -228,9 +247,55 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     popped = true;
   };
 
+  // Cold load on a deep link (/#tickets): the browser jumps before web fonts, the
+  // Theme runway and section scripts have settled, so the target drifts. Re-land
+  // on it once layout is final, unless the visitor has already moved on.
+  const settleColdHash = () => {
+    const hash = location.hash;
+    if (!hash || !findHashTarget(hash)) return;
+    let userMoved = false;
+    const moved = () => {
+      userMoved = true;
+    };
+    const opts = { passive: true, capture: true, once: true } as const;
+    window.addEventListener('wheel', moved, opts);
+    window.addEventListener('touchstart', moved, opts);
+    window.addEventListener('keydown', moved, opts);
+    const land = () => {
+      if (userMoved || location.hash !== hash) return;
+      lenisRef.current?.resize();
+      const el = findHashTarget(hash);
+      if (!el) return;
+      const lenis = lenisRef.current;
+      if (lenis) lenis.scrollTo(el, { immediate: true, force: true });
+      else el.scrollIntoView({ block: 'start', behavior: 'instant' as ScrollBehavior });
+      focusTarget(el);
+    };
+    const afterLayout = () => requestAnimationFrame(() => requestAnimationFrame(land));
+    const fontsReady = document.fonts?.ready ?? Promise.resolve();
+    void fontsReady.then(() => {
+      afterLayout();
+      // Section scripts refresh ScrollTrigger (and the Theme fit) a little later.
+      setTimeout(land, 400);
+      if (document.readyState !== 'complete') window.addEventListener('load', () => setTimeout(land, 50), { once: true });
+      setTimeout(() => {
+        window.removeEventListener('wheel', moved, true);
+        window.removeEventListener('touchstart', moved, true);
+        window.removeEventListener('keydown', moved, true);
+      }, 3000);
+    });
+  };
+
   const onRoute = (initial: boolean) => {
     currentKey = keyOf(location);
-    if (initial) return;
+    justRouted = true;
+    setTimeout(() => {
+      justRouted = false;
+    }, 0);
+    if (initial) {
+      settleColdHash();
+      return;
+    }
     const main = document.getElementById('main');
     const lenis = lenisRef.current;
     lenis?.start();
@@ -249,9 +314,10 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     }
     // Back/forward or a router navigation we did not start. Read the saved position
     // now: scroll events fired while the new page settles must not overwrite it.
-    const wasPop = popped;
+    // Whether it was a traversal is read in the frame (popstate may arrive after us).
     const saved = positions.get(currentKey);
     requestAnimationFrame(() => {
+      const wasPop = popped;
       popped = false;
       lenis?.resize();
       if (wasPop && saved !== undefined) {

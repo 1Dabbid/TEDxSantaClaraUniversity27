@@ -56,12 +56,17 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
     };
     const html = document.documentElement;
     const prev = html.style.overflow;
+    // The panel covers main and the footer: take them out of the tab order and the
+    // accessibility tree while it is open (the wrapper holds both).
+    const page = document.getElementById('main')?.parentElement ?? null;
+    page?.setAttribute('inert', '');
     html.style.overflow = 'hidden';
     html.setAttribute('data-menu-open', '');
     lenisRef.current?.stop();
     document.addEventListener('keydown', onKey);
     return () => {
       html.style.overflow = prev;
+      page?.removeAttribute('inert');
       html.removeAttribute('data-menu-open');
       lenisRef.current?.start();
       document.removeEventListener('keydown', onKey);
@@ -76,7 +81,7 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
-        className="relative flex size-10 items-center justify-center rounded-full border border-white/20 text-white transition-colors duration-300 hover:border-white"
+        className="tap relative flex size-11 items-center justify-center rounded-full border border-white/20 text-white transition-colors duration-300 hover:border-white pointer-fine:size-10"
       >
         <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
         <span aria-hidden="true" className="relative block h-3 w-4">
@@ -95,9 +100,9 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
         hidden={!open}
         data-lenis-prevent
         data-menu-panel
-        className="fixed inset-x-0 bottom-0 top-[var(--header-h)] overflow-y-auto border-t border-white/10 bg-black"
+        className="menu-panel fixed inset-x-0 bottom-0 top-[var(--header-h)] overflow-y-auto overscroll-contain border-t border-white/10 bg-black"
       >
-        <nav aria-label="Mobile" className="shell flex min-h-full flex-col pb-10 pt-8">
+        <nav aria-label="Mobile" className="shell flex min-h-full flex-col pb-[max(2.5rem,env(safe-area-inset-bottom))] pt-8">
           <p data-menu-item style={{ '--i': 0 } as CSSProperties} className="fine-print mb-4 text-subtle">
             Contents
           </p>
@@ -112,7 +117,7 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
                 <Link
                   href={item.href}
                   onClick={() => close(false)}
-                  className="flex items-baseline gap-4 py-5 text-3xl font-semibold tracking-tight"
+                  className="menu-link flex min-h-14 items-baseline gap-4 py-5 text-3xl font-semibold tracking-tight"
                 >
                   <span aria-hidden="true" className="fine-print w-10">
                     §&nbsp;{String(i + 1).padStart(2, '0')}

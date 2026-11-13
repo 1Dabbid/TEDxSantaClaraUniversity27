@@ -10,7 +10,7 @@ import { getSettings } from '@/lib/content';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
 import MotionRoot from '@/motion/MotionRoot';
 import SmoothScroll from '@/motion/SmoothScroll';
-import SceneLoader from '@/scene/SceneLoader';
+import SceneGate from '@/motion/SceneGate';
 
 // Inter variable, self-hosted from @fontsource-variable/inter (no network at build or runtime).
 const inter = localFont({
@@ -54,6 +54,8 @@ const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection;i
 export const viewport: Viewport = {
   themeColor: '#000000',
   colorScheme: 'dark',
+  // Edge to edge on notched phones; the header, shell and menu pad with safe-area insets.
+  viewportFit: 'cover',
 };
 
 export default async function RootLayout({ children }: { children: ReactNode }) {
@@ -73,7 +75,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <SkipLink />
           <Header settings={settings} />
         </ChromeGate>
-        <SceneLoader />
+        <SceneGate />
         <SmoothScroll>
           <div className="relative z-[var(--z-content)]">
             <main id="main" tabIndex={-1} className="outline-none">

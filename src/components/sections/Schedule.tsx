@@ -20,7 +20,7 @@ const rowGrid = 'grid grid-cols-[1.25rem_1fr] gap-x-4 sm:grid-cols-[1.25rem_8rem
 export function Schedule({ schedule, settings }: { schedule: ScheduleData; settings: Settings }) {
   const published = schedule.published && schedule.items.length > 0;
   return (
-    <SectionShell id="schedule" className="py-32 sm:py-44">
+    <SectionShell id="schedule" className="py-24 sm:py-44">
       <div className="shell">
         <SectionLabel index={3}>Schedule</SectionLabel>
         <SectionTitle id="schedule">One evening.</SectionTitle>
