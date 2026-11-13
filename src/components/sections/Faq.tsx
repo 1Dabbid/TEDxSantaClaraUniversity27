@@ -18,12 +18,15 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
       <JsonLd json={jsonLdString(faqJsonLd(items))} />
       {/* Two columns from lg only: at tablet width a third of the measure broke "Questions," mid-word. */}
       <div className="shell grid grid-cols-1 gap-14 lg:grid-cols-12">
-        <div className="min-w-0 lg:col-span-4">
+        <div className="@container min-w-0 lg:col-span-4">
           <div className="lg:sticky lg:top-[calc(var(--header-h)+3rem)]">
             <div data-reveal="fade">
               <SectionLabel>FAQ</SectionLabel>
             </div>
-            <SectionTitle id="faq" className="text-[clamp(2.75rem,4.6vw,5.25rem)]!">
+            {/* Sized to its column: "Questions," is 4.78em wide, so at most a fifth of the
+                column. Sized to the viewport alone, it ran a few pixels past the column at some
+                widths and the browser broke the comma onto a line of its own. */}
+            <SectionTitle id="faq" className="text-[min(100cqi/5,clamp(2.75rem,4.6vw,5.25rem))]!">
               <span data-reveal="lines" className="block">
                 Questions, answered.
               </span>
