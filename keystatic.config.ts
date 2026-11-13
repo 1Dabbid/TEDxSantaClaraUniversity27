@@ -428,7 +428,7 @@ export default config({
             }),
             tiers: fields.multiRelationship({
               label: 'Included in these tiers',
-              description: 'Click the box and pick each tier; tiers are listed by their slug, e.g. founding-partner.',
+              description: 'Click the box and pick each tier; tiers are listed by their slug, e.g. cornerstone-partner.',
               collection: 'tiers',
             }),
           }),
@@ -535,10 +535,10 @@ export default config({
       columns: ['name', 'order'],
       schema: {
         name: fields.slug({
-          name: { label: 'Tier name', description: 'e.g. Founding Partner' },
+          name: { label: 'Tier name', description: 'e.g. Cornerstone Partner' },
           slug: slugPart(
             'Slug',
-            'Made from the tier name. Leave it as generated: partner benefits and logos refer to the tier by it (e.g. founding-partner).',
+            'Made from the tier name. Leave it as generated: partner benefits and logos refer to the tier by it (e.g. cornerstone-partner).',
           ),
         }),
         description: fields.text({ label: 'Description', description: 'One or two sentences.', multiline: true }),
@@ -567,7 +567,7 @@ export default config({
         }),
         tier: fields.relationship({
           label: 'Tier',
-          description: 'Tiers are listed by their slug, e.g. founding-partner for Founding Partner.',
+          description: 'Tiers are listed by their slug, e.g. cornerstone-partner for Cornerstone Partner.',
           collection: 'tiers',
         }),
         logo: fields.image({

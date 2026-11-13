@@ -65,7 +65,7 @@ test.describe('links', () => {
 });
 
 test('slugs: lowercase letters, numbers and dashes only', () => {
-  for (const ok of ['jane-doe', 'speaker-01', 'founding-partner', 'a']) expect(isValidSlug(ok), ok).toBe(true);
+  for (const ok of ['jane-doe', 'speaker-01', 'cornerstone-partner', 'a']) expect(isValidSlug(ok), ok).toBe(true);
   for (const bad of ['Jane Doe!', 'Jane-Doe', 'jane_doe', '-jane', 'jane-', 'jane--doe', '', 'jané']) expect(isValidSlug(bad), bad).toBe(false);
 });
 
