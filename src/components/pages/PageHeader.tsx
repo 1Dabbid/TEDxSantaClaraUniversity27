@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import type { Settings } from '@/lib/content';
 import { EventName } from '@/components/ui/KeepCase';
 import { Tba } from '@/components/print/Print';
@@ -117,7 +117,8 @@ export function PageHeader({
       <p data-reveal="fade" className="mt-8 max-w-2xl text-lg text-pretty text-mute sm:mt-10 sm:text-xl">
         {intro}
       </p>
-      {children ? <div className="mt-10 flex flex-wrap gap-3">{children}</div> : null}
+      {/* Children.toArray drops null/false, so a page passing only conditional actions gets no empty row. */}
+      {Children.toArray(children).length ? <div className="mt-10 flex flex-wrap gap-3">{children}</div> : null}
       {facts.length ? (
         <dl
           data-reveal="stagger"

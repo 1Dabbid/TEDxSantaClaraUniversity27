@@ -80,15 +80,19 @@ function ApplyToSpeak({ settings }: { settings: Settings }) {
   if (!settings.sections.showSpeakerApplications) return null;
   const state = settings.speakerApplicationsState;
   const open = state === 'open' && Boolean(settings.speakerApplicationsUrl);
+  // Not open yet, but the interest form is: the early way in.
+  const interest = !open && state !== 'closed' && Boolean(settings.interestUrl);
   const copy = open
     ? 'Applications are open. Tell us the idea you would bring to the stage.'
     : state === 'closed'
       ? 'Applications for this event are closed. Thank you to everyone who applied.'
-      : 'Applications are not open yet. When they open, the link appears here and goes to the mailing list.';
+      : interest
+        ? 'Formal applications are not open yet. Register your interest to hear first when they open and to get an early look at pitching a talk.'
+        : 'Applications are not open yet. When they open, the link appears here and goes to the mailing list.';
   return (
     <div role="group" aria-labelledby="apply-title">
       <h3 id="apply-title" className="text-lg font-semibold tracking-tight">
-        Speak at <EventName />
+        {interest ? 'Want to speak?' : <>Speak at <EventName /></>}
       </h3>
       <p className="mt-2 max-w-md text-[#d0d0d0]">{copy}</p>
       {open && settings.speakerApplicationsDeadline ? (
@@ -97,6 +101,12 @@ function ApplyToSpeak({ settings }: { settings: Settings }) {
       {open ? (
         <div className="mt-5">
           <Button href={settings.speakerApplicationsUrl}>Apply to speak</Button>
+        </div>
+      ) : interest ? (
+        <div className="mt-5">
+          <Button href={settings.interestUrl} variant="ghost" data-interest-link>
+            Register your interest
+          </Button>
         </div>
       ) : null}
     </div>
@@ -129,6 +139,10 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
     settings.sections.showSpeakerApplications &&
     settings.speakerApplicationsState === 'open' &&
     Boolean(settings.speakerApplicationsUrl);
+  const interestOpen =
+    settings.sections.showSpeakerApplications &&
+    settings.speakerApplicationsState !== 'closed' &&
+    Boolean(settings.interestUrl);
 
   return (
     <SectionShell
@@ -163,6 +177,14 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
                       Deadline: {keepTedxCase(settings.speakerApplicationsDeadline)}
                     </span>
                   ) : null}
+                </p>
+              ) : null}
+              {any && !appsOpen && interestOpen ? (
+                <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <span className="text-mute">Want to speak?</span>
+                  <Button href={settings.interestUrl} variant="ghost" data-interest-link>
+                    Register your interest
+                  </Button>
                 </p>
               ) : null}
             </div>

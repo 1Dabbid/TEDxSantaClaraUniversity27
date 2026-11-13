@@ -11,7 +11,7 @@ import { SectionShell, SectionTitle } from './SectionShell';
  * Native <details>/<summary> accordion: works without JavaScript, keyboard
  * operable (Enter/Space), and announced as expandable by screen readers.
  */
-/** Questions shown at home; the rest are on /faq ("All 9 questions"). */
+/** Questions shown at home; the rest are on /faq ("All 10 questions"). */
 const HOME_QUESTIONS = 5;
 
 export function Faq({ items: all, settings }: { items: FaqItem[]; settings: Settings }) {

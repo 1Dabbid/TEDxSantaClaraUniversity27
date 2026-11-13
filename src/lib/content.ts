@@ -51,7 +51,7 @@ import type { ThemeCopy } from './theme-copy';
  * the event date, TED's texts, emails), so the lenient reader stays quiet about them.
  */
 const LOADER_CHECKED = new Set([
-  'mapUrl', 'ticketUrl', 'ticketEmbedUrl', 'speakerApplicationsUrl', 'newsletterUrl', 'livestreamUrl',
+  'mapUrl', 'ticketUrl', 'ticketEmbedUrl', 'speakerApplicationsUrl', 'interestUrl', 'newsletterUrl', 'livestreamUrl',
   'instagram', 'linkedin', 'youtube', 'tiktok', 'link', 'url',
   'doorsTime', 'talksTime', 'endTime', 'dateISO', 'aboutTedx', 'aboutTed', 'contactEmail', 'partnershipsEmail', 'classYear',
 ]);
@@ -327,6 +327,8 @@ export type Settings = {
   speakerApplicationsState: ApplicationsState;
   speakerApplicationsUrl: string;
   speakerApplicationsDeadline: string;
+  /** The club's interest form (speak, contact list, organize), '' when not set. */
+  interestUrl: string;
   newsletterUrl: string;
   contactEmail: string;
   partnershipsEmail: string;
@@ -531,6 +533,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
     speakerApplicationsState: tickets?.speakerApplicationsState ?? 'coming-soon',
     speakerApplicationsUrl: link(tickets?.speakerApplicationsUrl, T, 'Speaker application link'),
     speakerApplicationsDeadline: str(tickets?.speakerApplicationsDeadline),
+    interestUrl: link(tickets?.interestUrl, T, 'Interest form link'),
 
     newsletterUrl: link(contact?.newsletterUrl, C, 'Newsletter sign-up link'),
     contactEmail: email(contact?.contactEmail, 'contactEmail'),

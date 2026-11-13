@@ -42,6 +42,13 @@ export default async function SpeakersPage() {
   const numbered = speakers.map((speaker, index) => ({ speaker, index }));
   const announced = numbered.filter((x) => x.speaker.announced);
   const anyAnnounced = announced.length > 0;
+  // Before applications open: the interest form is the way to say you want to speak.
+  const appsOpen = settings.speakerApplicationsState === 'open' && Boolean(settings.speakerApplicationsUrl);
+  const interestOpen =
+    settings.sections.showSpeakerApplications &&
+    !appsOpen &&
+    settings.speakerApplicationsState !== 'closed' &&
+    Boolean(settings.interestUrl);
 
   return (
     <TopicPage>
@@ -76,6 +83,11 @@ export default async function SpeakersPage() {
               Join the mailing list
             </Button>
           )}
+          {interestOpen ? (
+            <Button href={settings.interestUrl} variant="ghost" size="lg" data-interest-link>
+              Want to speak? Register your interest
+            </Button>
+          ) : null}
         </PageHeader>
         {anyAnnounced ? (
           <div className="shell pb-24 sm:pb-32">

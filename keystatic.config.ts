@@ -299,6 +299,10 @@ export default config({
           label: 'Application deadline (optional)',
           description: `Written as you want it shown, e.g. January 15, 2027. ${LEAVE_BLANK}`,
         }),
+        interestUrl: urlField(
+          'Interest form link (speak or get involved)',
+          'The club’s interest form: register interest in speaking, join the contact list, help organize. While speaker applications are not open, the Speakers section and /speakers show “Want to speak? Register your interest” with this link, and /team shows “Get involved”. It opens in a new tab. If you change it, also update the FAQ answers that mention it.',
+        ),
       },
     }),
 

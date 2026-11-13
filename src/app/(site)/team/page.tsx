@@ -143,7 +143,16 @@ export default async function TeamPage() {
         </ul>
       </section>
 
-      {mail ? (
+      {/* Get involved (the interest form) first; the contact address beside it. */}
+      {settings.interestUrl ? (
+        <ClosingBand
+          current="/team"
+          heading="Get involved."
+          body="One short form to help organize the event, join the club’s contact list, or register your interest in speaking."
+          action={{ label: 'Get involved', href: settings.interestUrl }}
+          secondary={mail ? { label: settings.contactEmail, href: mail, ariaLabel: `Email ${settings.contactEmail}` } : undefined}
+        />
+      ) : mail ? (
         <ClosingBand
           current="/team"
           heading="Write to the team."

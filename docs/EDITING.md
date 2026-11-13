@@ -60,7 +60,7 @@ Besides the home page (the scroll story), each topic has its own page with an ad
 | **/team** | Every board role from **People > Team**, as a plain list of roles. | For people with **Show name publicly** ticked: name, role, photo (or initials), major, class year and LinkedIn link. Turning off the Team switch, or removing every role, removes the page. |
 | **/faq** | Every question. Each has its own link (e.g. `/faq#tickets-on-sale`, made from the question's words): send it to someone and the answer opens. Rewording a question changes its link. Turning off the FAQ switch removes the page. | |
 
-Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The team", "All 9 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
+Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The team", "All 10 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
 
 Unannounced speakers still have a page (`/speakers/speaker-01` and so on) so an old link never breaks, but nothing on the site links to it and search engines are told to ignore it.
 
@@ -113,6 +113,14 @@ Search engines only receive ticket details (price, sale start, link) while the s
 4. Set **Speaker applications** to **Open** and **Save**. The "Apply to speak" button (under the Speakers heading, and in the closing links at the bottom of the home page) only appears when the status is Open and the link is filled in.
 5. **The event > FAQ**: update the answer to **How can I apply to speak?** (it says applications are coming soon until you change it) and **Save**. Do the same again when applications close.
 6. All speaker-application wording can be switched off in **Contact & site > Show / hide sections > Show speaker applications (in the Speakers section)**.
+
+### The interest form (speak, contact list, get involved)
+
+Until formal applications open, the club's interest form is the way in: one form to register interest in speaking (hear first when applications open, get an early look at pitching a talk), join the club's contact list, and help organize.
+
+1. **The event > Tickets & speaker applications > Interest form link (speak or get involved)**: the form's full address (2027: `https://bernard29020.softr.app`). **Save**.
+2. While applications are **Coming soon**, the Speakers section on the home page and **/speakers** show "Want to speak? Register your interest" with this link, and **/team** ends with **Get involved**. All of them open the form in a new tab. Once applications are **Open** (with an application link), the Apply to speak button replaces it in Speakers; **/team** keeps **Get involved**. Empty the field to remove all of them.
+3. The FAQ answers **How can I apply to speak?** and **How can I get involved?** type the address out (a full `https://` address in any FAQ answer becomes a link that opens in a new tab). If the form changes, update those two answers as well.
 
 ### Add a sponsor (partner)
 
