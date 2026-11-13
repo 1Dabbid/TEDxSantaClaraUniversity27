@@ -34,13 +34,13 @@ export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: numbe
         </span>
       </div>
       <div className="speaker-text min-w-0 p-6 max-sm:self-center max-sm:p-4">
-        <h3 className="text-xl font-semibold tracking-tight">
+        <h3 className="text-xl font-semibold tracking-tight wrap-anywhere">
           <Link href={`/speakers/${speaker.slug}`} className="after:absolute after:inset-0 after:content-['']">
             {speaker.name}
           </Link>
         </h3>
-        {speaker.role ? <p className="mt-1 text-sm text-[#d0d0d0]">{speaker.role}</p> : null}
-        {speaker.talkTitle ? <p className="mt-4 text-white">“{speaker.talkTitle}”</p> : null}
+        {speaker.role ? <p className="mt-1 text-sm text-[#d0d0d0] wrap-anywhere">{speaker.role}</p> : null}
+        {speaker.talkTitle ? <p className="mt-4 text-white wrap-anywhere">“{speaker.talkTitle}”</p> : null}
       </div>
     </li>
   );

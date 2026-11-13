@@ -468,9 +468,13 @@ html:not(.motion) .reading-progress {
 .theme-line-ghost {
   display: none;
 }
+/* Static and reduced-motion mode (and phones): the phrases wrap, so a longer
+   tagline never runs off screen. Only the pinned motion stage keeps each phrase
+   on one row, because ThemeMotion measures and fits it to the stage. */
 .theme-line {
   display: block;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .theme-line-inner {
   position: relative;
@@ -651,6 +655,10 @@ html:not(.motion) .reading-progress {
     inset: -1.5rem -2rem;
     z-index: -1;
     background: radial-gradient(closest-side, rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.78) 60%, rgb(0 0 0 / 0));
+  }
+  html.motion .theme-line {
+    white-space: nowrap;
+    overflow-wrap: normal;
   }
   html.motion .theme-stack {
     position: absolute;

@@ -1,0 +1,51 @@
+import type { ReactNode } from 'react';
+import '@/app/globals.css';
+import { Footer } from '@/components/Footer';
+import { Header } from '@/components/Header';
+import { SkipLink } from '@/components/SkipLink';
+import { getSettings } from '@/lib/content';
+import MotionRoot from '@/motion/MotionRoot';
+import SmoothScroll from '@/motion/SmoothScroll';
+import SceneGate from '@/motion/SceneGate';
+
+/**
+ * Runs before first paint (it is the first thing in <body>, ahead of every element
+ * it affects). Adds `html.motion` only when JS runs, the visitor has no
+ * reduced-motion preference and no Save-Data. Without it (no JS, reduced motion)
+ * the server HTML is the complete, fully visible design. MotionRoot removes the
+ * class again if the quality tier resolves to `static`.
+ */
+const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection;if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData))d.classList.add('motion')}catch(e){}`;
+
+/**
+ * The public site's chrome: site CSS, motion boot, skip link, header, the WebGL
+ * scene gate, smooth scroll, the content layer and the footer. Used by the
+ * (site) route group's layout and by the root not-found page (an unknown URL is
+ * rendered by the root layout only, outside every route group).
+ *
+ * The Keystatic admin (/keystatic) lives outside the group and gets none of
+ * this: its popovers portal into <body> and must not sit under the content
+ * layer's stacking context.
+ */
+export async function SiteShell({ children }: { children: ReactNode }) {
+  const settings = await getSettings();
+  return (
+    <>
+      <script dangerouslySetInnerHTML={{ __html: MOTION_BOOT }} />
+      {/* The accent comes from Event basics; the loader guarantees a 6-digit hex value. */}
+      <style dangerouslySetInnerHTML={{ __html: `:root{--accent:${settings.accentColor}}` }} />
+      <SkipLink />
+      <Header settings={settings} />
+      <SceneGate />
+      <SmoothScroll>
+        <div className="relative z-[var(--z-content)]">
+          <main id="main" tabIndex={-1} className="outline-none">
+            {children}
+          </main>
+          <Footer settings={settings} />
+        </div>
+      </SmoothScroll>
+      <MotionRoot />
+    </>
+  );
+}
