@@ -3,6 +3,7 @@ import { formatCoordinate } from '@/lib/links';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
+import { VenueMotion } from '@/motion/sections/VenueMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
@@ -11,14 +12,14 @@ const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 function Reticle() {
   const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
   return (
-    <svg viewBox="0 0 320 320" aria-hidden="true" className="block size-full" fill="none">
+    <svg viewBox="0 0 320 320" aria-hidden="true" data-reticle className="block size-full" fill="none">
       <g stroke="currentColor" className="text-white/20" strokeWidth="1" vectorEffect="non-scaling-stroke">
         <circle cx="160" cy="160" r="150" />
         <circle cx="160" cy="160" r="104" strokeDasharray="2 6" />
         <circle cx="160" cy="160" r="52" />
         <path d="M160 0v118M160 202v118M0 160h118M202 160h118" />
       </g>
-      <g stroke="currentColor" className="text-white/40" strokeWidth="1">
+      <g stroke="currentColor" className="text-white/40" strokeWidth="1" data-reticle-bezel>
         {ticks.map((deg) => {
           const long = deg % 45 === 0;
           const r1 = 150;
@@ -56,6 +57,7 @@ export function Venue({ settings }: { settings: Settings }) {
 
   return (
     <SectionShell id="venue" scrim="left" className="py-32 sm:py-44">
+      <VenueMotion />
       <div className="shell">
         <div className="grid gap-16 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7 lg:col-span-8">
@@ -76,7 +78,7 @@ export function Venue({ settings }: { settings: Settings }) {
 
           {/* Coordinate plate: a proof with crop marks, on its own near-solid ground so it never depends on the canvas. */}
           <figure
-            data-reveal="fade"
+            data-venue-plate
             className="relative mx-auto w-full max-w-sm bg-black/80 p-6 sm:p-7 md:col-span-5 md:mx-0 md:ml-auto lg:col-span-4"
           >
             <CropMarks />
@@ -91,8 +93,8 @@ export function Venue({ settings }: { settings: Settings }) {
               {coords ? (
                 <>
                   <p className="font-mono text-[1.375rem] leading-[1.25] tracking-[-0.02em] text-white tabular-nums sm:text-2xl">
-                    <span className="block">{formatCoordinate(coords.lat, 'lat')}</span>
-                    <span className="block">{formatCoordinate(coords.lng, 'lng')}</span>
+                    <span data-venue-coord className="block">{formatCoordinate(coords.lat, 'lat')}</span>
+                    <span data-venue-coord className="block">{formatCoordinate(coords.lng, 'lng')}</span>
                   </p>
                   {coords.note ? (
                     <p data-cursor="loupe" className="fine-print mt-3 text-mute">
