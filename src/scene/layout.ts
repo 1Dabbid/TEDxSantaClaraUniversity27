@@ -38,11 +38,12 @@ export function barrelRadius(y: number): number {
 }
 
 /**
- * The one camera axis of the home page journey (see choreography.ts): the
- * heading, from the subject towards the camera, as an azimuth from +Z towards
- * +X. The camera only ever looks back along this heading, so everything that
- * is lit or aimed "for the camera" (the mic aim, the studio strips) is placed
- * relative to it.
+ * The hero's camera heading (see choreography.ts): from the subject towards
+ * the camera, as an azimuth from +Z towards +X. The hero, the push in and the
+ * engraving macro look back along it (orbit 0), and everything lit or aimed
+ * "for the camera" there (the mic aim, the studio strips, the engraving) is
+ * placed relative to it. From the pull out on, the camera orbits away from it
+ * (towards the grille side), in one direction only.
  */
 export const VIEW_AZ = 0.12;
 
