@@ -12,6 +12,7 @@ import {
 } from 'three';
 import { look } from './look';
 import { shared } from './materials';
+import { EMPTY_MASK } from './textures';
 
 /**
  * Planar reflection of the stage floor (high tier only): the scene objects on
@@ -53,6 +54,7 @@ export function createReflection(gl: WebGLRenderer) {
     dispose() {
       rt.dispose();
       shared.uReflOn.value = 0;
+      if (shared.uRefl.value === rt.texture) shared.uRefl.value = EMPTY_MASK;
     },
     /** Renders the mirrored view if the shot can show it; call before the main render. */
     render(scene: Scene, camera: PerspectiveCamera, width: number, height: number, dt: number) {

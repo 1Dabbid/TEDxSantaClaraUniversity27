@@ -12,6 +12,7 @@ import {
   Vector3,
   type BufferGeometry,
   type Group,
+  type Texture,
 } from 'three';
 import { bevelledExtrude, machinedLathe, mergeParts, roundedBox, threadProfile, type ProfilePoint } from './geometry';
 import {
@@ -34,7 +35,7 @@ import {
 } from './materials';
 import { REFLECT_LAYER } from './reflection';
 import { engravingRows, type EngravingFacts } from './engraving';
-import { createEngravingMask } from './textures';
+import { EMPTY_MASK, createEngravingMask } from './textures';
 
 /** Body profile: tail, knurled grip, tapered barrel with two seam lines, neck under the band ring. */
 function bodyProfile(taperSteps: number): ProfilePoint[] {
@@ -397,21 +398,36 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
     let cancelled = false;
     const w = high ? 4096 : 3072;
     const h = high ? 2048 : 1536;
-    createEngravingMask(w, h, rows).then((tex) => {
-      if (cancelled) {
-        tex.dispose();
-        return;
-      }
-      tex.anisotropy = Math.min(high ? 16 : 4, gl.capabilities.getMaxAnisotropy());
-      maskOn.current = mats.body.uniforms.uMaskOn;
-      fade.current = 0.0001;
-      tex.needsUpdate = true;
-      const u = mats.body.uniforms;
-      u.uMask.value = tex;
-      u.uMaskTexel.value = [1 / w, 1 / h];
-    });
+    let made: Texture | null = null;
+    createEngravingMask(w, h, rows)
+      .then((tex) => {
+        if (tex === EMPTY_MASK) return;
+        if (cancelled) {
+          tex.dispose();
+          return;
+        }
+        made = tex;
+        tex.anisotropy = Math.min(high ? 16 : 4, gl.capabilities.getMaxAnisotropy());
+        maskOn.current = mats.body.uniforms.uMaskOn;
+        fade.current = 0.0001;
+        tex.needsUpdate = true;
+        const u = mats.body.uniforms;
+        u.uMask.value = tex;
+        u.uMaskTexel.value = [1 / w, 1 / h];
+      })
+      .catch(() => {
+        /* no engraving rather than no scene */
+      });
     return () => {
       cancelled = true;
+      if (made) {
+        const u = mats.body.uniforms;
+        if (u.uMask.value === made) {
+          u.uMask.value = EMPTY_MASK;
+          u.uMaskOn.value = 0;
+        }
+        made.dispose();
+      }
     };
   }, [gl, high, mats, rows]);
 
@@ -424,8 +440,6 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
       mats.nickel.dispose();
       mats.hardware.dispose();
       mats.cable.dispose();
-      const t = mats.body.uniforms.uMask.value;
-      if (t.image && (t.image as { width: number }).width > 1) t.dispose();
     },
     [geo, mats],
   );

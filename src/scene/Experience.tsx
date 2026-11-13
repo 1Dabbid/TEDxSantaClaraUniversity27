@@ -126,25 +126,75 @@ export default function Experience({
   const tier: Tier = quality === 'high' && step < 3 ? 'high' : 'low';
   const post = quality === 'high' && step < 2 && searchFlag('post') !== '0';
 
+  // Device pixel ratio, re-read when the window moves to a screen with another density.
+  const [deviceDpr, setDeviceDpr] = useState(() => window.devicePixelRatio || 1);
   useEffect(() => {
-    const base = quality === 'high' ? Math.min(2, window.devicePixelRatio || 1) : Math.min(1.5, window.devicePixelRatio || 1);
+    let mq: MediaQueryList | null = null;
+    const onChange = () => {
+      setDeviceDpr(window.devicePixelRatio || 1);
+      arm();
+    };
+    const arm = () => {
+      mq?.removeEventListener('change', onChange);
+      mq = window.matchMedia(`(resolution: ${window.devicePixelRatio || 1}dppx)`);
+      mq.addEventListener('change', onChange);
+    };
+    arm();
+    return () => mq?.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
+    const base = quality === 'high' ? Math.min(2, deviceDpr) : Math.min(1.5, deviceDpr);
     const scale = [1, 0.8, 0.7, 0.66, 0.6][Math.min(step, 4)];
     setDpr(Math.max(1, base * scale));
-  }, [quality, step, setDpr]);
+  }, [quality, step, setDpr, deviceDpr]);
+
+  // WebGL context loss: stop and hide; on restore rebuild what lives only on the
+  // GPU (the PMREM environment; render targets are redrawn every frame and
+  // textures re-upload from their sources), then resume if the canvas is shown.
+  const [contextGen, setContextGen] = useState(0);
+  const lost = useRef(false);
+  const sleeping = useRef(false);
+  useEffect(() => {
+    const canvas = get().gl.domElement;
+    const onLost = (e: Event) => {
+      e.preventDefault();
+      lost.current = true;
+      sleeping.current = true;
+      setFrameloop('never');
+      canvas.style.visibility = 'hidden';
+    };
+    const onRestored = () => {
+      lost.current = false;
+      canvas.style.visibility = '';
+      setContextGen((g) => g + 1);
+    };
+    canvas.addEventListener('webglcontextlost', onLost);
+    canvas.addEventListener('webglcontextrestored', onRestored);
+    return () => {
+      canvas.removeEventListener('webglcontextlost', onLost);
+      canvas.removeEventListener('webglcontextrestored', onRestored);
+    };
+  }, [get, setFrameloop]);
 
   // Environment, fog, renderer setup.
   useEffect(() => {
     const { gl, scene } = get();
-    const env = createStudioEnvironment(gl);
+    let env: ReturnType<typeof createStudioEnvironment> | null = null;
+    try {
+      env = createStudioEnvironment(gl);
+    } catch {
+      env = null; // no reflections rather than no scene
+    }
     scene.environment = env;
     scene.environmentIntensity = 1;
     scene.fog = new FogExp2('#000000', 0.03);
     return () => {
       scene.environment = null;
       scene.fog = null;
-      env.dispose();
+      env?.dispose();
     };
-  }, [get]);
+  }, [get, contextGen]);
 
   // Compile every program up front, including objects that are hidden until
   // later in the journey (beam, dust, haze, motes), so no shader compiles
@@ -169,7 +219,7 @@ export default function Experience({
     gl.setRenderTarget(prev);
     probe?.dispose();
     for (const o of hidden) o.visible = false;
-  }, [get, tier, post]);
+  }, [get, tier, post, contextGen]);
 
   // Section metrics.
   useEffect(() => {
@@ -188,10 +238,14 @@ export default function Experience({
   }, [pathname]);
 
   // Stop rendering when dark or hidden; wake on scroll / route / visibility.
-  const sleeping = useRef(false);
+  // Never wake a canvas that is not on screen: off the home page SceneGate keeps
+  // it mounted but hidden (data-hidden) and paused, and a lost context stays paused.
   useEffect(() => {
+    const canvas = get().gl.domElement;
+    const shown = () =>
+      !lost.current && !canvas.closest('[data-hidden]') && getComputedStyle(canvas).visibility !== 'hidden';
     const wake = () => {
-      if (document.hidden) {
+      if (document.hidden || !shown()) {
         sleeping.current = true;
         setFrameloop('never');
         return;
@@ -216,7 +270,7 @@ export default function Experience({
     // scrollState is written on the smooth-scroll ticker, which can lag the
     // native scroll event; a cheap poll while asleep catches every case.
     const poll = window.setInterval(() => {
-      if (sleeping.current && !document.hidden) wake();
+      if (sleeping.current && !document.hidden && shown()) wake();
     }, 200);
     window.addEventListener('scroll', wake, { passive: true });
     window.addEventListener('resize', wake);
@@ -228,7 +282,7 @@ export default function Experience({
       window.removeEventListener('resize', wake);
       document.removeEventListener('visibilitychange', onVis);
     };
-  }, [setFrameloop, pathname]);
+  }, [get, setFrameloop, pathname, contextGen]);
 
   const portrait = size.width / Math.max(1, size.height) < 0.9;
   const shots = useMemo(() => resolveShots(portrait ? PORTRAIT_SHOTS : DESKTOP_SHOTS), [portrait]);

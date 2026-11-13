@@ -205,7 +205,7 @@ const DARK_TARGET: V3 = [0, 0.4, 0];
  * engraved column's left edge right of ~58% of the frame, clear of the theme
  * copy ("Read the fine print." and the growing phrases).
  */
-const MACRO_PAN = 0.0025;
+const MACRO_PAN = 0.0035;
 
 /** Macro look shared by the engraving shots: raking key from screen right, bright side right. */
 const MACRO = {
@@ -320,7 +320,7 @@ const heroPortrait = orbit(micPoint(0.105), 0.56, -0.02, 0.5, 0.08, -0.12);
 
 const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 0.85, dof: 0.6, key: 0.5, motes: 0.6, focus: [0.66, 0.45] as const, scrim: 0.35, bloom: 0.9 };
 
-const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.06, spot: 0.15, key: 0.75, rim: 2.6, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
+const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.06, spot: 0.15, key: 0.75, rim: 3.4, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
 
 export const PORTRAIT_SHOTS: Shot[] = [
   { at: 0, ...heroPortrait, ...HERO_PORTRAIT_LOOK },
@@ -331,7 +331,7 @@ export const PORTRAIT_SHOTS: Shot[] = [
     up: tuple(MIC_AXIS),
     space: 'mic',
     fov: 32,
-    exposure: 0.9,
+    exposure: 0.78,
     dof: 0.3,
     drift: 0.004,
     cone: 0.05,
@@ -344,7 +344,10 @@ export const PORTRAIT_SHOTS: Shot[] = [
     haze: 0.2,
     vignette: 0.75,
     env: 0.5,
-    scrim: 0.25,
+    // The barrel slides up behind the hero title ("Print" and its red footnote mark): keep it dim there.
+    scrim: 0.6,
+    scrimEdge: 0.9,
+    shade: 0.85,
   },
   { at: 0.85, ...barrel(PHI_HERO + 0.05, 0.08, 0.085, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [0.6, 2.3, 0.3] },
   { at: 1.4, ...barrel(PHI_HERO + 0.35, 0.074, 0.08, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [1.0, 2.2, 0.3] },
