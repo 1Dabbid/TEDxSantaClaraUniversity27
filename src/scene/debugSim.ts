@@ -150,8 +150,9 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     // Subject anchor: the mic head (grille), the barrel middle and the stand's foot on screen.
     const head = micPoint(0.1302);
     const foot = new Vector3(SPINE.x, 0, SPINE.z);
-    const drift = (P: Vector3) => {
-      const q = sp.map((f) => project(f, P, aspect)).filter((v) => v[2] > 0);
+    const drift = (P: Vector3, frames = sp) => {
+      // Only frames where the point is in the picture (the foot is below the frame in the first close shots).
+      const q = frames.map((f) => project(f, P, aspect)).filter((v) => v[2] > 0 && v[0] >= 0 && v[0] <= 1 && v[1] >= 0 && v[1] <= 1);
       const xs = q.map((v) => v[0]);
       const ys = q.map((v) => v[1]);
       return {
@@ -179,18 +180,66 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       runMax = Math.max(runMax, d);
       prev = d;
     }
+    // Framing jump between filmstrip frames (every 2.5% of the journey from Theme to the end of
+    // Tickets, J step 0.125): the largest ratio of camera-to-head distance between neighbours.
+    let zoomStep = 1;
+    let zoomAt = 0;
+    const byJ = new Map(F.map((f) => [f.J.toFixed(3), f]));
+    for (let J = 1.0; J <= to - 0.125 + 1e-9; J += 0.005) {
+      const f0 = byJ.get(J.toFixed(3));
+      const f1 = byJ.get((J + 0.125).toFixed(3));
+      if (!f0 || !f1) continue;
+      const d0 = new Vector3(...f0.pos).distanceTo(head);
+      const d1 = new Vector3(...f1.pos).distanceTo(head);
+      const r = Math.max(d0, d1) / Math.max(1e-6, Math.min(d0, d1));
+      if (r > zoomStep) [zoomStep, zoomAt] = [r, J];
+    }
     let minClr = Infinity;
     let clrAt = '';
     for (const f of F) if (f.clr < minClr) [minClr, clrAt] = [f.clr, `${f.obj}@J${f.J}`];
+    // Real scrolling at a steady speed (px/s) from the start of Theme to the end of Tickets, then a
+    // hold: the fastest turn of the view direction (deg/s) and the tightest near-plane clearance.
+    const L = measure();
+    const yAt = (J: number) => {
+      const k = Math.min(SECTION_IDS.length - 1, Math.floor(J));
+      const id = SECTION_IDS[k];
+      return (L.tops[id] ?? 0) + (J - k) * (L.heights[id] ?? 0) - L.vh / 2;
+    };
+    const scroll: Record<string, { maxAngVelDegS: number; atJ: number; minClearance: number; clrObj: string }> = {};
+    for (const speed of [1500, 4000]) {
+      const y0 = yAt(1.0);
+      const y1 = yAt(5.9999);
+      const n = Math.max(2, Math.ceil(((y1 - y0) / speed) * 60));
+      const ys: number[] = [];
+      for (let i = 0; i <= n; i++) ys.push(y0 + ((y1 - y0) * i) / n);
+      for (let i = 0; i < 120; i++) ys.push(y1);
+      const R = api.run({ ys, drift: false });
+      let maxW = 0;
+      let at = 0;
+      let mc = Infinity;
+      let mo = '';
+      for (let i = 1; i < R.length; i++) {
+        const a = new Vector3(...R[i - 1].tgt).sub(new Vector3(...R[i - 1].pos)).normalize();
+        const c = new Vector3(...R[i].tgt).sub(new Vector3(...R[i].pos)).normalize();
+        const w = ((Math.acos(Math.min(1, a.dot(c))) * 180) / Math.PI) * 60;
+        if (w > maxW) [maxW, at] = [w, R[i].J];
+        if (R[i].clr < mc) [mc, mo] = [R[i].clr, R[i].obj];
+      }
+      scroll[speed] = { maxAngVelDegS: +maxW.toFixed(1), atJ: at, minClearance: mc, clrObj: mo };
+    }
     return {
       headingChangeDeg: +(Math.max(...dy) - Math.min(...dy)).toFixed(3),
       maxLateralM: +Math.max(...lat).toFixed(4),
       travelM: +a.distanceTo(b).toFixed(3),
       anchorHead: drift(head),
       anchorFoot: drift(foot),
+      /** The head across the pull back (the macro's last shot to the start of Speakers). */
+      anchorHeadPullBack: drift(head, F.filter((f) => f.J >= outFrom && f.J <= from)),
       monotonic: { reversals, maxPushBackM: +maxBack.toFixed(5) },
       minClearance: minClr,
       minClearanceAt: clrAt,
+      maxZoomPerFilmStep: { ratio: +zoomStep.toFixed(2), atJ: +zoomAt.toFixed(3) },
+      scroll,
     };
   };
   const full = { ...api, metrics };

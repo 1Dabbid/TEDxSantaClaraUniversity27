@@ -395,6 +395,21 @@ export default function Experience({
       look,
       fs.out,
     );
+    // Debug: window.__sceneTune = { key: 0.9, envRot: 0.3, keyDir: [1, 2, 0.3], ... } overrides the
+    // sampled look values live (only with ?scene-debug=1), for tuning a shot without a rebuild.
+    if (debug) {
+      const tune = (window as unknown as { __sceneTune?: Record<string, number | number[]> }).__sceneTune;
+      if (tune) {
+        const lk = look as unknown as Record<string, number>;
+        const ok = o as unknown as Record<string, unknown>;
+        for (const [k, v] of Object.entries(tune)) {
+          if (Array.isArray(v)) {
+            if (k === 'keyDir') o.keyDir.set(v[0], v[1], v[2]);
+          } else if (k in lk) lk[k] = v;
+          else if (typeof ok[k] === 'number') ok[k] = v;
+        }
+      }
+    }
     const s = o.s;
     const target = o.target;
     const dist = o.dist;

@@ -237,16 +237,18 @@ const MACRO = {
   parallax: 0.0018,
   cone: 0,
   spot: 0,
-  key: 0.48,
+  key: 0.75,
   keyCam: 1,
   rim: 0.4,
   rimAng: 1.2,
   haze: 0,
   motes: 1,
   vignette: 0.85,
-  // The studio strips walk round the barrel (choreography never circles it): the streak lands left of the facing line.
-  envRot: -1.1,
-  env: 0.22,
+  // The studio strips walk round the barrel (choreography never circles it): the streak runs down
+  // the engraved column, a little right of the row starts, so the etched copy reads bright.
+  envRot: -0.8,
+  env: 0.4,
+  focus: [0.74, 0.5] as const,
   scrim: 0.55,
   scrimEdge: 0.9,
   bloom: 1.3,
@@ -257,7 +259,20 @@ const HERO_LOOK = { fov: 30, exposure: 1.05, drift: 0.012, parallax: 0.022, cone
 /** The stage under its light: the speakers hold and everything after it. */
 const STAGE_LOOK = { fov: 32, exposure: 1, dof: 0.1, drift: 0.006, parallax: 0.025, cone: 1.3, spot: 1, key: 0.5, keyCam: 0, rim: 0.9, rimAng: -0.6, haze: 0, motes: 0, vignette: 0.62, bloom: 1.1, env: 1 };
 
-const ANCHOR: readonly [number, number] = [0.68, 0.42];
+/*
+ * Looks along the pull back, between the macro and the lit stage. The key light leaves the
+ * camera (keyCam 1 -> 0) and the rim swings from screen right to the upstage side, while the
+ * overhead spot stays off until the stand and the rug are in frame.
+ */
+/** The barrel standing back from upright, the engraving still lit by the raking key. */
+const PULL_BARREL = { fov: 29, exposure: 1.06, dof: 0.5, drift: 0.003, parallax: 0.006, cone: 0, spot: 0, key: 0.8, keyCam: 0.75, keyDir: [1.8, 1.7, 0.35] as V3, rim: 0.7, rimAng: 0.6, haze: 0.15, motes: 0.5, vignette: 0.8, envRot: -0.5, env: 0.45, scrim: 0.45, scrimEdge: 0.75, bloom: 1.2 };
+/** Barrel and grille. */
+const PULL_MIC = { fov: 29.5, exposure: 1.03, dof: 0.4, drift: 0.004, parallax: 0.008, cone: 0.02, spot: 0.02, key: 0.85, keyCam: 0.5, keyDir: [1.5, 1.6, 0.3] as V3, rim: 1.0, rimAng: 0.1, haze: 0.3, motes: 0.3, vignette: 0.75, envRot: -0.2, env: 0.55, scrim: 0.4, scrimEdge: 0.6, bloom: 1.1 };
+/** The whole microphone on a dark stage. */
+const PULL_DARK = { fov: 30, exposure: 1, dof: 0.3, drift: 0.004, parallax: 0.012, cone: 0.04, spot: 0.04, key: 0.85, keyCam: 0.3, keyDir: [1.4, 1.6, 0.3] as V3, rim: 1.2, rimAng: -0.3, haze: 0.25, motes: 0.05, vignette: 0.72, envRot: 0, env: 0.6, scrim: 0.35, scrimEdge: 0.5, bloom: 1.1 };
+/** Microphone and upper stand, the spot just beginning to warm. */
+const PULL_STAND = { fov: 31, exposure: 1, dof: 0.22, drift: 0.005, parallax: 0.016, cone: 0.03, spot: 0.15, key: 0.8, keyCam: 0.1, rim: 1.15, rimAng: -0.45, haze: 0.08, motes: 0, vignette: 0.68, env: 0.75, scrim: 0.2, scrimEdge: 0.3, bloom: 1.1 };
+
 /** In the macro the barrel slides right so its engraved column clears the theme headline (left edge past ~58%). */
 const ANCHOR_MACRO: readonly [number, number] = [0.8, 0.5];
 
@@ -295,51 +310,24 @@ export const DESKTOP_SHOTS: Shot[] = [
   // The macro: the same push settles on the engraving, then slides slowly down the barrel (rows go by).
   { at: 0.98, aim: { mic: 0.088 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [1.1, 2.2, 0.3] },
   { at: 1.3, aim: { mic: 0.081 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [1.5, 2.0, 0.3] },
-  { at: 1.62, aim: { mic: 0.074 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [1.8, 1.8, 0.3] },
-  { at: 1.8, aim: { mic: 0.07 }, dist: 0.068, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [2.0, 1.6, 0.3] },
-  {
-    // Pull straight back out: the engraving recedes, the whole microphone comes into frame, still dark.
-    at: 1.93,
-    aim: { mic: 0.09 },
-    dist: 0.42,
-    anchor: [0.72, 0.43],
-    roll: 0.12,
-    fov: 30,
-    exposure: 1.0,
-    dof: 0.35,
-    drift: 0.004,
-    parallax: 0.01,
-    cone: 0.12,
-    spot: 0.08,
-    key: 0.85,
-    keyCam: 0.3,
-    keyDir: [1.4, 1.6, 0.3],
-    rim: 1.2,
-    rimAng: -0.3,
-    haze: 0.4,
-    motes: 0.2,
-    vignette: 0.72,
-    scrim: 0.35,
-    scrimEdge: 0.5,
-    env: 0.6,
-  },
-  {
-    // ... then its stand, while the overhead spot comes up: the light coming on is the event.
-    at: 2.03,
-    aim: { stand: 1.22 },
-    dist: 2.1,
-    anchor: ANCHOR,
-    ...STAGE_LOOK,
-    exposure: 1,
-    cone: 0.75,
-    spot: 0.6,
-    key: 0.7,
-    rim: 1.1,
-    haze: 0.15,
-    dof: 0.2,
-  },
+  { at: 1.6, aim: { mic: 0.074 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [1.8, 1.8, 0.3] },
+  { at: 1.72, aim: { mic: 0.072 }, dist: 0.067, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [2.0, 1.6, 0.3] },
+  // The pull back: straight out along the same line, the distance growing evenly in log space
+  // (about 1.7x per 0.08 of the journey) so every frame follows from the one before. The
+  // engraving recedes, the barrel stands back from upright, the whole microphone comes into frame,
+  // then its stand, then the rug, and only then does the overhead spot come up.
+  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.1054, anchor: [0.785, 0.485], ...MACRO, roll: 0.9, keyDir: [2.0, 1.6, 0.3], dof: 0.7, motes: 0.8, scrim: 0.5 },
+  { at: 1.865, aim: { mic: 0.082 }, dist: 0.1814, anchor: [0.755, 0.465], roll: 0.62, ...PULL_BARREL },
+  { at: 1.9375, aim: { mic: 0.09 }, dist: 0.3268, anchor: [0.725, 0.445], roll: 0.3, ...PULL_MIC },
+  // The whole microphone, still in the dark: only its key and rim light.
+  { at: 2.01, aim: { mic: 0.1 }, dist: 0.6445, anchor: [0.7, 0.43], roll: 0.06, ...PULL_DARK },
+  // The aim slides down the stand line in step with the distance, so the head rises on screen
+  // slowly (about 0.42 to 0.25 of the height) while the stand, then the rug, enter from below.
+  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.271, anchor: [0.685, 0.43], ...PULL_STAND, fov: 31 },
+  { at: 2.155, aim: { stand: 1.395 }, dist: 2.29, anchor: [0.68, 0.44], ...STAGE_LOOK, cone: 0.12, spot: 0.5, key: 0.7, rim: 1.05, haze: 0.03, dof: 0.15 },
+  { at: 2.2275, aim: { stand: 1.195 }, dist: 3.942, anchor: [0.68, 0.445], ...STAGE_LOOK, cone: 0.65, spot: 0.88, key: 0.6, rim: 0.95 },
   // Speakers: locked off on the microphone in the shaft of light on the red circle.
-  { at: 2.16, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
+  { at: 2.3, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
   { at: 2.96, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
   // Schedule: the same frame drifts back a few percent; the light carries the change (denser haze, a little dimmer).
   { at: 3.92, aim: { stand: 0.88 }, dist: 6.55, anchor: [0.68, 0.45], ...STAGE_LOOK, cone: 1.5, spot: 0.95, exposure: 0.97 },
@@ -355,7 +343,7 @@ export const DESKTOP_SHOTS: Shot[] = [
 
 /** Portrait: the same axis, the subject centred, in the lower middle (the copy sits above it on full-width scrims). */
 const P_ANCHOR: readonly [number, number] = [0.5, 0.62];
-const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 1.15, dof: 0.6, key: 0.85, motes: 0.6, scrim: 0.35, bloom: 0.9 };
+const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 1.15, dof: 0.6, key: 0.85, motes: 0.6, scrim: 0.35, bloom: 0.9, focus: [0.6, 0.45] as const };
 const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.02, spot: 0.15, key: 0.75, rim: 3.4, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
 const STAGE_PORTRAIT = { ...STAGE_LOOK, fov: 40, exposure: 1.05, parallax: 0, cone: 1.35, spot: 1.1 };
 
@@ -389,10 +377,16 @@ export const PORTRAIT_SHOTS: Shot[] = [
   },
   { at: 0.85, aim: { mic: 0.088 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, keyDir: [0.6, 2.3, 0.3] },
   { at: 1.4, aim: { mic: 0.08 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, keyDir: [1.0, 2.2, 0.3] },
-  { at: 1.75, aim: { mic: 0.072 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, keyDir: [1.3, 2.0, 0.3] },
-  { at: 1.93, aim: { mic: 0.09 }, dist: 0.7, anchor: [0.5, 0.6], roll: 0.1, fov: 36, exposure: 0.85, dof: 0.2, drift: 0.006, cone: 0.12, spot: 0.06, key: 0.9, keyCam: 0.3, rim: 1.4, rimAng: -0.4, haze: 0.3, vignette: 0.7 },
-  { at: 2.04, aim: { stand: 1.2 }, dist: 3.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.8, spot: 0.6, key: 0.7 },
-  { at: 2.16, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
+  { at: 1.72, aim: { mic: 0.072 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, keyDir: [1.3, 2.0, 0.3] },
+  // The same pull back as on landscape, at portrait distances.
+  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.158, anchor: [0.54, 0.56], ...MACRO_PORTRAIT, roll: 0.9, keyDir: [1.4, 1.9, 0.3], dof: 0.5 },
+  { at: 1.865, aim: { mic: 0.082 }, dist: 0.273, anchor: [0.53, 0.575], roll: 0.62, ...PULL_BARREL, fov: 33, exposure: 1.08, scrim: 0.35, parallax: 0 },
+  { at: 1.9375, aim: { mic: 0.09 }, dist: 0.494, anchor: [0.515, 0.59], roll: 0.3, ...PULL_MIC, fov: 34.5, scrim: 0.35, parallax: 0 },
+  { at: 2.01, aim: { mic: 0.1 }, dist: 0.98, anchor: [0.5, 0.6], roll: 0.06, ...PULL_DARK, fov: 36, parallax: 0 },
+  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.943, anchor: P_ANCHOR, ...PULL_STAND, fov: 37, parallax: 0 },
+  { at: 2.155, aim: { stand: 1.38 }, dist: 3.517, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.12, spot: 0.5, key: 0.7, haze: 0.03, dof: 0.15 },
+  { at: 2.2275, aim: { stand: 1.16 }, dist: 6.08, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.7, spot: 0.9, key: 0.6 },
+  { at: 2.3, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
   { at: 2.96, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
   { at: 3.92, aim: { stand: 0.83 }, dist: 10.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 1.5, spot: 1.05, exposure: 1.0 },
   { at: 4.6, aim: { stand: 0.68 }, dist: 15, lift: 0.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 1.5, key: 0.3, scrimEdge: 0.6 },

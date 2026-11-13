@@ -11,7 +11,7 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
-import { MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE } from './layout';
+import { ENGRAVING_START_PHI, MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE } from './layout';
 import { EMPTY_MASK } from './textures';
 
 /** Tangent of the overhead spot's nominal half-angle (the beam just covers the rug). */
@@ -274,7 +274,8 @@ export function createBodyMaterial(cheap: boolean) {
 
       float bv = (vObj.y - uBand.x) / (uBand.y - uBand.x);
       if (bv > 0.0 && bv < 1.0 && r > 0.005) {
-        vec2 uv = vec2(phi * 0.15915494, bv);
+        // u = 0 (where every row begins) at ENGRAVING_START_PHI, left of the camera axis.
+        vec2 uv = vec2((phi - (${ENGRAVING_START_PHI.toFixed(4)})) * 0.15915494, bv);
         vec2 dx = dFdx(uv); vec2 dy = dFdy(uv);
         dx.x -= floor(dx.x + 0.5); dy.x -= floor(dy.x + 0.5);
         float mr = textureGrad(uMask, uv, dx, dy).r;
