@@ -315,25 +315,28 @@ export const DESKTOP_SHOTS: Shot[] = [
     bloom: 1.2,
   },
   // The macro: the same push settles on the engraving, then slides slowly down the barrel (rows go by).
-  { at: 0.98, aim: { mic: 0.088 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [1.1, 2.2, 0.3] },
-  { at: 1.3, aim: { mic: 0.081 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [1.5, 2.0, 0.3] },
-  { at: 1.6, aim: { mic: 0.074 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [1.8, 1.8, 0.3] },
-  { at: 1.72, aim: { mic: 0.072 }, dist: 0.067, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [2.0, 1.6, 0.3] },
+  // The barrel arrives upright (roll ~1) and the roll unwinds evenly from 1.3 until the stage shots
+  // (about 20 deg spread over a screen and a half), so the subject never spins as it recedes:
+  // __sceneSim.metrics().rollPullBack and scroll[*].maxRollRateDegS measure it.
+  { at: 0.98, aim: { mic: 0.088 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.94, keyDir: [1.1, 2.2, 0.3] },
+  { at: 1.3, aim: { mic: 0.081 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.92, keyDir: [1.5, 2.0, 0.3] },
+  { at: 1.6, aim: { mic: 0.074 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.63, keyDir: [1.8, 1.8, 0.3] },
+  { at: 1.72, aim: { mic: 0.072 }, dist: 0.067, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.51, keyDir: [2.0, 1.6, 0.3] },
   // The pull back: straight out along the same line, the distance growing evenly in log space
   // (eight steps of 0.0725, eased: about 1.6x at the ends, 2x in the middle) so every frame
   // follows from the one before, over about 1.2 screens of scroll on a 1440x900 screen. The
   // engraving recedes, the barrel stands back from upright, the whole microphone comes into frame,
   // then its stand, then the rug, and only then does the overhead spot come up.
-  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.1054, anchor: [0.785, 0.485], ...MACRO, roll: 0.9, keyDir: [2.0, 1.6, 0.3], dof: 0.7, motes: 0.8, scrim: 0.5 },
-  { at: 1.865, aim: { mic: 0.082 }, dist: 0.1814, anchor: [0.755, 0.465], roll: 0.62, ...PULL_BARREL },
+  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.1054, anchor: [0.785, 0.485], ...MACRO, roll: 0.44, keyDir: [2.0, 1.6, 0.3], dof: 0.7, motes: 0.8, scrim: 0.5 },
+  { at: 1.865, aim: { mic: 0.082 }, dist: 0.1814, anchor: [0.755, 0.465], roll: 0.37, ...PULL_BARREL },
   { at: 1.9375, aim: { mic: 0.09 }, dist: 0.3268, anchor: [0.725, 0.445], roll: 0.3, ...PULL_MIC },
   // The whole microphone, still in the dark: only its key and rim light.
-  { at: 2.01, aim: { mic: 0.1 }, dist: 0.6445, anchor: [0.7, 0.43], roll: 0.06, ...PULL_DARK },
+  { at: 2.01, aim: { mic: 0.1 }, dist: 0.6445, anchor: [0.7, 0.43], roll: 0.23, ...PULL_DARK },
   // The aim slides down the stand line in step with the distance, so the head rises on screen
   // slowly (about 0.42 to 0.25 of the height) while the stand, then the rug, enter from below.
-  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.271, anchor: [0.685, 0.43], ...PULL_STAND, fov: 31 },
-  { at: 2.155, aim: { stand: 1.395 }, dist: 2.29, anchor: [0.68, 0.44], ...STAGE_LOOK, cone: 0.12, spot: 0.5, key: 0.7, rim: 1.05, haze: 0.03, dof: 0.15 },
-  { at: 2.2275, aim: { stand: 1.195 }, dist: 3.942, anchor: [0.68, 0.445], ...STAGE_LOOK, cone: 0.65, spot: 0.88, key: 0.6, rim: 0.95 },
+  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.271, anchor: [0.685, 0.43], roll: 0.16, ...PULL_STAND, fov: 31 },
+  { at: 2.155, aim: { stand: 1.395 }, dist: 2.29, anchor: [0.68, 0.44], roll: 0.09, ...STAGE_LOOK, cone: 0.12, spot: 0.5, key: 0.7, rim: 1.05, haze: 0.03, dof: 0.15 },
+  { at: 2.2275, aim: { stand: 1.195 }, dist: 3.942, anchor: [0.68, 0.445], roll: 0.02, ...STAGE_LOOK, cone: 0.65, spot: 0.88, key: 0.6, rim: 0.95 },
   // Speakers: locked off on the microphone in the shaft of light on the red circle.
   { at: 2.3, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
   { at: 2.96, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
@@ -384,17 +387,17 @@ export const PORTRAIT_SHOTS: Shot[] = [
     scrimEdge: 0.9,
     shade: 1,
   },
-  { at: 0.85, aim: { mic: 0.088 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, keyDir: [0.6, 2.3, 0.3] },
-  { at: 1.4, aim: { mic: 0.08 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, keyDir: [1.0, 2.2, 0.3] },
-  { at: 1.72, aim: { mic: 0.072 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, keyDir: [1.3, 2.0, 0.3] },
+  { at: 0.85, aim: { mic: 0.088 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.94, keyDir: [0.6, 2.3, 0.3] },
+  { at: 1.4, aim: { mic: 0.08 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.82, keyDir: [1.0, 2.2, 0.3] },
+  { at: 1.72, aim: { mic: 0.072 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.51, keyDir: [1.3, 2.0, 0.3] },
   // The same pull back as on landscape, at portrait distances.
-  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.158, anchor: [0.54, 0.56], ...MACRO_PORTRAIT, roll: 0.9, keyDir: [1.4, 1.9, 0.3], dof: 0.5 },
-  { at: 1.865, aim: { mic: 0.082 }, dist: 0.273, anchor: [0.53, 0.575], roll: 0.62, ...PULL_BARREL, fov: 33, exposure: 1.08, scrim: 0.35, parallax: 0 },
+  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.158, anchor: [0.54, 0.56], ...MACRO_PORTRAIT, roll: 0.44, keyDir: [1.4, 1.9, 0.3], dof: 0.5 },
+  { at: 1.865, aim: { mic: 0.082 }, dist: 0.273, anchor: [0.53, 0.575], roll: 0.37, ...PULL_BARREL, fov: 33, exposure: 1.08, scrim: 0.35, parallax: 0 },
   { at: 1.9375, aim: { mic: 0.09 }, dist: 0.494, anchor: [0.515, 0.59], roll: 0.3, ...PULL_MIC, fov: 34.5, scrim: 0.35, parallax: 0 },
-  { at: 2.01, aim: { mic: 0.1 }, dist: 0.98, anchor: [0.5, 0.6], roll: 0.06, ...PULL_DARK, fov: 36, parallax: 0 },
-  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.943, anchor: P_ANCHOR, ...PULL_STAND, fov: 37, parallax: 0 },
-  { at: 2.155, aim: { stand: 1.38 }, dist: 3.517, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.12, spot: 0.5, key: 0.7, haze: 0.03, dof: 0.15 },
-  { at: 2.2275, aim: { stand: 1.16 }, dist: 6.08, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.45, spot: 0.9, key: 0.6 },
+  { at: 2.01, aim: { mic: 0.1 }, dist: 0.98, anchor: [0.5, 0.6], roll: 0.23, ...PULL_DARK, fov: 36, parallax: 0 },
+  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.943, anchor: P_ANCHOR, roll: 0.16, ...PULL_STAND, fov: 37, parallax: 0 },
+  { at: 2.155, aim: { stand: 1.38 }, dist: 3.517, anchor: P_ANCHOR, roll: 0.09, ...STAGE_PORTRAIT, cone: 0.12, spot: 0.5, key: 0.7, haze: 0.03, dof: 0.15 },
+  { at: 2.2275, aim: { stand: 1.16 }, dist: 6.08, anchor: P_ANCHOR, roll: 0.02, ...STAGE_PORTRAIT, cone: 0.45, spot: 0.9, key: 0.6 },
   { at: 2.3, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
   { at: 2.96, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
   { at: 3.92, aim: { stand: 0.83 }, dist: 10.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.7, spot: 1.05, exposure: 0.97 },
