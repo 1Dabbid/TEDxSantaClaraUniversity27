@@ -156,7 +156,7 @@ function orbit(centre: Vector3, az: number, el: number, dist: number, shiftRight
 }
 
 /** Mic-space macro shot looking at the barrel surface at angle phi, height y. */
-function barrel(phi: number, y: number, dist: number, lookY = 0, shift = 0) {
+function barrel(phi: number, y: number, dist: number, lookY = 0, shift = 0, pan = 0) {
   const r = barrelRadius(y);
   const n = [Math.sin(phi), 0, Math.cos(phi)] as const;
   // Tangent (towards decreasing phi): shifting the target along it slides the barrel across the frame.
@@ -165,7 +165,8 @@ function barrel(phi: number, y: number, dist: number, lookY = 0, shift = 0) {
   return {
     space: 'mic' as const,
     pos: [s[0] + n[0] * dist + tg[0] * shift * 0.3, s[1] - lookY * 0.5, s[2] + n[2] * dist + tg[2] * shift * 0.3] as V3,
-    target: [s[0] + tg[0] * shift, s[1] + lookY, s[2] + tg[2] * shift] as V3,
+    // pan: turns the view only (camera stays), sliding the barrel sideways in frame.
+    target: [s[0] + tg[0] * (shift + pan), s[1] + lookY, s[2] + tg[2] * (shift + pan)] as V3,
   };
 }
 
@@ -199,6 +200,13 @@ const PHI_HERO = (() => {
 const DARK_POS: V3 = [-2.4, 5.4, 20.5];
 const DARK_TARGET: V3 = [0, 0.4, 0];
 
+/**
+ * Pan of the desktop macro shots (metres along the barrel tangent): keeps the
+ * engraved column's left edge right of ~58% of the frame, clear of the theme
+ * copy ("Read the fine print." and the growing phrases).
+ */
+const MACRO_PAN = 0.0025;
+
 /** Macro look shared by the engraving shots: raking key from screen right, bright side right. */
 const MACRO = {
   fov: 28,
@@ -214,7 +222,7 @@ const MACRO = {
   haze: 0,
   motes: 1,
   vignette: 0.85,
-  focus: [0.7, 0.5] as const,
+  focus: [0.75, 0.5] as const,
   envRot: 0.6,
   env: 0.22,
   scrim: 0.55,
@@ -271,10 +279,10 @@ export const DESKTOP_SHOTS: Shot[] = [
     scrimEdge: 0.85,
     bloom: 1.2,
   },
-  { at: 0.98, ...barrel(PHI_HERO + 0.05, 0.088, 0.047, 0, 0.005), ...MACRO, keyDir: [1.1, 2.2, 0.3] },
-  { at: 1.3, ...barrel(PHI_HERO + 0.3, 0.077, 0.045, 0, 0.005), ...MACRO, keyDir: [1.5, 2.0, 0.3] },
-  { at: 1.62, ...barrel(PHI_HERO + 0.5, 0.068, 0.045, 0, 0.005), ...MACRO, keyDir: [1.8, 1.8, 0.3] },
-  { at: 1.8, ...barrel(PHI_HERO + 0.62, 0.064, 0.05, 0, 0.005), ...MACRO, keyDir: [2.0, 1.6, 0.3] },
+  { at: 0.98, ...barrel(PHI_HERO + 0.05, 0.088, 0.047, 0, 0.005, MACRO_PAN), ...MACRO, keyDir: [1.1, 2.2, 0.3] },
+  { at: 1.3, ...barrel(PHI_HERO + 0.3, 0.077, 0.045, 0, 0.005, MACRO_PAN), ...MACRO, keyDir: [1.5, 2.0, 0.3] },
+  { at: 1.62, ...barrel(PHI_HERO + 0.5, 0.068, 0.045, 0, 0.005, MACRO_PAN), ...MACRO, keyDir: [1.8, 1.8, 0.3] },
+  { at: 1.8, ...barrel(PHI_HERO + 0.62, 0.064, 0.05, 0, 0.005, MACRO_PAN), ...MACRO, keyDir: [2.0, 1.6, 0.3] },
   {
     at: 1.95,
     ...pullBackLevel(PHI_HERO + 0.72, 0.62, 0.04, micPoint(0.07)),
@@ -307,8 +315,8 @@ export const DESKTOP_SHOTS: Shot[] = [
   { at: 9.5, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
 ];
 
-/** Portrait hero: mic large, low right, cropped by the frame edge; rim-lit silhouette with a key. */
-const heroPortrait = orbit(micPoint(0.105), 0.56, -0.02, 0.5, 0.05, -0.06);
+/** Portrait hero: mic head in the lower 30% of the frame against the right edge, cropped (the tagline and buttons sit above it); rim-lit with a key. */
+const heroPortrait = orbit(micPoint(0.105), 0.56, -0.02, 0.5, 0.08, -0.12);
 
 const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 0.85, dof: 0.6, key: 0.5, motes: 0.6, focus: [0.66, 0.45] as const, scrim: 0.35, bloom: 0.9 };
 

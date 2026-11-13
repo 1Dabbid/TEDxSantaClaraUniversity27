@@ -32,6 +32,7 @@ import {
   resolveShots,
 } from './choreography';
 import { createStudioEnvironment } from './environment';
+import type { EngravingFacts } from './engraving';
 import { look } from './look';
 import { createRig, createRigOut, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
@@ -105,7 +106,16 @@ function motesGeometry() {
  * The whole scene: microphone on its stand, the red rug under an overhead
  * spot, 100 seats, one camera driven by scroll. Rendering is owned by <Post>.
  */
-export default function Experience({ quality, pathname = '/' }: { quality: Exclude<Quality, 'static'>; pathname?: string }) {
+export default function Experience({
+  quality,
+  pathname = '/',
+  engraving,
+}: {
+  quality: Exclude<Quality, 'static'>;
+  pathname?: string;
+  /** Optional facts engraved on the barrel (date, venue, seats, ...); defaults to engraving.ts. */
+  engraving?: Partial<EngravingFacts>;
+}) {
   const get = useThree((s) => s.get);
   const setFrameloop = useThree((s) => s.setFrameloop);
   const setDpr = useThree((s) => s.setDpr);
@@ -429,7 +439,7 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
       />
       {/* Cool backlight from high upstage: rims the stand and the tops of the seat backs seen from the rear */}
       <directionalLight position={[0, 7, -8]} intensity={0.3} color="#dfe5f2" onUpdate={reflected} />
-      <Microphone quality={tier} />
+      <Microphone quality={tier} engraving={engraving} />
       <Stage quality={tier} />
       <Seats quality={tier} />
       <Venue />

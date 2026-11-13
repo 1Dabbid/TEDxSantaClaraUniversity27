@@ -33,6 +33,7 @@ import {
   createPolishedMaterial,
 } from './materials';
 import { REFLECT_LAYER } from './reflection';
+import { engravingRows, type EngravingFacts } from './engraving';
 import { createEngravingMask } from './textures';
 
 /** Body profile: tail, knurled grip, tapered barrel with two seam lines, neck under the band ring. */
@@ -340,11 +341,14 @@ function cableGeometry(high: boolean) {
   return new TubeGeometry(curve, high ? 520 : 220, 0.0034, high ? 8 : 5, false);
 }
 
-export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
+export default function Microphone({ quality, engraving }: { quality: 'high' | 'low'; engraving?: Partial<EngravingFacts> }) {
   const high = quality === 'high';
   const gl = useThree((s) => s.gl);
   const fade = useRef(0);
   const root = useRef<Group>(null);
+  // Rebuild the mask only when the engraved facts actually change.
+  const engravingKey = JSON.stringify(engraving ?? {});
+  const rows = useMemo(() => engravingRows(JSON.parse(engravingKey) as Partial<EngravingFacts>), [engravingKey]);
   const maskOn = useRef<{ value: number } | null>(null);
 
   const geo = useMemo(() => {
@@ -393,7 +397,7 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
     let cancelled = false;
     const w = high ? 4096 : 3072;
     const h = high ? 2048 : 1536;
-    createEngravingMask(w, h).then((tex) => {
+    createEngravingMask(w, h, rows).then((tex) => {
       if (cancelled) {
         tex.dispose();
         return;
@@ -409,7 +413,7 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
     return () => {
       cancelled = true;
     };
-  }, [gl, high, mats]);
+  }, [gl, high, mats, rows]);
 
   useEffect(
     () => () => {

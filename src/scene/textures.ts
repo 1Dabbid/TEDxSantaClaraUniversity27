@@ -9,7 +9,7 @@ import {
   UnsignedByteType,
   type Texture,
 } from 'three';
-import { ENGRAVING_ROWS, ENGRAVING_SEPARATOR } from './engraving';
+import { ENGRAVING_ROWS, ENGRAVING_SEPARATOR, type EngravingRow } from './engraving';
 import { MIC, barrelRadius } from './layout';
 
 const MONO = "ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace";
@@ -42,7 +42,7 @@ const yieldToIdle = () =>
  * uploaded to the GPU as a single-channel (R8) texture: no pixel readback, no CPU blur. The canvas text
  * antialiasing gives the walls their slope; mipmaps are generated on the GPU.
  */
-export async function createEngravingMask(width: number, height: number): Promise<Texture> {
+export async function createEngravingMask(width: number, height: number, rows: readonly EngravingRow[] = ENGRAVING_ROWS): Promise<Texture> {
   try {
     await document.fonts?.ready;
   } catch {
@@ -68,14 +68,14 @@ export async function createEngravingMask(width: number, height: number): Promis
 
   const bandH = MIC.bandY[1] - MIC.bandY[0];
   const pxPerM = height / bandH;
-  const total = ENGRAVING_ROWS.reduce((s, r) => s + (r.kind === 'rule' ? ROW_WEIGHT.rule : ROW_WEIGHT[r.style]), 0);
+  const total = rows.reduce((s, r) => s + (r.kind === 'rule' ? ROW_WEIGHT.rule : ROW_WEIGHT[r.style]), 0);
   // Leave a margin top and bottom of the band.
   const margin = height * 0.03;
   const unit = (height - margin * 2) / total;
 
   let yTop = margin;
   let slice = performance.now();
-  for (const row of ENGRAVING_ROWS) {
+  for (const row of rows) {
     // Time-sliced: draw rows for ~8 ms, then give the main thread back.
     if (performance.now() - slice > 8) {
       await yieldToIdle();
