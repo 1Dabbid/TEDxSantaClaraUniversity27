@@ -3,6 +3,7 @@ import type { Settings, VenueNote } from '@/lib/content';
 import { getSettings } from '@/lib/content';
 import { jsonLdString, pageJsonLd, venuePlaceJsonLd } from '@/lib/jsonld';
 import { formatCoordinate } from '@/lib/links';
+import { slugIds } from '@/lib/faq-ids';
 import { topicPageMetadata } from '@/lib/page-meta';
 import { SITE_NAME, seatsLabel, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
@@ -32,7 +33,18 @@ type Kind = 'directions' | 'parking' | 'access' | 'other';
 const kindOf = (title: string): Kind =>
   /direction|getting/i.test(title) ? 'directions' : /park/i.test(title) ? 'parking' : /access/i.test(title) ? 'access' : 'other';
 
-const anchorOf = (title: string) => title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'note';
+/** Ids /venue itself renders: a note's anchor never takes one of them (lib/faq-ids.ts slugIds uniques the rest). */
+const VENUE_IDS: ReadonlySet<string> = new Set([
+  'main',
+  'site-footer',
+  'venue-page-title',
+  'venue-address-title',
+  'getting-there-title',
+  'next-title',
+  'footer-tedx',
+  'footer-ted',
+  'footer-site',
+]);
 
 /** "Directions, parking and accessibility" */
 function listOf(titles: string[]): string {
@@ -130,6 +142,11 @@ export default async function VenuePage() {
   const addressLine = [a.street, cityLine].filter(Boolean).join(', ');
   const notes = settings.venueNotes.length ? settings.venueNotes : DEFAULT_NOTES;
   const pending = notes.filter((n) => !n.body).map((n) => n.title);
+  const noteIds = slugIds(
+    notes.map((n) => n.title),
+    VENUE_IDS,
+    'note',
+  );
 
   return (
     <TopicPage>
@@ -227,7 +244,7 @@ export default async function VenuePage() {
             {notes.map((n, i) => (
               <li
                 key={`${n.title}-${i}`}
-                id={anchorOf(n.title)}
+                id={noteIds[i]}
                 className="grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2 gap-y-3 border-b border-white/15 py-7 sm:grid-cols-[3.5rem_11rem_minmax(0,1fr)] sm:items-baseline sm:gap-x-6"
               >
                 <span aria-hidden="true" className="fine-print text-white">

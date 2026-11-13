@@ -23,7 +23,11 @@ export const RESERVED_IDS: ReadonlySet<string> = new Set([
   'footer-site',
 ]);
 
-export function faqSlug(question: string): string {
+/**
+ * One slug. `reserved` ids get the `fallback` word appended; text with no ASCII
+ * letters or digits becomes `fallback` itself (then uniqued by slugIds).
+ */
+export function faqSlug(question: string, reserved: ReadonlySet<string> = RESERVED_IDS, fallback = 'question'): string {
   const words = question
     .normalize('NFKD')
     .replace(/[̀-ͯ]/g, '')
@@ -33,19 +37,22 @@ export function faqSlug(question: string): string {
     .filter(Boolean);
   const kept = words.filter((w) => !FILLER.has(w));
   const slug = (kept.length ? kept : words).slice(0, 6).join('-');
-  if (!slug) return 'question';
+  if (!slug) return fallback;
   // An id must not start with a digit to be usable as a CSS selector without escaping.
   const safe = /^\d/.test(slug) ? `q-${slug}` : slug;
-  return RESERVED_IDS.has(safe) ? `${safe}-question` : safe;
+  return reserved.has(safe) ? `${safe}-${fallback}` : safe;
 }
 
-export function faqIds(questions: string[]): string[] {
-  const used = new Set<string>();
-  return questions.map((q) => {
-    const base = faqSlug(q);
+/** Unique ids for a list of headings on one page: slugs, never a reserved id, repeats get "-2", "-3". */
+export function slugIds(texts: string[], reserved: ReadonlySet<string>, fallback: string): string[] {
+  const used = new Set<string>(reserved);
+  return texts.map((q) => {
+    const base = faqSlug(q, reserved, fallback);
     let id = base;
     for (let n = 2; used.has(id); n++) id = `${base}-${n}`;
     used.add(id);
     return id;
   });
 }
+
+export const faqIds = (questions: string[]): string[] => slugIds(questions, RESERVED_IDS, 'question');
