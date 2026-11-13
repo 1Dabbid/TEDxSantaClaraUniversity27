@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
+import { initials } from '../../src/lib/site';
 import { contentValue } from './helpers';
 
 /**
@@ -14,21 +15,30 @@ const PAGES = ['/', '/partners', '/team', '/schedule', '/venue', '/speakers', '/
 /** The club's own public addresses (Contact in the admin); no other email may appear. */
 const CLUB_EMAILS = [contentValue('contact.yaml', 'contactEmail'), contentValue('contact.yaml', 'partnershipsEmail')].filter(Boolean);
 
-/** Named team members from content/team, in display order. */
-function teamFromContent(): { name: string; linkedin: string }[] {
+type ContentMember = { slug: string; name: string; role: string; linkedin: string; hasPhoto: boolean };
+
+/** Named team members from content/team, in display order, and whether each has a photo (Photo field or the dropped-in file). */
+function teamFromContent(): ContentMember[] {
   const dir = join(process.cwd(), 'content/team');
   return readdirSync(dir)
     .filter((f) => f.endsWith('.yaml'))
-    .map((f) => readFileSync(join(dir, f), 'utf8'))
-    .filter((y) => /^showName:\s*true/m.test(y))
-    .map((y) => ({
-      name: (y.match(/^name:\s*(.+)$/m)?.[1] ?? '').trim(),
-      linkedin: (y.match(/^linkedin:\s*(.+)$/m)?.[1] ?? '').trim(),
-      order: Number(y.match(/^order:\s*(\d+)/m)?.[1] ?? 0),
-    }))
+    .map((f) => ({ slug: f.replace(/\.yaml$/, ''), y: readFileSync(join(dir, f), 'utf8') }))
+    .filter(({ y }) => /^showName:\s*true/m.test(y))
+    .map(({ slug, y }) => {
+      const photoField = (y.match(/^photo:\s*(.*)$/m)?.[1] ?? '').trim();
+      const dropped = ['jpg', 'jpeg', 'png', 'webp'].some((ext) => existsSync(join(process.cwd(), 'public/images/team', slug, `photo.${ext}`)));
+      return {
+        slug,
+        name: (y.match(/^name:\s*(.+)$/m)?.[1] ?? '').trim(),
+        role: (y.match(/^role:\s*(.+)$/m)?.[1] ?? '').trim(),
+        linkedin: (y.match(/^linkedin:\s*(.+)$/m)?.[1] ?? '').trim(),
+        hasPhoto: Boolean(photoField && photoField !== 'null') || dropped,
+        order: Number(y.match(/^order:\s*(\d+)/m)?.[1] ?? 0),
+      };
+    })
     .filter((m) => m.name)
     .sort((a, b) => a.order - b.order)
-    .map(({ name, linkedin }) => ({ name, linkedin }));
+    .map(({ slug, name, role, linkedin, hasPhoto }) => ({ slug, name, role, linkedin, hasPhoto }));
 }
 
 test.describe('history: the event returns, it is not the first', () => {
@@ -73,18 +83,161 @@ test.describe('team', () => {
     }
   });
 
-  test('without photos each member gets a monogram, never an empty box', async ({ page }) => {
+  test('/team groups the board by level: the president alone, the executive board, then operations', async ({ page }) => {
     await page.goto('/team');
-    const marks = page.locator('[data-team-member] [data-team-monogram]');
-    await expect(marks).toHaveCount(team.length);
-    await expect(marks.first()).toHaveText('DS');
+    const groups = page.locator('section[aria-labelledby^="board-"]');
+    const group = (name: string) => groups.filter({ has: page.getByRole('heading', { level: 2, name, exact: true }) });
+    await expect(groups.getByRole('heading', { level: 2 })).toHaveText([/President$/, /Executive board$/, /Operations$/]);
+    await expect(group('President').locator('[data-team-member] h3')).toHaveText(['David Simmons']);
+    await expect(group('Executive board').locator('[data-team-member] h3')).toHaveText(['Liam Aldwinckle', 'Diego Velasco']);
+    await expect(group('Operations').locator('[data-team-member] h3')).toHaveCount(6);
+    // The president's portrait is the larger one.
+    const lead = (await group('President').locator('.portrait').boundingBox())!;
+    const card = (await group('Operations').locator('.portrait').first().boundingBox())!;
+    expect(lead.width).toBeGreaterThan(card.width * 1.2);
   });
 
-  test('the home roster shows the nine names in order and links to /team', async ({ page }) => {
+  test('three steps down the chart: the president, then the executive board, then operations', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/team');
+    const width = async (level: string) =>
+      (await page.locator(`section[aria-labelledby="board-${level}"] .portrait`).first().boundingBox())!.width;
+    const [lead, exec, ops] = [await width('president'), await width('executive'), await width('operations')];
+    expect(lead).toBeGreaterThan(exec + 30);
+    expect(exec).toBeGreaterThan(ops + 30);
+  });
+
+  test('every member has a 4:5 frame: a photo toggle where there is a photo, initials where there is not', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/team');
+    for (const m of team) {
+      const card = page.locator(`[data-team-member]#${m.slug}`);
+      const frame = card.locator(m.hasPhoto ? '[data-portrait-toggle]' : '[data-team-monogram]');
+      await expect(frame, m.slug).toHaveCount(1);
+      const box = (await frame.boundingBox())!;
+      expect(box.width / box.height, m.slug).toBeCloseTo(0.8, 2);
+      if (m.hasPhoto) await expect(frame.locator('img')).toHaveAttribute('alt', '');
+      else await expect(frame).toHaveText(initials(m.name));
+    }
+  });
+
+  test('photos are black and white until hovered; the neighbour stays black and white', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/team');
+    const portraits = page.locator('[data-team-member] [data-portrait-toggle]');
+    test.skip((await portraits.count()) < 3, 'needs three photos');
+    const filter = (i: number) => portraits.nth(i).locator('img').evaluate((el) => getComputedStyle(el).filter);
+    expect(await filter(1)).toContain('grayscale(1)');
+    await portraits.nth(1).hover();
+    await expect.poll(() => filter(1)).toContain('grayscale(0)');
+    expect(await filter(2)).toContain('grayscale(1)');
+  });
+
+  test('keyboard: focus shows the colour on the portrait and its LinkedIn link; Enter keeps it, marked by crop marks', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/team');
+    const card = page.locator('section[aria-labelledby="board-operations"] [data-team-member]').filter({ has: page.locator('[data-portrait-toggle]') }).first();
+    const name = (await card.locator('h3').textContent())!.trim();
+    const button = card.getByRole('button', { name: `${name} in colour` });
+    const link = card.getByRole('link', { name: `${name} on LinkedIn (opens in a new tab)` });
+    const filter = () => card.locator('img').evaluate((el) => getComputedStyle(el).filter);
+    const marks = () => card.locator('.portrait-marks').evaluate((el) => getComputedStyle(el).opacity);
+    expect(await filter()).toContain('grayscale(1)');
+    await link.focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(button).toBeFocused();
+    await expect.poll(filter).toContain('grayscale(0)');
+    // Focus alone draws no crop marks; the ring is square.
+    expect(await marks()).toBe('0');
+    expect(await button.evaluate((el) => getComputedStyle(el).borderRadius)).toBe('0px');
+    await page.keyboard.press('Enter');
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(marks).toBe('1');
+    await page.keyboard.press('Tab');
+    await expect(link).toBeFocused();
+    await expect.poll(filter).toContain('grayscale(0)');
+  });
+
+  test('phones: two columns, a tap toggles colour and the LinkedIn link stays reachable', async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+    const page = await ctx.newPage();
+    await page.goto('/team');
+    const cards = page.locator('section[aria-labelledby="board-operations"] [data-team-member]');
+    const [a, b] = [(await cards.nth(0).boundingBox())!, (await cards.nth(1).boundingBox())!];
+    expect(Math.abs(a.y - b.y)).toBeLessThan(2);
+    expect(b.x).toBeGreaterThan(a.x + a.width - 1);
+    const card = cards.filter({ has: page.locator('[data-portrait-toggle]') }).first();
+    const name = (await card.locator('h3').textContent())!.trim();
+    const button = card.getByRole('button', { name: `${name} in colour` });
+    const filter = () => button.locator('img').evaluate((el) => getComputedStyle(el).filter);
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await button.tap();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(filter).toContain('grayscale(0)');
+    await button.tap();
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await expect.poll(filter).toContain('grayscale(1)');
+    // The link is its own target, below the portrait, and large enough to tap.
+    const link = card.getByRole('link', { name: `${name} on LinkedIn (opens in a new tab)` });
+    const lb = (await link.boundingBox())!;
+    const pb = (await button.boundingBox())!;
+    expect(lb.y).toBeGreaterThanOrEqual(pb.y + pb.height);
+    expect(lb.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await ctx.close();
+  });
+
+  test('the home strip: grouped by level at every width, one link per person to their /team card', async ({ page }) => {
     await page.goto('/');
-    const names = page.locator('#team [data-sign] [data-sign-mark] p');
-    expect(await names.allTextContents()).toEqual(team.map((m) => m.name));
+    const names = page.locator('#team [data-sign] [data-sign-name]');
+    expect((await names.allTextContents()).map((t) => t.replace(/,$/, ''))).toEqual(team.map((m) => m.name));
+    for (const width of [1440, 1024, 768, 390]) {
+      await page.setViewportSize({ width, height: 900 });
+      const levels = page.locator('#team ul[aria-labelledby^="team-level-"]');
+      await expect(levels).toHaveCount(3);
+      for (const label of ['President', 'Executive board', 'Operations']) {
+        await expect(page.locator('#team').getByRole('list', { name: label, exact: true })).toBeVisible();
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth), `${width}`).toBeLessThanOrEqual(width);
+    }
+    for (const m of team) {
+      await expect(page.locator(`#team a[href="/team#${m.slug}"]`), m.slug).toHaveCount(1);
+    }
+    await expect(page.locator('#team button')).toHaveCount(0);
     await expect(page.locator('#team').getByRole('link', { name: 'The team' })).toHaveAttribute('href', '/team');
+  });
+
+  test('the home strip: phones put the President and Executive board on one row, Operations three by three', async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+    const page = await ctx.newPage();
+    await page.goto('/');
+    const tops = async (label: string) =>
+      Promise.all(
+        (await page.locator('#team').getByRole('list', { name: label, exact: true }).locator('.portrait').all()).map(async (p) => Math.round((await p.boundingBox())!.y)),
+      );
+    const [pres, exec, ops] = [await tops('President'), await tops('Executive board'), await tops('Operations')];
+    expect(new Set([...pres, ...exec]).size).toBe(1);
+    expect(new Set(ops.slice(0, 3)).size).toBe(1);
+    expect(ops[3]).toBeGreaterThan(ops[0]);
+    expect(ops[0]).toBeGreaterThan(pres[0]);
+    await ctx.close();
+  });
+
+  test('the home strip: lazy portraits, and the file loaded fits the frame (desktop, DPR 1)', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    const imgs = page.locator('#team [data-portrait-photo] img');
+    await expect(imgs).toHaveCount(team.filter((m) => m.hasPhoto).length);
+    for (const img of await imgs.all()) await expect(img).toHaveAttribute('loading', 'lazy');
+    await page.locator('#team').scrollIntoViewIfNeeded();
+    for (const img of await imgs.all()) {
+      await img.scrollIntoViewIfNeeded();
+      await expect.poll(() => img.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+      const src = await img.evaluate((el: HTMLImageElement) => el.currentSrc);
+      const w = Number(new URL(src).searchParams.get('w'));
+      expect(w, src).toBeGreaterThan(0);
+      expect(w, src).toBeLessThanOrEqual(256);
+    }
   });
 
   for (const route of ['/', '/team']) {

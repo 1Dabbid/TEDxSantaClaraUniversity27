@@ -10,6 +10,7 @@ import {
   TED_TEXT_MIN_LENGTH,
   TEDX_MAX_CAPACITY,
 } from './src/lib/site';
+import { TEAM_LEVEL_OPTIONS } from './src/lib/team';
 import { THEME_COPY_DEFAULTS as COPY } from './src/lib/theme-copy';
 
 /**
@@ -610,11 +611,18 @@ export default config({
         photo: fields.image({
           label: 'Photo (optional)',
           description:
-            'Square headshot: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG), about 600×600 px. Shown in black and white, only together with the name. Without a photo the site shows the person’s initials.',
+            'Portrait headshot in a 4:5 shape (taller than wide), about 960×1200 px: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG). Head and shoulders, the face in the upper third, so the board lines up. Shown in black and white, in colour on hover, keyboard focus or tap, only together with the name. Without a photo the site shows the person’s initials in the same frame.',
           directory: 'public/images/team',
           publicPath: '/images/team/',
         }),
-        order: fields.integer({ label: 'Order', description: 'Lower numbers come first.', defaultValue: 0 }),
+        level: fields.select({
+          label: 'Level',
+          description:
+            'Which group the person appears in on the home page and /team: President (shown first, larger), Executive board, or Operations. Leave it on Automatic: a role that is just “President” (or “Co-President”) goes first, a role starting “VP” or “Vice President” goes to the executive board, and every other role (the directors) to operations. Pick a level only when the role name says otherwise, e.g. a “Treasurer” who sits on the executive board.',
+          options: [...TEAM_LEVEL_OPTIONS],
+          defaultValue: 'auto',
+        }),
+        order: fields.integer({ label: 'Order', description: 'Lower numbers come first within each level.', defaultValue: 0 }),
       },
     }),
 
