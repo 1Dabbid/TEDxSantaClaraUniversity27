@@ -543,6 +543,27 @@ html:not(.motion) .reading-progress {
       height: 190vh;
     }
   }
+  /* When the stage scrolls out, its scrims (clipped by the stage) would end in
+     a hard horizontal edge over the scene. This tail continues their bottom-row
+     density below the runway and fades it out, under the Speakers section. */
+  html.motion .theme-runway::after {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 100%;
+    height: 45vh;
+    z-index: -1;
+    pointer-events: none;
+    background: linear-gradient(
+      to right,
+      rgb(0 0 0 / 0.92),
+      rgb(0 0 0 / 0.88) 50%,
+      rgb(0 0 0 / 0.55) 75%,
+      rgb(0 0 0 / 0.2) 90%,
+      rgb(0 0 0 / 0)
+    );
+    mask-image: linear-gradient(to bottom, #000, transparent);
+  }
   html.motion .theme-stage {
     position: sticky;
     top: 0;
@@ -583,7 +604,9 @@ html:not(.motion) .reading-progress {
   /* Settles in behind the growing phrases (ThemeMotion), so the big type never
      competes with the engraved letters behind it. Left/centre only. */
   html.motion .theme-scrim-stack {
-    background: radial-gradient(ellipse 46% 42% at 28% 47%, rgb(0 0 0 / 0.66), rgb(0 0 0 / 0) 100%);
+    /* Wide enough to reach the end of the longest phrase (~57% of the width),
+       where the engraved letters are brightest. */
+    background: radial-gradient(ellipse 56% 46% at 30% 47%, rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.58) 62%, rgb(0 0 0 / 0) 100%);
   }
   /* The clause counter sits top right, over the engraving: its own small scrim. */
   html.motion .theme-counter {
@@ -593,9 +616,11 @@ html:not(.motion) .reading-progress {
   html.motion .theme-counter::before {
     content: '';
     position: absolute;
-    inset: -1.5rem -2rem;
+    /* Wide enough that the whole label (not just its middle) sits on the
+       dense part: the engraving behind it can be mid grey. */
+    inset: -2.25rem -4.5rem;
     z-index: -1;
-    background: radial-gradient(closest-side, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.65) 60%, rgb(0 0 0 / 0));
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.88) 62%, rgb(0 0 0 / 0));
   }
   /* Portrait tablets: the push-in frames the engraving across the whole width,
      so the phrases take the full width over a stronger, wider scrim. */
@@ -639,7 +664,7 @@ html:not(.motion) .reading-progress {
     position: absolute;
     inset: -1.5rem -2rem;
     z-index: -1;
-    background: radial-gradient(closest-side, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.6) 60%, rgb(0 0 0 / 0));
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.9), rgb(0 0 0 / 0.78) 60%, rgb(0 0 0 / 0));
   }
   html.motion .theme-stack {
     position: absolute;
@@ -792,10 +817,12 @@ html:not(.motion) .reading-progress {
     min-height: 100svh;
     padding-top: calc(var(--header-h) + 2rem);
     padding-bottom: 2.5rem;
+    /* Top stops dense enough that the fine-print label stays AA even with
+       the spotlight cone directly behind it (narrow phones). */
     background: linear-gradient(
       to bottom,
-      rgb(0 0 0 / 0.88),
-      rgb(0 0 0 / 0.66) 30%,
+      rgb(0 0 0 / 0.92),
+      rgb(0 0 0 / 0.72) 30%,
       rgb(0 0 0 / 0) 46%,
       rgb(0 0 0 / 0) 60%,
       rgb(0 0 0 / 0.8) 80%,

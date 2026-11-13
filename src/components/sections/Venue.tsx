@@ -37,11 +37,22 @@ function Reticle() {
           );
         })}
       </g>
-      <g className="fill-white/60" style={{ font: '9px ui-monospace, monospace', letterSpacing: '0.12em' }}>
-        <text x="160" y="28" textAnchor="middle">N</text>
-        <text x="296" y="163" textAnchor="middle">E</text>
-        <text x="160" y="300" textAnchor="middle">S</text>
-        <text x="24" y="163" textAnchor="middle">W</text>
+      {/* Cardinal letters sit inside the bezel (its long ticks run r 136-150),
+          centred on their axis, and knock the crosshair out behind them with a
+          black stroke painted under the fill. */}
+      <g
+        className="fill-white/60"
+        stroke="#000"
+        strokeWidth="5"
+        paintOrder="stroke"
+        dominantBaseline="central"
+        textAnchor="middle"
+        style={{ font: '9px ui-monospace, monospace' }}
+      >
+        <text x="160" y="124">N</text>
+        <text x="196" y="160">E</text>
+        <text x="160" y="196">S</text>
+        <text x="124" y="160">W</text>
       </g>
       <circle cx="160" cy="160" r="14" stroke="var(--color-accent)" strokeWidth="1" />
       <circle cx="160" cy="160" r="4" fill="var(--color-accent)" />

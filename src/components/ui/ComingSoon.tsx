@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 /** Small pill: a red dot and a fine-print label. */
 export function ComingSoonBadge({ children = 'Coming soon' }: { children?: ReactNode }) {
   return (
-    <span className="fine-print inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-mute">
+    <span className="fine-print inline-flex items-center gap-2 rounded-full border border-white/15 bg-black/70 px-3 py-1 text-mute">
       <span aria-hidden="true" className="size-1.5 rounded-full bg-accent" />
       {children}
     </span>

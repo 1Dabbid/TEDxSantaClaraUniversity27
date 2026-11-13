@@ -33,7 +33,7 @@ function textRect(el: HTMLElement): DOMRect {
  *      weight and tight tracking (opacity crossfade to the display copy, done
  *      while it is still small, so no double image is visible at full size),
  *   3. grown phrases stay white and stack into the finished sentence; at the
- *      end the small print returns, its terms underlined in accent,
+ *      end the lifted terms return to the small print, underlined in accent,
  *   4. a clause counter ticks: § 1.0 → § 1.4(a) → (b) → (c).
  * Measurements are functions re-evaluated on every ScrollTrigger refresh.
  *
@@ -111,9 +111,9 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
     //   0.13-0.33  the engraving on the 3D microphone is the only fine print on
     //              screen (a figure caption points at it);
     //   0.31-0.37  the contract returns, its defined terms light up;
-    //   0.37-0.87  the phrases lift off and grow, one after another; lines that
-    //              have grown stay white and stack into the sentence;
-    //   0.87-1     settled: the sentence, the contract at full strength.
+    //   0.37-0.87  the phrases lift off the (fully legible) contract and grow, one
+    //              after another; lines that have grown stay white and stack;
+    //   0.87-1     settled: the sentence, its terms underlined in the contract.
     const t0 = 0.37;
     const span = 0.5 / n;
     const grow = span * 0.9;
@@ -151,12 +151,14 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
     const contract = fineList ?? fine;
     tl.to(titleWrap, { opacity: 0, y: -48, duration: 0.11, ease: 'power2.in' }, 0.02);
     // The engraving beat: DOM fine print recedes, the 3D type carries the frame.
-    tl.to(contract, { opacity: 0.12, duration: 0.08, ease: 'power1.inOut' }, 0.05);
+    // Fully gone, quickly: a half-visible contract over black reads as a
+    // rendering fault and fails contrast, so it is either legible or absent.
+    tl.to(contract, { opacity: 0, duration: 0.035, ease: 'power1.in' }, 0.05);
     if (fig) {
       tl.fromTo(fig, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.05, ease: 'power2.out', immediateRender: false }, 0.15);
       tl.to(fig, { opacity: 0, duration: 0.04, ease: 'power1.in' }, 0.31);
     }
-    tl.to(contract, { opacity: 1, duration: 0.05, ease: 'power1.out' }, 0.31);
+    tl.to(contract, { opacity: 1, duration: 0.035, ease: 'power1.out' }, 0.31);
     if (scrim) tl.to(scrim, { opacity: 1, duration: 0.12 }, t0 - 0.02);
 
     inners.forEach((inner, i) => {
@@ -176,14 +178,14 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       const settleAt = at + grow * 0.16;
       tl.fromTo(ghosts[i], { opacity: 1 }, { opacity: 0, duration: grow * 0.28, ease: 'power1.inOut', immediateRender: false }, settleAt);
       tl.fromTo(texts[i], { opacity: 0 }, { opacity: 1, duration: grow * 0.28, ease: 'power1.inOut', immediateRender: false }, settleAt);
-      // While the big type grows the contract steps back (it returns at the end).
-      if (i === 0) tl.to(contract, { opacity: 0.12, duration: grow * 0.5 }, at + grow * 0.4);
+      // The contract stays at full strength while the phrases lift off it: each
+      // take-off leaves from a visible spot (a faded contract read as a fault, and
+      // a fully hidden one left the small take-off copy floating alone).
     });
 
-    // Settle: the finished sentence stays white; the contract returns at full
-    // strength with its defined terms underlined in accent.
+    // Settle: the finished sentence stays white; the lifted terms return to the
+    // contract, underlined in accent.
     const end = t0 + n * span;
-    tl.to(contract, { opacity: 1, duration: 0.07 }, end);
     tl.set(phrases, { textDecorationColor: accent }, end);
     tl.to(phrases, { opacity: 1, duration: 0.06 }, end);
     if (foot) tl.fromTo(foot, { opacity: 0 }, { opacity: 1, duration: 0.06, immediateRender: true }, end + 0.02);

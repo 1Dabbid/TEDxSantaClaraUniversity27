@@ -97,16 +97,19 @@ export function Hero({ settings }: { settings: Settings }) {
           </a>
         </h1>
 
-        <div data-hero-body>
+        {/* Phones: the buttons come straight after the tagline (CSS order), so the
+            name, theme, date, venue and both actions fit the first screen even
+            at 360x740. The facts have nothing focusable: tab order is unchanged. */}
+        <div data-hero-body className="flex flex-col">
           <p
             data-hero-seq
             style={seq(0)}
-            className="mt-6 max-w-[17rem] text-lg text-balance text-mute sm:max-w-xl sm:text-2xl sm:leading-snug"
+            className="mt-6 max-w-[12.75rem] text-lg text-balance text-mute min-[400px]:max-w-[15rem] sm:max-w-xl sm:text-2xl sm:leading-snug"
           >
             {settings.themeTagline}
           </p>
 
-          <div className="hero-facts relative mt-7 max-w-[15.5rem] sm:mt-12 sm:max-w-[min(54rem,56vw)]">
+          <div className="hero-facts relative mt-7 max-w-[15.5rem] max-sm:order-2 sm:mt-12 sm:max-w-[min(54rem,56vw)]">
             <span aria-hidden="true" className="hero-rule absolute inset-x-0 top-0 h-px origin-left bg-white/15" />
             <dl data-hero-seq style={seq(1)} className="grid grid-cols-1 gap-y-3.5 pt-5 sm:grid-cols-3 sm:gap-6 sm:pt-6">
               <div>
@@ -132,17 +135,17 @@ export function Hero({ settings }: { settings: Settings }) {
             </dl>
           </div>
 
-          <div data-hero-seq style={seq(2)} className="mt-7 flex flex-wrap items-center gap-3 sm:mt-10">
-            <Button href={cta.href} size="lg" aria-label={cta.ariaLabel}>
+          <div data-hero-seq style={seq(2)} className="mt-7 flex flex-wrap items-center gap-3 max-sm:order-1 sm:mt-10">
+            <Button href={cta.href} size="lg" aria-label={cta.ariaLabel} className="max-sm:px-6">
               Tickets
             </Button>
-            <Button href="#speakers" variant="ghost" size="lg">
+            <Button href="#speakers" variant="ghost" size="lg" className="max-sm:bg-black/75 max-sm:px-6">
               Speakers
             </Button>
             <WatchLive url={settings.livestreamUrl} size="lg" className="sm:ml-3" />
           </div>
 
-          <div className="mt-8 flex items-end justify-between gap-8 sm:mt-12">
+          <div className="mt-8 flex items-end justify-between gap-8 max-sm:order-3 sm:mt-12">
             <p id="hero-note" data-hero-seq style={seq(3)} className="fine-print max-w-md">
               <span className="text-accent">1.</span> Terms and conditions apply. They are the whole point.
             </p>
