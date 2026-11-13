@@ -169,6 +169,22 @@ function priceOf(v: number | null | undefined): number | null {
 }
 
 const byOrder = <T extends { order: number }>(a: T, b: T) => a.order - b.order;
+
+/**
+ * Speaker and team photos must be raster images. Keystatic's image field cannot
+ * restrict file types, so the build checks instead: an SVG can carry script, and
+ * portraits have no reason to be vector files. (Sponsor logos may be SVG: they are
+ * only ever shown through <img>, and /images/* is served with a sandboxed CSP.)
+ */
+const RASTER_PHOTO = /\.(jpe?g|png|webp|avif)$/i;
+function rasterPhoto(path: string | null, where: string): string | null {
+  if (path && !RASTER_PHOTO.test(path)) {
+    throw new Error(
+      `${where}: the photo "${path}" is not a JPG, PNG, WebP or AVIF file. SVG and other formats are not allowed for photos; upload a JPG or PNG in the admin instead.`,
+    );
+  }
+  return path;
+}
 const str = (v: string | null | undefined) => (v ?? '').trim();
 
 function coordinates(lat: string, lng: string, note: string) {
@@ -270,7 +286,7 @@ export const getSpeakers = cache(async (): Promise<Speaker[]> => {
       talkTitle: entry.announced ? entry.talkTitle : '',
       shortBio: entry.announced ? entry.shortBio : '',
       bio: entry.announced ? entry.bio : '',
-      photo: entry.announced ? entry.photo : null,
+      photo: entry.announced ? rasterPhoto(entry.photo, `Speaker "${slug}"`) : null,
       link: entry.announced ? str(entry.link) : '',
       linkLabel: entry.announced ? str(entry.linkLabel) || 'Website' : '',
       order: entry.order ?? 0,
@@ -308,7 +324,7 @@ export const getTeam = cache(async (): Promise<TeamMember[]> => {
         slug,
         role: entry.role,
         name: visible ? str(entry.name) : null,
-        photo: visible ? entry.photo : null,
+        photo: visible ? rasterPhoto(entry.photo, `Team member "${slug}"`) : null,
         order: entry.order ?? 0,
       };
     })

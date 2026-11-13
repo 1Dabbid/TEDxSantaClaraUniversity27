@@ -414,7 +414,8 @@ export default config({
         }),
         photo: fields.image({
           label: 'Portrait',
-          description: 'A portrait photo, ideally 1200×1500 px or larger (4:5). It is shown in black and white.',
+          description:
+            'A portrait photo (JPG, PNG or WebP; not SVG), ideally 1200×1500 px or larger (4:5). It is shown in black and white.',
           directory: 'public/images/speakers',
           publicPath: '/images/speakers/',
         }),
@@ -452,7 +453,7 @@ export default config({
         }),
         photo: fields.image({
           label: 'Photo (optional)',
-          description: 'Square headshot. Only shown together with the name.',
+          description: 'Square headshot (JPG, PNG or WebP; not SVG). Only shown together with the name.',
           directory: 'public/images/team',
           publicPath: '/images/team/',
         }),

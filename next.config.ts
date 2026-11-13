@@ -168,6 +168,16 @@ const nextConfig: NextConfig = {
         source: '/:dir(brand|images)/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
       },
+      // Static uploads and assets, opened directly: an uploaded SVG (sponsor logos may be SVG)
+      // must never run script or load anything on the site's origin, so these files get a
+      // sandboxed, script-free policy that replaces the site CSP. It does not affect <img>,
+      // <picture>, next/image or the share images, which do not apply a file's own CSP.
+      {
+        source: '/:dir(brand|images|stills|icons)/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox" },
+        ],
+      },
     ];
   },
 };
