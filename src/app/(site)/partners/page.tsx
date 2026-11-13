@@ -7,8 +7,11 @@ import { partnerCta } from '@/lib/links';
 import { SITE_NAME, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { keepTedxCase } from '@/components/ui/KeepCase';
-import { Arrow, ClauseNo, Tba } from '@/components/print/Print';
+import { EventName, keepTedxCase } from '@/components/ui/KeepCase';
+import { Arrow, ClauseNo, JsonLd, Tba } from '@/components/print/Print';
+import { ClosingBand } from '@/components/pages/ClosingBand';
+import { Breadcrumb } from '@/components/pages/PageHeader';
+import { jsonLdString, pageJsonLd } from '@/lib/jsonld';
 import { PartnersMotion } from '@/motion/sections/PartnersMotion';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -355,13 +358,27 @@ export default async function PartnersPage() {
 
   return (
     <div id="prospectus" className="relative isolate">
+      <JsonLd
+        json={jsonLdString(
+          pageJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Partners', path: '/partners' },
+          ]),
+        )}
+      />
       <PartnersMotion />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-black/85" />
 
       {/* Hero: who, what, the offer, how to start. */}
-      <section aria-labelledby="partners-title" className="shell pb-20 pt-20 sm:pb-28 sm:pt-28">
-        <p data-reveal="fade" className="fine-print text-mute">
-          Partners · {keepTedxCase(settings.themeName)}
+      <section aria-labelledby="partners-title" className="shell pb-20 pt-12 sm:pb-28 sm:pt-16">
+        <Breadcrumb trail={[{ name: 'Partners' }]} />
+        <p data-reveal="fade" className="fine-print mt-14 flex flex-wrap items-center gap-x-3 gap-y-1 text-mute sm:mt-24">
+          <span aria-hidden="true" className="h-px w-8 bg-accent" />
+          <span className="text-white">Partners</span>
+          <span aria-hidden="true">·</span>
+          <EventName name={settings.eventName} />
+          <span aria-hidden="true">·</span>
+          {keepTedxCase(settings.themeName)}
         </p>
         <h1
           id="partners-title"
@@ -534,7 +551,7 @@ export default async function PartnersPage() {
       ) : null}
 
       {/* Contact: the address itself is the call to action. */}
-      <section aria-labelledby="partner-cta-title" className="shell pb-32 pt-12 sm:pb-44">
+      <section aria-labelledby="partner-cta-title" className="shell pb-24 pt-12 sm:pb-32">
         <div className="border-t border-white/15 pt-10 sm:pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <SectionLabel index={next()}>Contact</SectionLabel>
@@ -569,6 +586,8 @@ export default async function PartnersPage() {
           </a>
         </div>
       </section>
+
+      <ClosingBand current="/partners" />
     </div>
   );
 }

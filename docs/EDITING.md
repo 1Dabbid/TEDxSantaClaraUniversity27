@@ -49,6 +49,19 @@ The home page shows what is true today and grows by itself as you publish. You n
 | **Partners** | A short text invitation on the home page (never names or logos) linking to `/partners`. On `/partners`, **Current partners** is hidden. | **Published** partners appear on `/partners` only. |
 | **Hero buttons** | **Tickets** and **Get updates** (mailing list). | Once a speaker is announced: **Tickets** and **Speakers**. |
 
+### The topic pages
+
+Besides the home page (the scroll story), each topic has its own page with an address you can share: **/speakers**, **/schedule**, **/venue**, **/partners**, **/team** and **/faq**. They read the same content as the home page, so there is nothing extra to fill in.
+
+| Page | While nothing is published | Once you publish |
+| --- | --- | --- |
+| **/venue** | The street address and **Open in Maps** at the top, the coordinates, and Directions, Parking and Accessibility with one line saying the details follow (Directions points to the address; Accessibility to the contact email). The times show as one line, "Doors and talk times to follow". | Each **Getting there** note you fill in (**Venue & directions**) appears under its title; **Doors open at**, **Talks start at**, **Event ends at** appear at the top. |
+| **/schedule** | The date, "Running order to follow" and the mailing list button. | The full running order (**Show the running order**). |
+| **/team** | Every board role from **People > Team**, as a plain list of roles. | Names and photos for people with **Show name publicly** ticked. Turning off the Team switch, or removing every role, removes the page. |
+| **/faq** | Every question. Each has its own link (e.g. `/faq#tickets-on-sale`, made from the question's words): send it to someone and the answer opens. Rewording a question changes its link. Turning off the FAQ switch removes the page. | |
+
+Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The whole team", "All 9 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
+
 Unannounced speakers still have a page (`/speakers/speaker-01` and so on) so an old link never breaks, but nothing on the site links to it and search engines are told to ignore it.
 
 ## 4. Recipes
@@ -126,7 +139,8 @@ The Team section stays hidden until at least one person has a public name; then 
 2. Instead of typing details that change, write a placeholder and the site fills it in from **Event basics** and **Venue & directions**: `{date}` (e.g. Friday, April 23, 2027), `{venue}` (the building), `{campus}` (e.g. Santa Clara University), `{capacity}` (the seat count) and `{eventName}` (TEDxSantaClaraUniversity). The "When and where" answer already uses them, so it follows the Event date and venue automatically.
 3. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Numbering is automatic.
 4. To delete a question, click the bin icon next to it. There is no confirmation, but nothing is gone until you **Save**: reload the page to get it back.
-5. Hide the section with **Show / hide sections > Show the FAQ section on the home page**.
+5. The home page shows the first five questions, then a link to **/faq** with all of them. Put the most asked ones first.
+6. Hide the section with **Show / hide sections > Show the FAQ section on the home page**.
 
 ### Change contact links
 

@@ -3,6 +3,7 @@ import { Button } from './ui/Button';
 import { Logo } from './Logo';
 import { MobileMenu } from './MobileMenu';
 import { navItems, navVisibility } from './nav';
+import { PrimaryNav } from './PrimaryNav';
 import type { Settings } from '@/lib/content';
 import { ticketCta } from '@/lib/tickets';
 
@@ -41,20 +42,7 @@ export async function Header({ settings }: { settings: Settings }) {
           </time>
         </p>
 
-        <nav aria-label="Primary" className="ml-auto hidden lg:block">
-          <ul className="flex items-center gap-1">
-            {items.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="group block rounded-full px-3 py-2 text-sm text-mute transition-colors duration-300 hover:text-white focus-visible:text-white"
-                >
-                  <span className="link-draw pb-0.5 group-focus-visible:bg-[length:100%_1px]">{item.label}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <PrimaryNav items={items} />
 
         <div className="ml-auto flex items-center gap-2 lg:ml-2">
           <Button href={cta.href} size="sm" aria-label={cta.ariaLabel}>

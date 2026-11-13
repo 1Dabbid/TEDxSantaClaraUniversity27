@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { publishedSpeakers, settle } from './helpers';
+import { publishedSpeakers, settle, topicRoutes } from './helpers';
 
 /**
  * TEDx licence naming rule, checked on the page as it is actually rendered.
@@ -164,9 +164,8 @@ async function checkPage(page: Page, label: string) {
 
 const ROUTES = [
   '/',
-  '/partners',
+  ...topicRoutes(),
   ...publishedSpeakers().map((s) => `/speakers/${s.slug}`),
-  '/speakers',
   '/this-clause-does-not-exist',
 ];
 

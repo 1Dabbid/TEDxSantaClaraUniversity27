@@ -1,12 +1,12 @@
 import AxeBuilder from '@axe-core/playwright';
 import { expect, test } from '@playwright/test';
-import { publishedSpeakers, settle } from './helpers';
+import { publishedSpeakers, settle, topicRoutes } from './helpers';
 
 /** axe-core (WCAG 2.x A/AA rules) on the reduced-motion design, which is also the server HTML. */
 test.use({ reducedMotion: 'reduce' });
 
 const speaker = publishedSpeakers()[0]?.slug;
-const routes = ['/', '/partners', '/speakers', ...(speaker ? [`/speakers/${speaker}`] : [])];
+const routes = ['/', ...topicRoutes(), ...(speaker ? [`/speakers/${speaker}`] : [])];
 
 for (const route of routes) {
   test(`axe: ${route}`, async ({ page }) => {

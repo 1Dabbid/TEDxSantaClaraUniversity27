@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { horizontalOverflow, settle, watchProblems } from './helpers';
+import { horizontalOverflow, settle, watchProblems, topicRoutes } from './helpers';
 
 const canvas = (page: Page) => page.locator('canvas');
 const motionOn = (page: Page) => page.evaluate(() => document.documentElement.classList.contains('motion'));
@@ -246,7 +246,7 @@ test('back pressed while the transition curtain covers the page: scroll restorat
 
 test.describe('no horizontal overflow', () => {
   for (const width of [320, 390, 768, 1440]) {
-    for (const route of ['/', '/partners']) {
+    for (const route of ['/', ...topicRoutes()]) {
       test(`${route} at ${width}px`, async ({ page }) => {
         await page.setViewportSize({ width, height: 900 });
         await page.goto(route);

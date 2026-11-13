@@ -6,6 +6,7 @@ import { TextLink } from '@/components/ui/TextLink';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { EventName, keepTedxCase } from '@/components/ui/KeepCase';
 import { SpeakersMotion } from '@/motion/sections/SpeakersMotion';
+import { MoreLink } from '@/components/pages/MoreLink';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 /* Glass over the scene: plain translucency plus a soft gradient (no backdrop
@@ -200,6 +201,7 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
               </div>
             </div>
           )}
+          {any ? <MoreLink href="/speakers" label="All speakers" /> : null}
         </div>
       </div>
       <SpeakersMotion />

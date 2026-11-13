@@ -1,9 +1,12 @@
 import type { Metadata } from 'next';
-import Link from 'next/link';
 import { getSettings, getSpeakers } from '@/lib/content';
-import { isIndexable, SITE_NAME } from '@/lib/site';
+import { jsonLdString, pageJsonLd } from '@/lib/jsonld';
+import { isIndexable, SITE_NAME, venueLine } from '@/lib/site';
 import { SpeakerCard, SpeakersToCome } from '@/components/sections/Speakers';
 import { Button } from '@/components/ui/Button';
+import { JsonLd } from '@/components/print/Print';
+import { TicketsClosingBand } from '@/components/pages/ClosingBand';
+import { PageHeader, TopicPage } from '@/components/pages/PageHeader';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [s, speakers] = await Promise.all([getSettings(), getSpeakers()]);
@@ -41,56 +44,52 @@ export default async function SpeakersPage() {
   const anyAnnounced = announced.length > 0;
 
   return (
-    <section aria-labelledby="speakers-index-title" className="relative isolate">
-      <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-black/85" />
-      <div className="shell pt-12 pb-28 sm:pt-16 sm:pb-36">
-        <nav aria-label="Breadcrumb" className="fine-print text-mute">
-          <ol className="-my-1.5 flex flex-wrap items-center gap-x-2">
-            <li>
-              <Link href="/" className="inline-block py-1.5 hover:text-white">
-                Home
-              </Link>
-            </li>
-            <li aria-hidden="true">/</li>
-            <li aria-current="page" className="text-white">
-              Speakers
-            </li>
-          </ol>
-        </nav>
-        <p className="fine-print mt-16 text-mute sm:mt-24">
-          {/* The event name is never uppercased. */}
-          <span className="tracking-normal normal-case text-white">{SITE_NAME}</span> · {settings.themeName} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
-        </p>
-        <h1
-          id="speakers-index-title"
-          data-reveal="lines"
-          className="mt-6 text-[clamp(3.25rem,9.6vw,8.75rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance"
-        >
-          {anyAnnounced ? 'Speakers' : settings.copy.speakersEmptyHeading}
-        </h1>
-        {anyAnnounced ? (
-          <ul aria-label="Speakers" className="mt-14 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-            {announced.map(({ speaker, index }) => (
-              <SpeakerCard key={speaker.slug} speaker={speaker} index={index} level={2} />
-            ))}
-            <SpeakersToCome count={speakers.length - announced.length} />
-          </ul>
-        ) : (
-          <div className="mt-10 max-w-xl">
-            <p className="text-lg text-mute sm:text-xl">
-              The lineup is announced on this page and to the mailing list first.
-            </p>
-            <div className="mt-10 flex flex-wrap gap-3">
-              <Button href={settings.newsletterUrl || '/#newsletter'} size="lg">
-                Join the mailing list
-              </Button>
-              <Button href="/" variant="ghost" size="lg">
-                Back to the event
-              </Button>
-            </div>
-          </div>
+    <TopicPage>
+      <JsonLd
+        json={jsonLdString(
+          pageJsonLd([
+            { name: 'Home', path: '/' },
+            { name: 'Speakers', path: '/speakers' },
+          ]),
         )}
-      </div>
-    </section>
+      />
+      <section aria-labelledby="speakers-index-title">
+        <PageHeader
+          settings={settings}
+          label="Speakers"
+          titleId="speakers-index-title"
+          title={anyAnnounced ? 'Speakers' : settings.copy.speakersEmptyHeading}
+          intro={
+            anyAnnounced
+              ? `Live talks at the ${settings.venueName}, recorded and submitted for publication on the TEDx Talks YouTube channel.`
+              : 'The lineup is announced on this page and to the mailing list first.'
+          }
+          facts={[
+            { k: 'Date', v: <time dateTime={settings.dateISO}>{settings.dateLong}</time> },
+            { k: 'Venue', v: venueLine(settings) },
+            // Before any is announced the title already says so: no second "to be announced".
+            ...(anyAnnounced ? [{ k: 'Speakers', v: `${announced.length} announced` }] : []),
+          ]}
+        >
+          {anyAnnounced ? null : (
+            <Button href={settings.newsletterUrl || '/#newsletter'} size="lg">
+              Join the mailing list
+            </Button>
+          )}
+        </PageHeader>
+        {anyAnnounced ? (
+          <div className="shell pb-24 sm:pb-32">
+            <ul aria-label="Speakers" className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+              {announced.map(({ speaker, index }) => (
+                <SpeakerCard key={speaker.slug} speaker={speaker} index={index} level={2} />
+              ))}
+              <SpeakersToCome count={speakers.length - announced.length} />
+            </ul>
+          </div>
+        ) : null}
+      </section>
+
+      <TicketsClosingBand current="/speakers" settings={settings} />
+    </TopicPage>
   );
 }

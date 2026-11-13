@@ -7,7 +7,7 @@ import { FooterMotion } from '@/motion/sections/FooterMotion';
 import { Logo } from './Logo';
 import { EventName, Tedx } from './ui/KeepCase';
 import { MotionToggle } from './ui/MotionToggle';
-import { navItems, navVisibility } from './nav';
+import { footerNavItems, navVisibility } from './nav';
 
 const SOCIAL_LABELS: Record<keyof Settings['socials'], string> = {
   instagram: 'Instagram',
@@ -34,7 +34,7 @@ function dateParts(iso: string) {
 export async function Footer({ settings }: { settings: Settings }) {
   // Same visibility rule as the header: never link to a section that is not rendered.
   const [visible, ted] = await Promise.all([navVisibility(), getTedLanguage()]);
-  const nav = navItems(visible);
+  const nav = footerNavItems(visible);
   const socials = (Object.keys(SOCIAL_LABELS) as (keyof Settings['socials'])[]).filter((k) => settings.socials[k]);
   const partner = partnerCta(settings);
   const parts = dateParts(settings.dateISO);
