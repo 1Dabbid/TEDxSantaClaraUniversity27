@@ -3,7 +3,7 @@ import { cache } from 'react';
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
 import { formatCalendarDate } from './dates';
-import { TEDX_MAX_CAPACITY } from './site';
+import { EMAIL_PATTERN, TEDX_MAX_CAPACITY } from './site';
 
 /**
  * Typed content loader. Components never import Keystatic directly; they get
@@ -187,6 +187,18 @@ function rasterPhoto(path: string | null, where: string): string | null {
 }
 const str = (v: string | null | undefined) => (v ?? '').trim();
 
+/**
+ * An email address for `mailto:` links, or '' (the link is then hidden). The admin
+ * already validates the field; this also covers hand-edited YAML, so a value such as
+ * `a@b.co?bcc=x@evil.com` can never reach a link.
+ */
+function email(v: string | null | undefined, field: string): string {
+  const e = str(v);
+  if (EMAIL_PATTERN.test(e)) return e;
+  console.warn(`content/contact.yaml: ignoring ${field} "${e}": not a plain email address.`);
+  return '';
+}
+
 function coordinates(lat: string, lng: string, note: string) {
   const la = Number.parseFloat(lat);
   const lo = Number.parseFloat(lng);
@@ -255,8 +267,8 @@ export const getSettings = cache(async (): Promise<Settings> => {
     speakerApplicationsDeadline: str(tickets?.speakerApplicationsDeadline),
 
     newsletterUrl: str(contact?.newsletterUrl),
-    contactEmail: str(contact?.contactEmail),
-    partnershipsEmail: str(contact?.partnershipsEmail),
+    contactEmail: email(contact?.contactEmail, 'contactEmail'),
+    partnershipsEmail: email(contact?.partnershipsEmail, 'partnershipsEmail'),
     livestreamUrl: str(contact?.livestreamUrl),
     socials: {
       instagram: str(contact?.socials.instagram),

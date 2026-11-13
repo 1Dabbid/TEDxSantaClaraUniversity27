@@ -1,5 +1,5 @@
 import { collection, config, fields, singleton } from '@keystatic/core';
-import { TEDX_MAX_CAPACITY } from './src/lib/site';
+import { EMAIL_PATTERN, TEDX_MAX_CAPACITY } from './src/lib/site';
 
 /**
  * Keystatic content model: what student editors see at /keystatic.
@@ -22,7 +22,6 @@ import { TEDX_MAX_CAPACITY } from './src/lib/site';
 const useGithub = process.env.KEYSTATIC_GITHUB_MODE === '1';
 
 const LEAVE_BLANK = 'Leave blank until it is confirmed. The site shows “to be announced” instead.';
-const EMAIL = /^$|^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TIME = /^$|^\d{1,2}:\d{2}\s?(AM|PM)$/i;
 
 const urlField = (label: string, description: string) => fields.url({ label, description });
@@ -31,7 +30,7 @@ const emailField = (label: string, description: string) =>
   fields.text({
     label,
     description,
-    validation: { pattern: { regex: EMAIL, message: 'Use a full email address, like name@example.com, or leave it blank.' } },
+    validation: { pattern: { regex: EMAIL_PATTERN, message: 'Use a full email address, like name@example.com, or leave it blank.' } },
   });
 
 const timeField = (label: string) =>
