@@ -7,7 +7,7 @@ import { partnerCta } from '@/lib/links';
 import { BENEFIT_GROUP_LABEL, type BenefitGroup, SITE_NAME, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { EventName, keepTedxCase } from '@/components/ui/KeepCase';
+import { EventName, keepTedxCase, Tedx } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, JsonLd, Tba } from '@/components/print/Print';
 import { ClosingBand } from '@/components/pages/ClosingBand';
 import { Breadcrumb } from '@/components/pages/PageHeader';
@@ -321,7 +321,7 @@ function BenefitsComparison({
       </div>
       {anyTbc ? (
         <p className="fine-print mt-6 max-w-xl text-mute">
-          Items marked “to be confirmed” are being checked against TEDx rules and may change.
+          Items marked “to be confirmed” are being checked against <Tedx /> rules and may change.
         </p>
       ) : null}
     </>
