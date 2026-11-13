@@ -543,7 +543,7 @@ export default async function PartnersPage() {
               <SectionLabel index={5}>Terms</SectionLabel>
             </div>
             <h2 id="rules-title" data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight text-balance">
-              How TEDx partnerships work.
+              How partnerships work under TEDx rules.
             </h2>
             <p data-reveal="fade" className="mt-6 max-w-sm text-mute">
               Every TEDx event follows rules set by TED. They protect the talks, and they are the reason partners can
