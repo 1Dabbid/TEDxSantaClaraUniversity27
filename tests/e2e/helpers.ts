@@ -1,9 +1,51 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Page } from '@playwright/test';
+import { siteUrlFrom } from '../../src/lib/site';
+import { THEME_COPY_DEFAULTS, type ThemeCopy } from '../../src/lib/theme-copy';
 
-/** The canonical origin hard-coded in src/lib/site.ts (used in robots.txt and the sitemap). */
-export const SITE_URL = 'https://fineprint.tedxscu.com';
+/** The canonical origin of the build under test (src/lib/site.ts: SITE_URL env var, else the default). */
+export const SITE_URL = siteUrlFrom(process.env.SITE_URL);
+
+/**
+ * One top-level scalar from a content YAML file ('' when absent): plain, 'single'
+ * or "double" quoted, or a `|-` block. Enough for the flat files the admin writes;
+ * no YAML dependency. Lets the suite check this year's facts without hard-coding them.
+ */
+export function contentValue(file: string, key: string): string {
+  const yaml = readFileSync(join(process.cwd(), 'content', file), 'utf8');
+  const block = yaml.match(new RegExp(`^${key}:\\s*\\|-?\\n((?:(?:  .*)?\\n?)*)`, 'm'));
+  if (block) return block[1].replace(/^ {2}/gm, '').trimEnd();
+  const m = yaml.match(new RegExp(`^${key}:[ \\t]*(.*)$`, 'm'));
+  if (!m) return '';
+  const v = m[1].trim();
+  if (v.startsWith("'") && v.endsWith("'")) return v.slice(1, -1).replace(/''/g, "'");
+  if (v.startsWith('"') && v.endsWith('"')) return JSON.parse(v) as string;
+  return v;
+}
+
+/** This year's facts, read from content/ as the site does (Event basics and Venue). */
+export function eventFacts() {
+  const dateISO = contentValue('settings.yaml', 'dateISO');
+  return {
+    themeName: contentValue('settings.yaml', 'themeName'),
+    dateISO,
+    /** "April 23, 2027" (the weekday is left out so both the long and short forms match). */
+    dateText: new Date(`${dateISO}T12:00:00Z`).toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      timeZone: 'UTC',
+    }),
+    venueName: contentValue('venue.yaml', 'venueName'),
+    campus: contentValue('venue.yaml', 'campus'),
+  };
+}
+
+/** One Theme copy line as the site shows it: content/theme-copy.yaml, else the built-in default. */
+export function themeCopy(key: keyof ThemeCopy): string {
+  return contentValue('theme-copy.yaml', key) || THEME_COPY_DEFAULTS[key];
+}
 
 type SpeakerFile = { slug: string; announced: boolean; published: boolean };
 

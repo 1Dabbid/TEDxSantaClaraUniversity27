@@ -44,6 +44,11 @@ export function Theme({ settings }: { settings: Settings }) {
   const paras = paragraphs(settings.themeStory);
   const phrases = phrasesOf(settings.themeTagline);
   const defIndex = paras.length + 1;
+  const copy = settings.copy;
+  // The heading's last two words never break apart (no one-word last line).
+  const headWords = copy.themeHeading.split(/\s+/).filter(Boolean);
+  const headEnd = headWords.slice(-2).join(' ');
+  const headStart = headWords.length > 2 ? `${headWords.slice(0, -2).join(' ')} ` : '';
 
   return (
     <SectionShell id="theme" scrim="none" className="theme-runway">
@@ -71,7 +76,8 @@ export function Theme({ settings }: { settings: Settings }) {
 
           <div data-theme-title-wrap>
             <SectionTitle id="theme" reveal={false} className="max-w-4xl">
-              Read the <span className="whitespace-nowrap">fine print.</span>
+              {headStart}
+              <span className="whitespace-nowrap">{headEnd}</span>
             </SectionTitle>
           </div>
 
@@ -93,7 +99,7 @@ export function Theme({ settings }: { settings: Settings }) {
           {/* Motion only: a figure caption for the 3D engraving, shown in the beat
               where it is the only fine print on screen. */}
           <p aria-hidden="true" data-theme-fig className="theme-fig fine-print">
-            <span className="text-white">Fig.&nbsp;1</span> The fine print, engraved. Read it closely.
+            <span className="text-white">Fig.&nbsp;1</span> {copy.themeFigureCaption}
           </p>
 
           <div
@@ -129,9 +135,11 @@ export function Theme({ settings }: { settings: Settings }) {
                 ))}
               </li>
             </ol>
-            <p data-theme-foot className="fine-print mt-2 text-[0.5625rem] tracking-[0.18em]">
-              <span className="text-[#ff4d63]">*</span> Read in full before proceeding. The details are binding.
-            </p>
+            {copy.themeFootnote ? (
+              <p data-theme-foot className="fine-print mt-2 text-[0.5625rem] tracking-[0.18em]">
+                <span className="text-[#ff4d63]">*</span> {copy.themeFootnote}
+              </p>
+            ) : null}
           </div>
         </div>
       </div>

@@ -72,10 +72,10 @@ export function Schedule({ schedule, settings }: { schedule: ScheduleData; setti
         ) : (
           <div className="mt-12 border-t border-white/15 pt-8 lg:max-w-[32rem]">
             <p data-reveal="lines" className="text-title font-semibold tracking-tight text-balance lg:text-[2.25rem]">
-              Running order to follow.
+              {settings.copy.scheduleEmptyHeading}
             </p>
             <p data-reveal="fade" className="mt-4 text-mute">
-              Doors, talks and intermission times are published here once the speakers are confirmed. The date and venue are final.
+              {settings.copy.scheduleEmptyNote}
             </p>
           </div>
         )}
