@@ -36,6 +36,9 @@ test.describe('history: the event returns, it is not the first', () => {
     test(`${route} makes no "first" claim`, async ({ request }) => {
       const html = (await (await request.get(route)).text()).toLowerCase();
       for (const s of ['first mainstage', 'first one happen', 'founding partner']) expect(html, `${route}: "${s}"`).not.toContain(s);
+      // The whole document, head (meta and share descriptions) included.
+      expect(html, `${route}: "mainstage"`).not.toMatch(/mainstage/);
+      expect(html, `${route}: a "first" claim not followed by "since"`).not.toMatch(/first tedxsantaclarauniversity(?! since)/);
     });
   }
 
