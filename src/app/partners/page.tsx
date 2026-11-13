@@ -81,7 +81,7 @@ const reasons = (capacity: number): { figure: ReactNode; title: string; body: st
 const RULES = [
   {
     title: 'The stage is not for sale.',
-    body: 'Partners cannot speak or present from the stage, and have no say over the programme or the speakers.',
+    body: 'Partners cannot speak or present from the stage, and have no say over the program or the speakers.',
   },
   {
     title: 'Thanks, on one slide.',
@@ -553,7 +553,7 @@ export default async function PartnersPage() {
         <div className="border-t border-white/15 pt-10 sm:pt-14">
           <div className="flex flex-wrap items-baseline justify-between gap-4">
             <SectionLabel index={6}>Execution</SectionLabel>
-            <p className="fine-print text-mute">Partnerships, sponsorships and corporate enquiries</p>
+            <p className="fine-print text-mute">Partnerships, sponsorships and corporate inquiries</p>
           </div>
           <h2
             id="partner-cta-title"

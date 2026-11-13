@@ -8,7 +8,7 @@ import { Logo } from './Logo';
 import { navItems } from './nav';
 
 const WHAT_IS_TEDX =
-  'In the spirit of discovering and sharing ideas, TED has created a program called TEDx. TEDx is a program of local, self-organized events that bring people together to share a TED-like experience. Our event is called TEDxSantaClaraUniversity, where x = independently organized TED event. At our TEDxSantaClaraUniversity event, TED Talks video and live speakers will combine to spark deep discussion and connection in a small group. The TED Conference provides general guidance for the TEDx program, but individual TEDx events, including ours, are self-organized.';
+  'In the spirit of discovering and spreading ideas, TED has created a program called TEDx. TEDx is a program of local, self-organized events that bring people together to share a TED-like experience. Our event is called TEDxSantaClaraUniversity, where x = independently organized TED event. At our TEDxSantaClaraUniversity event, TED Talks video and live speakers will combine to spark deep discussion and connection in a small group. The TED Conference provides general guidance for the TEDx program, but individual TEDx events, including ours, are self-organized.';
 
 const SOCIAL_LABELS: Record<keyof Settings['socials'], string> = {
   instagram: 'Instagram',
