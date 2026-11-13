@@ -39,7 +39,7 @@ const HASH = /* glsl */ `
 const COMPOSITE_FRAG = /* glsl */ `
   uniform sampler2D tScene; uniform vec2 uRes; uniform float uTime; uniform float uDof; uniform vec2 uFocus;
   uniform float uVig; uniform float uGrain; uniform float uBloom; uniform float uShade; uniform float uScrim;
-  uniform float uStreak; uniform float uCA; uniform float uEdge;
+  uniform float uStreak; uniform float uCA; uniform float uEdge; uniform float uBand;
   varying vec2 vUv;
   ${HASH}
   // NaN / Inf guard: a single bad pixel would otherwise smear through every mip as a box.
@@ -93,6 +93,7 @@ const COMPOSITE_FRAG = /* glsl */ `
     col *= 1.0 - uShade * smoothstep(0.52, 0.78, uv.x);
     col *= 1.0 - uScrim * (1.0 - smoothstep(0.3, 0.66, uv.x));
     col *= 1.0 - uEdge * max(1.0 - smoothstep(0.0, 0.17, uv.y), smoothstep(0.78, 0.9, uv.y));
+    col *= 1.0 - uBand * smoothstep(0.6, 0.69, uv.y) * (1.0 - smoothstep(0.86, 0.94, uv.y));
     gl_FragColor = vec4(max(col, 0.0), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
@@ -108,13 +109,13 @@ const COMPOSITE_FRAG = /* glsl */ `
 
 /** Low tier: no offscreen pass, just a blended vignette + scrim + grain veil over the frame. */
 const OVERLAY_FRAG = /* glsl */ `
-  uniform vec2 uRes; uniform float uTime; uniform float uVig; uniform float uGrain; uniform float uShade; uniform float uScrim; uniform float uEdge;
+  uniform vec2 uRes; uniform float uTime; uniform float uVig; uniform float uGrain; uniform float uShade; uniform float uScrim; uniform float uEdge; uniform float uBand;
   varying vec2 vUv;
   ${HASH}
   void main() {
     vec2 c = vUv - 0.5; c.x *= uRes.x / uRes.y;
     float v = (1.0 - smoothstep(1.2, 0.18, length(c))) * uVig;
-    v = 1.0 - (1.0 - v) * (1.0 - uShade * smoothstep(0.52, 0.78, vUv.x)) * (1.0 - uScrim * (1.0 - smoothstep(0.3, 0.66, vUv.x))) * (1.0 - uEdge * max(1.0 - smoothstep(0.0, 0.17, vUv.y), smoothstep(0.78, 0.9, vUv.y)));
+    v = 1.0 - (1.0 - v) * (1.0 - uShade * smoothstep(0.52, 0.78, vUv.x)) * (1.0 - uScrim * (1.0 - smoothstep(0.3, 0.66, vUv.x))) * (1.0 - uEdge * max(1.0 - smoothstep(0.0, 0.17, vUv.y), smoothstep(0.78, 0.9, vUv.y))) * (1.0 - uBand * smoothstep(0.6, 0.69, vUv.y) * (1.0 - smoothstep(0.86, 0.94, vUv.y)));
     float g = hash(gl_FragCoord.xy + fract(uTime * 7.13) * 917.0) - 0.5;
     float lift = max(g, 0.0) * uGrain;
     float a = clamp(v + max(-g, 0.0) * uGrain, 0.0, 1.0);
@@ -172,6 +173,7 @@ export default function Post({ post, reflect = false }: { post: boolean; reflect
         uStreak: { value: 0.12 },
         uCA: { value: 0.0015 },
         uEdge: { value: 0 },
+        uBand: { value: 0 },
       },
       vertexShader: VERT,
       fragmentShader: COMPOSITE_FRAG,
@@ -187,6 +189,7 @@ export default function Post({ post, reflect = false }: { post: boolean; reflect
         uShade: { value: 0 },
         uScrim: { value: 0 },
         uEdge: { value: 0 },
+        uBand: { value: 0 },
       },
       vertexShader: VERT,
       fragmentShader: OVERLAY_FRAG,
@@ -263,6 +266,7 @@ export default function Post({ post, reflect = false }: { post: boolean; reflect
       u.uShade.value = look.shade;
       u.uScrim.value = look.scrim;
       u.uEdge.value = look.scrimEdge;
+      u.uBand.value = look.band;
       u.uBloom.value = 0.45 * look.bloom;
       (u.uFocus.value as Vector2).set(look.focusX, look.focusY);
       u.uGrain.value = 0.028 * Math.min(1, look.exposure * 2);
@@ -278,6 +282,7 @@ export default function Post({ post, reflect = false }: { post: boolean; reflect
       u.uShade.value = look.shade;
       u.uScrim.value = look.scrim * 0.8;
       u.uEdge.value = look.scrimEdge;
+      u.uBand.value = look.band;
       u.uGrain.value = 0.028 * Math.min(1, look.exposure * 2);
       gl.render(scene, camera);
       const auto = gl.autoClear;

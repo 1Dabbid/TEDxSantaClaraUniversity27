@@ -68,6 +68,8 @@ export type Shot = {
   scrim?: number;
   /** Darken thin bands along the top and bottom edges (0..1), behind section labels and captions. */
   scrimEdge?: number;
+  /** Darken a soft horizontal band across the upper middle of the frame (0..1), behind a full-width heading. */
+  band?: number;
   /** Highlight bloom multiplier (high tier). */
   bloom?: number;
   /** Studio environment (reflection strips) intensity, default 1. */
@@ -105,6 +107,7 @@ export type ResolvedShot = {
   focusY: number;
   scrim: number;
   scrimEdge: number;
+  band: number;
   bloom: number;
   env: number;
 };
@@ -363,8 +366,8 @@ export const PORTRAIT_SHOTS: Shot[] = [
   { at: 2.1, pos: [8.6, 3.0, 3.6], target: [0.15, 0.0, -0.1], fov: 40, exposure: 1.05, drift: 0.02, cone: 1.35, spot: 1.1, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
   { at: 2.3, pos: [8.4, 3.1, 3.4], target: [0.15, 0.0, -0.1], fov: 40, exposure: 1.05, drift: 0.02, cone: 1.35, spot: 1.1, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
   { at: 2.6, pos: [8.0, 3.8, 3.8], target: [0.1, -0.2, -0.1], fov: 40, exposure: 0.95, drift: 0.03, cone: 1.25, spot: 1.0, key: 0.5, rim: 0.8, vignette: 0.66 },
-  { at: 3.2, ...stageOrbit(0.55, 0.32, 7.4), fov: 40, exposure: 1.0, drift: 0.03, cone: 1.35, spot: 1.1, key: 0.5, vignette: 0.6 },
-  { at: 3.9, ...stageOrbit(-0.3, 0.3, 7.4), fov: 40, exposure: 1.0, drift: 0.03, cone: 1.35, spot: 1.1, key: 0.5, vignette: 0.6 },
+  { at: 3.2, ...stageOrbit(0.55, 0.32, 7.4), fov: 40, exposure: 1.0, drift: 0.03, cone: 1.15, spot: 1.1, scrimEdge: 0.6, key: 0.5, vignette: 0.6 },
+  { at: 3.9, ...stageOrbit(-0.3, 0.3, 7.4), fov: 40, exposure: 1.0, drift: 0.03, cone: 1.15, spot: 1.1, scrimEdge: 0.6, key: 0.5, vignette: 0.6 },
   { at: 4.5, pos: [0.4, 2.6, 15.5], target: [0, 0.6, 0], fov: 40, exposure: 1.0, drift: 0.04, cone: 1.6, spot: 1.15, key: 0.3, vignette: 0.6, scrimEdge: 0.6 },
   { at: 5.5, pos: [-0.8, 4.4, 19], target: [0, 0.3, 0], fov: 38, exposure: 0.85, drift: 0.04, cone: 1.6, spot: 1.1, key: 0.3, vignette: 0.65 },
   { at: 6.0, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
@@ -437,7 +440,7 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
     }
     if (!opts.speakersTba || portrait) return [sh];
     // The shaft comes down right of the heading's left half; its brightest part (low, over the pool) stays centre-right.
-    const hold = { fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 1.9, scrimEdge: 0.45, spot: 1.1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.2 };
+    const hold = { fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 1.9, scrimEdge: 0.45, band: 0.75, spot: 1.1, key: 0.5, rim: 0.6, rimAng: -0.6, vignette: 0.62, bloom: 1.2 };
     if (sh.at === 2.1) return [{ at: 2.1, ...RUG_TBA_A, ...hold }];
     if (sh.at === 2.3) return [{ at: 2.4, ...RUG_TBA_B, ...hold }];
     if (sh.at === 2.48) return [{ at: 2.75, ...RUG_TBA_C, ...hold, exposure: 0.97 }];
@@ -490,6 +493,7 @@ export function resolveShot(s: Shot): ResolvedShot {
     focusY: s.focus?.[1] ?? 0.5,
     scrim: s.scrim ?? 0,
     scrimEdge: s.scrimEdge ?? 0,
+    band: s.band ?? 0,
     bloom: s.bloom ?? 1,
     env: s.env ?? 1,
   };
@@ -554,6 +558,7 @@ const scalarKeys = [
   'focusY',
   'scrim',
   'scrimEdge',
+  'band',
   'bloom',
   'env',
 ] as const;

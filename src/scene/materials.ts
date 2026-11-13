@@ -958,7 +958,8 @@ export function createDustMaterial() {
       void main() {
         vec2 c = gl_PointCoord - 0.5;
         float d = 1.0 - smoothstep(0.05, 0.5, length(c));
-        gl_FragColor = vec4(vec3(1.0, 0.96, 0.9) * d * d * vA * 2.0 * uIntensity, 1.0);
+        // Capped: a sparkle reads as a bright point, never as a blown-out disc (or a hot pixel behind type).
+        gl_FragColor = vec4(min(vec3(1.0, 0.96, 0.9) * d * d * vA * 2.0 * uIntensity, vec3(0.9)), 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
