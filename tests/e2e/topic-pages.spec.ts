@@ -30,14 +30,13 @@ test.describe('navigation rule', () => {
       const header = page.getByRole('navigation', { name: 'Primary' });
       const hrefs = await header.getByRole('link').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
       for (const h of hrefs) expect(h!.includes('#'), `header link ${h} on ${route}`).toBe(false);
+      // Off the home page the header lists every page that exists, so the current one is always there and marked.
       const current = header.locator('a[aria-current="page"]');
-      // Schedule and Team are in the header only once their home sections show.
-      if (hrefs.includes(route)) {
-        await expect(current).toHaveCount(1);
-        await expect(current).toHaveAttribute('href', route);
-      } else {
-        await expect(current).toHaveCount(0);
-      }
+      await expect(current).toHaveCount(1);
+      await expect(current).toHaveAttribute('href', route);
+      const footer = page.getByRole('navigation', { name: 'Site' });
+      const footerHrefs = await footer.getByRole('link').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
+      expect(hrefs, `header and footer list the same pages on ${route}`).toEqual(footerHrefs.filter((h) => !h!.includes('#')));
     });
   }
 

@@ -19,16 +19,19 @@ import type { NavItem } from './nav-links';
  *    section: "All speakers" (once one is announced), "Full schedule" (once
  *    published), "Venue details", "The whole team", "All questions".
  *
- * Header items follow the home sections' own content state, so the header is
- * identical on every page and never points at a placeholder:
+ * Header items on the home page follow the home sections' own content state, so
+ * the header there never points at a placeholder:
  * - Schedule: only once the running order is published (the section shows a
  *   short "to follow" note until then).
  * - Team: only when the home section renders (switched on and one name public).
  * - FAQ: only when switched on and non-empty.
- * The footer follows whether the PAGE exists, which is wider: /schedule always
- * (it states the date), /team whenever the Team switch is on (it lists the board
- * roles even before a name is public). A page whose content is switched off is
- * a 404 and is linked from nowhere.
+ * Off the home page the header follows whether the PAGE exists, like the footer,
+ * which is wider: /schedule always (it states the date), /team whenever the Team
+ * switch is on (it lists the board roles even before a name is
+ * public). So a visitor on /schedule or /team always sees where they are, and
+ * the header and footer list the same pages. Items that exist only off the home
+ * page carry `homeHidden` (filtered by `headerItems`, nav-links.ts).
+ * A page whose content is switched off is a 404 and is linked from nowhere.
  * Tickets is not in the header list: it is the red button next to it.
  */
 export type { NavItem };
@@ -48,10 +51,10 @@ export type NavVisibility = {
 export function navItems(visible: NavVisibility): NavItem[] {
   const items: (NavItem | false)[] = [
     { label: 'Speakers', href: '/speakers', home: '/#speakers' },
-    visible.schedule && { label: 'Schedule', href: '/schedule', home: '/#schedule' },
+    { label: 'Schedule', href: '/schedule', home: '/#schedule', homeHidden: !visible.schedule },
     { label: 'Venue', href: '/venue', home: '/#venue' },
     { label: 'Partners', href: '/partners' },
-    visible.team && { label: 'Team', href: '/team', home: '/#team' },
+    visible.teamPage && { label: 'Team', href: '/team', home: '/#team', homeHidden: !visible.team },
     visible.faq && { label: 'FAQ', href: '/faq', home: '/#faq' },
   ];
   return items.filter((i): i is NavItem => Boolean(i));

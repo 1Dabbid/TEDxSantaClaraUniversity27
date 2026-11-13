@@ -13,6 +13,8 @@ export type NavItem = {
   readonly href: string;
   /** The home-page section, used by the header on `/`. Absent: always the page (Partners). */
   readonly home?: string;
+  /** Left out of the header on the home page (its home section is a placeholder or hidden); shown on every other page. */
+  readonly homeHidden?: boolean;
 };
 
 const clean = (path: string | null | undefined) => {
@@ -22,6 +24,11 @@ const clean = (path: string | null | undefined) => {
 
 /** True on the home page, where the header scrolls through the story instead of leaving it. */
 export const isHome = (pathname: string | null | undefined) => clean(pathname) === '/';
+
+/** The header items shown on `pathname`: all of them, except `homeHidden` ones on the home page. */
+export function headerItems(items: readonly NavItem[], pathname: string | null | undefined): readonly NavItem[] {
+  return isHome(pathname) ? items.filter((i) => !i.homeHidden) : items;
+}
 
 /** The address a header link points at on `pathname`. */
 export function navHref(item: NavItem, pathname: string | null | undefined): string {
