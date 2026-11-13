@@ -86,4 +86,28 @@ test.describe('reduce motion switch', () => {
       expect(await html(page)).toMatchObject({ motion: false, stored: null });
     });
   });
+
+  test.describe('in the mobile menu', () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test('is in the menu, inside its focus ring, and follows the footer switch', async ({ page }) => {
+      await page.goto('/');
+      await settle(page, 400);
+      await page.getByRole('button', { name: 'Open menu' }).click();
+      const panel = page.locator('[data-menu-panel]');
+      const toggle = panel.getByRole('button', { name: /^Reduce motion/ });
+      await expect(toggle).toBeVisible();
+      await expect(toggle).toHaveAttribute('aria-pressed', 'false');
+      // Shift+Tab from the menu toggle wraps to the last item of the ring: the switch.
+      await page.getByRole('button', { name: 'Close menu' }).focus();
+      await page.keyboard.press('Shift+Tab');
+      await expect(toggle).toBeFocused();
+      await page.keyboard.press('Enter');
+      await expect(toggle).toHaveAttribute('aria-pressed', 'true');
+      expect(await html(page)).toMatchObject({ motion: false, reduce: true, stored: '1' });
+      await page.keyboard.press('Escape');
+      await expect(panel).toBeHidden();
+      await expect(page.locator('footer').getByRole('button', { name: /^Reduce motion/ })).toHaveAttribute('aria-pressed', 'true');
+    });
+  });
 });

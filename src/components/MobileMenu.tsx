@@ -4,12 +4,14 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { lenisRef } from '@/motion/lenisRef';
+import { MotionToggle } from './ui/MotionToggle';
 
 type Item = { readonly label: string; readonly href: string };
 
 /**
  * Accessible disclosure menu for small screens. Escape closes; focus returns to
- * the toggle; Tab cycles between the toggle and the menu links while it is open
+ * the toggle; Tab cycles between the toggle, the menu links and the Reduce
+ * motion switch while it is open
  * (the panel covers the page). With motion on, the panel wipes down and the
  * clauses rise in (CSS, see globals.css).
  */
@@ -41,7 +43,7 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
         return;
       }
       if (e.key !== 'Tab') return;
-      const links = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('a[href]') ?? []);
+      const links = Array.from(panelRef.current?.querySelectorAll<HTMLElement>('a[href], button') ?? []);
       const toggle = toggleRef.current;
       if (!toggle || links.length === 0) return;
       const ring = [toggle, ...links];
@@ -141,9 +143,13 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
               </li>
             ))}
           </ul>
+          {/* Same switch as in the footer: stops the 3D scene, smooth scroll and animation. */}
+          <div data-menu-item style={{ '--i': items.length + 1 } as CSSProperties} className="mt-8">
+            <MotionToggle />
+          </div>
           <p
             data-menu-item
-            style={{ '--i': items.length + 1 } as CSSProperties}
+            style={{ '--i': items.length + 2 } as CSSProperties}
             className="fine-print mt-auto pt-10"
           >
             <time dateTime={dateISO}>{dateLong}</time>
