@@ -55,8 +55,8 @@ export default async function SchedulePage() {
           title="One evening."
           intro={
             <>
-              Live talks at the {settings.venueName} on <time dateTime={settings.dateISO}>{settings.dateLong}</time>, for{' '}
-              {seatsLabel(settings.capacity)}.
+              Live talks at the {settings.venueName} on <time dateTime={settings.dateISO}>{settings.dateLong}</time>: doors,
+              talks and breaks, in order.
             </>
           }
           facts={[

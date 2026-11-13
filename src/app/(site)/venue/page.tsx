@@ -179,7 +179,7 @@ export default async function VenuePage() {
               Address
             </h2>
             <address className="mt-8 not-italic">
-              <span className="block text-[clamp(1.75rem,4vw,3rem)] leading-[1.05] font-semibold tracking-tight text-balance">
+              <span className="block text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
                 {settings.venueName}
               </span>
               <span className="mt-4 block text-lg leading-relaxed text-mute sm:text-xl">

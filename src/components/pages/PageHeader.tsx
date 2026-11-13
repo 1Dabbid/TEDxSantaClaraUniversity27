@@ -102,7 +102,7 @@ export function PageHeader({
       {facts.length ? (
         <dl
           data-reveal="stagger"
-          className={`mt-14 grid grid-cols-1 gap-x-6 gap-y-7 border-t border-white/15 pt-6 min-[25rem]:grid-cols-2 sm:mt-20 ${
+          className={`mt-14 grid grid-cols-1 gap-x-6 gap-y-7 border-t border-white/15 pt-6 min-[22rem]:grid-cols-2 sm:mt-20 ${
             facts.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'
           }`}
         >
