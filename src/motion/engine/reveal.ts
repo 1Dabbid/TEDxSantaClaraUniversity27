@@ -52,20 +52,71 @@ function delayOf(el: HTMLElement) {
   return Number.isFinite(d) ? d : 0;
 }
 
+/*
+ * Layout invariant for split reveals: the split text must occupy exactly the box
+ * of the unsplit text before, during and after the reveal, or reverting the
+ * split shifts everything below it (CLS). Pieces of that:
+ *
+ * - Mask boxes are exactly line boxes: no padding/margin, room for descenders
+ *   comes from a clip-path (globals.css, `.rv-line-mask`).
+ * - Lines are measured from the real layout: words are wrapped in plain inline
+ *   spans while SplitText measures them (`tag: 'span'`). Inline-block word boxes
+ *   re-flow differently, most visibly under `text-wrap: balance`, and the split
+ *   would then have a different number of lines. Line spans are made blocks in
+ *   globals.css.
+ * - Block wrappers are split themselves, never sliced from their parent: a
+ *   heading whose text sits in a `<span class="block">`, or a bio of several
+ *   <p>. SplitText slices nested elements word by word, and each block slice
+ *   re-flows (and re-balances) the rest of the text, which can add a line.
+ *   Margins between blocks (`space-y-*`) also stay where they are instead of
+ *   moving onto every line mask.
+ * - `text-indent` is inherited by every line block but only indents the first
+ *   line of the unsplit text (hanging punctuation): reset it on the others.
+ * - Safety net: if a split still does not reproduce the unsplit box, it is
+ *   dropped and the element gets the plain fade reveal instead.
+ *
+ * Re-splits (resize, web font swap) go through SplitText's autoSplit, which
+ * reverts, re-splits from the new layout and resumes the tween at its time.
+ */
+const isInlineLevel = (n: Element) => getComputedStyle(n).display.startsWith('inline');
+const isOutOfFlow = (n: Element) => /^(absolute|fixed)$/.test(getComputedStyle(n).position);
+
+function lineTargets(el: HTMLElement): HTMLElement[] {
+  const kids = (Array.from(el.children) as HTMLElement[]).filter((k) => !isOutOfFlow(k));
+  const looseText = Array.from(el.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && n.textContent?.trim());
+  if (looseText || !kids.length || kids.some(isInlineLevel)) return [el];
+  return kids.flatMap(lineTargets);
+}
+
+function pinLines(self: SplitText) {
+  for (const line of self.lines as HTMLElement[]) {
+    // First line of its split element: no line mask before it.
+    if (line.parentElement?.previousElementSibling?.classList.contains('rv-line-mask')) line.style.textIndent = '0';
+  }
+}
+
 function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
   const delay = delayOf(el);
   const heading = /^H[1-6]$/.test(el.tagName);
   const shear = kind === 'lines' && el.dataset.revealVariant === 'shear';
   const interactive = el.querySelector(INTERACTIVE) !== null;
+  const unsplitHeight = el.getBoundingClientRect().height;
 
   // Accessibility: headings get aria-label (+ hidden split). Running text split into
   // lines stays plain text (it still reads naturally). Char-split non-headings read
   // from a visually hidden copy while the split copy is aria-hidden.
-  let target: HTMLElement = el;
+  const targets = kind === 'lines' ? lineTargets(el) : [el];
+  let target: HTMLElement | HTMLElement[] = targets;
   let aria: 'auto' | 'none' = 'none';
   let unwrap: (() => void) | null = null;
   if (heading && !interactive) {
     aria = 'auto';
+    if (targets[0] !== el) {
+      // The split runs on blocks inside the heading: the heading itself carries the label.
+      const label = el.getAttribute('aria-label');
+      el.setAttribute('aria-label', (el.textContent ?? '').trim());
+      unwrap = () => (label === null ? el.removeAttribute('aria-label') : el.setAttribute('aria-label', label));
+    }
   } else if (kind === 'chars' && !interactive) {
     const sr = document.createElement('span');
     sr.className = 'sr-only';
@@ -87,18 +138,19 @@ function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
   let finished = false;
   let split: SplitText | null = null;
   let current: gsap.core.Tween | null = null;
+  const restore = () => {
+    split?.kill();
+    split?.revert();
+    split = null;
+    unwrap?.();
+    unwrap = null;
+  };
   const finish = () => {
     if (finished) return;
     finished = true;
     done.add(el);
     // Restore the original markup on the next frame (after the last tween render).
-    requestAnimationFrame(() => {
-      split?.kill();
-      split?.revert();
-      split = null;
-      unwrap?.();
-      unwrap = null;
-    });
+    requestAnimationFrame(restore);
   };
 
   split = SplitText.create(target, {
@@ -107,9 +159,13 @@ function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
     linesClass: 'rv-line',
     wordsClass: 'rv-word',
     charsClass: 'rv-char',
+    // Lines: measure from the real inline layout (see above). Chars keep SplitText's
+    // inline-block wrappers, which they need to move.
+    ...(kind === 'lines' ? { tag: 'span' } : null),
     aria,
     autoSplit: true,
     onSplit(self: SplitText) {
+      if (kind === 'lines') pinLines(self);
       if (finished) return;
       const parts = kind === 'lines' ? self.lines : self.chars;
       current = gsap.from(parts, {
@@ -126,15 +182,19 @@ function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
     },
   });
 
+  if (Math.abs(el.getBoundingClientRect().height - unsplitHeight) > 0.5) {
+    // The split would change the layout (see above): reveal the element whole instead.
+    finished = true;
+    restore();
+    return revealFade(el);
+  }
+
   return {
     el,
     now: () => finishTween(current),
     kill: () => {
       finished = true;
-      split?.kill();
-      split?.revert();
-      split = null;
-      unwrap?.();
+      restore();
     },
   };
 }
@@ -167,8 +227,9 @@ function revealRule(el: HTMLElement): Rec {
   return { el, kill: () => tween.revert(), now: () => finishTween(tween) };
 }
 
-function revealStagger(el: HTMLElement): Rec {
-  const children = Array.from(el.children) as HTMLElement[];
+function revealStagger(el: HTMLElement, onScreen: ((c: Element) => boolean) | null): Rec {
+  // Cold load: children already painted on screen stay as they are (see scanReveals).
+  const children = (Array.from(el.children) as HTMLElement[]).filter((c) => !onScreen?.(c));
   const wipe = el.dataset.revealVariant === 'wipe';
   const delay = delayOf(el);
   // transition:none so CSS hover transitions on the children never smear the reveal.
@@ -211,38 +272,71 @@ function revealStagger(el: HTMLElement): Rec {
   };
 }
 
+function create(el: HTMLElement, onScreen: ((c: Element) => boolean) | null): Rec {
+  switch (el.dataset.reveal) {
+    case 'lines':
+      return revealSplit(el, 'lines');
+    case 'chars':
+      return revealSplit(el, 'chars');
+    case 'stagger':
+      return revealStagger(el, onScreen);
+    case 'rule':
+      return revealRule(el);
+    default:
+      return revealFade(el);
+  }
+}
+
+/**
+ * Cold load vs. later scans. The server HTML paints fully visible (the CSS
+ * pre-reveal hide only applies once `html[data-reveals]` is set), so the first
+ * contentful paint is also the largest one and the engine arriving late never
+ * delays LCP. On the first scan, reveals already painted inside the viewport
+ * are left as they are, with no hide-then-animate; everything below the fold
+ * is armed off screen as usual. After that scan the hide applies, so content
+ * rendered later (client navigations under the curtain, back/forward) is hidden
+ * from its first paint until armed, with the 3s failsafe in globals.css.
+ */
+const READY_ATTR = 'data-reveals';
+const onScreenNow = (n: Element) => {
+  const r = n.getBoundingClientRect();
+  return r.bottom > 0 && r.top < window.innerHeight && r.width > 0 && r.height > 0;
+};
+
 /** Arms every not-yet-armed [data-reveal] element under `root`. */
 export function scanReveals(root: ParentNode = document) {
   tune();
+  const html = document.documentElement;
+  const onScreen = html.hasAttribute(READY_ATTR) ? null : onScreenNow;
   const els = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]:not([data-reveal-armed])'));
   // Nested reveals: the outermost one owns the animation. Arm them all first,
   // before any outer split re-creates them.
   const own: HTMLElement[] = [];
   for (const el of els) {
     if (el.parentElement?.closest('[data-reveal]') || done.has(el)) arm(el);
-    else own.push(el);
+    else if (onScreen && el.dataset.reveal !== 'stagger' && onScreen(el)) {
+      done.add(el);
+      arm(el);
+    } else own.push(el);
   }
   for (const el of own) {
-    let rec: Rec | null = null;
-    switch (el.dataset.reveal) {
-      case 'lines':
-        rec = revealSplit(el, 'lines');
-        break;
-      case 'chars':
-        rec = revealSplit(el, 'chars');
-        break;
-      case 'stagger':
-        rec = revealStagger(el);
-        break;
-      case 'rule':
-        rec = revealRule(el);
-        break;
-      default:
-        rec = revealFade(el);
-    }
+    // Everything a reveal creates (tweens, ScrollTriggers, batch delayedCalls, the
+    // split) is recorded by its context, so kill() can let go of all of it.
+    let r!: Rec;
+    const ctx = gsap.context(() => {
+      r = create(el, onScreen);
+    });
     arm(el);
-    records.push(rec);
+    records.push({
+      el,
+      now: r.now,
+      kill: () => {
+        r.kill();
+        ctx.revert();
+      },
+    });
   }
+  html.setAttribute(READY_ATTR, '');
 }
 
 /** Kills reveals whose elements left the document (route change). */
@@ -262,6 +356,8 @@ export function killReveals() {
     r.el.removeAttribute('data-reveal-armed');
   }
   records.length = 0;
+  // A later scan (quality back up) starts from whatever is painted, like a cold load.
+  document.documentElement.removeAttribute(READY_ATTR);
 }
 
 /** Keyboard focus must never land on something still hidden: finish its reveal now. */

@@ -220,7 +220,11 @@ html.lenis body {
    failsafe animation shows everything if the motion bundle never arrives. */
 /* Only the outermost reveal hides: nested ones are animated by it (and a split
    re-creates them, so they could never be armed reliably). */
-html.motion [data-reveal]:not([data-reveal-armed]):not([data-reveal] [data-reveal]) {
+/* Only after the engine's first scan ([data-reveals] on <html>): the cold-load
+   HTML paints fully visible so LCP never waits for the motion bundle. The first
+   scan leaves what is already on screen as it is and arms the rest off screen;
+   pages rendered later (client navigations) are hidden from their first paint. */
+html.motion[data-reveals] [data-reveal]:not([data-reveal-armed]):not([data-reveal] [data-reveal]) {
   opacity: 0;
   animation: reveal-failsafe 0.01s linear 3s forwards;
 }
@@ -230,15 +234,27 @@ html.motion [data-reveal]:not([data-reveal-armed]):not([data-reveal] [data-revea
   }
 }
 
-/* SplitText masks: give descenders room inside the clip. */
+/* SplitText masks. Each mask box must be exactly the line (or word) box of the
+   unsplit text, or the heading changes height when the split is reverted (CLS).
+   So no padding/margin: line masks are blocks, and a padding + negative-margin
+   pair never nets out there (adjacent block margins collapse). Descenders,
+   ascenders and hanging punctuation get room from a clip-path that reaches past
+   the box instead of SplitText's overflow:clip; it does not touch layout. */
 .rv-line-mask,
 .rv-word-mask {
-  padding-block: 0.1em;
-  margin-block: -0.1em;
+  overflow: visible !important;
+  clip-path: inset(-0.1em -100vw);
 }
+/* Line wrappers are spans (measured as plain inline text, see reveal.ts). */
+.rv-line-mask,
+.rv-line {
+  display: block;
+  position: relative;
+}
+/* overflow:visible keeps the inline-block's baseline at its text, so words sit
+   exactly where the unsplit text did (SplitText's top alignment does not). */
 .rv-word-mask {
-  padding-inline: 0.04em;
-  margin-inline: -0.04em;
+  vertical-align: baseline !important;
 }
 
 /* Header: hides on scroll down (engine toggles data-hidden), never while focused. */
