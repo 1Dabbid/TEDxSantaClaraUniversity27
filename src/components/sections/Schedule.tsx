@@ -1,9 +1,9 @@
 import type { Schedule as ScheduleData, Settings } from '@/lib/content';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { SCHEDULE_KIND_LABEL as KIND_LABEL } from '@/lib/site';
 import { ScheduleMotion } from '@/motion/sections/ScheduleMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
-const KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', other: 'Program' } as const;
 
 const rowGrid =
   'grid grid-cols-[1.25rem_1fr] gap-x-4 sm:grid-cols-[1.25rem_8rem_1fr_auto] sm:items-baseline sm:gap-x-8 lg:grid-cols-[1.25rem_5rem_1fr_auto] lg:gap-x-6';

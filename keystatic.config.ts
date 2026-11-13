@@ -1,5 +1,6 @@
 import { collection, config, fields, singleton } from '@keystatic/core';
-import { EMAIL_PATTERN, TEDX_MAX_CAPACITY } from './src/lib/site';
+import { HTTPS_URL_MESSAGE, HTTPS_URL_PATTERN, SLUG_MESSAGE, SLUG_PATTERN, TIME_PATTERN } from './src/lib/content-checks';
+import { EMAIL_PATTERN, SCHEDULE_KIND_LABEL, SITE_NAME, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './src/lib/site';
 
 /**
  * Keystatic content model: what student editors see at /keystatic.
@@ -22,9 +23,33 @@ import { EMAIL_PATTERN, TEDX_MAX_CAPACITY } from './src/lib/site';
 const useGithub = process.env.KEYSTATIC_GITHUB_MODE === '1';
 
 const LEAVE_BLANK = 'Leave blank until it is confirmed. The site shows “to be announced” instead.';
-const TIME = /^$|^\d{1,2}:\d{2}\s?(AM|PM)$/i;
+const TIME = new RegExp(`^$|${TIME_PATTERN.source}`, 'i');
 
-const urlField = (label: string, description: string) => fields.url({ label, description });
+/**
+ * Every link field. A text field with a pattern rather than Keystatic's URL field,
+ * which accepts "www.example.com" or "@handle" and would make broken relative links.
+ * The loader (src/lib/content.ts) also normalises or drops bad values defensively.
+ */
+const urlField = (label: string, description: string) =>
+  fields.text({
+    label,
+    description: `${description} Paste the full address starting with https://.`,
+    validation: { pattern: { regex: HTTPS_URL_PATTERN, message: HTTPS_URL_MESSAGE } },
+  });
+
+/** The "slug" (page address / file name) part of every collection's name field. */
+const slugPart = (label: string, description: string) => ({
+  label,
+  description: `${description} ${SLUG_MESSAGE}`,
+  validation: { pattern: { regex: SLUG_PATTERN, message: SLUG_MESSAGE } },
+});
+
+/** TED's required texts: never blank or only spaces, and long enough to be the real wording. */
+const TED_TEXT_VALIDATION = {
+  isRequired: true,
+  length: { min: TED_TEXT_MIN_LENGTH },
+  pattern: { regex: /\S/, message: 'Paste TED’s official text here. It cannot be empty or only spaces.' },
+};
 
 const emailField = (label: string, description: string) =>
   fields.text({
@@ -37,7 +62,7 @@ const timeField = (label: string) =>
   fields.text({
     label,
     description: `Write it like 5:30 PM. ${LEAVE_BLANK}`,
-    validation: { pattern: { regex: TIME, message: 'Write the time like 5:30 PM, or leave it blank.' } },
+    validation: { pattern: { regex: TIME, message: 'Write the time like 5:30 PM (hours 1 to 12, then AM or PM), or leave it blank.' } },
   });
 
 export default config({
@@ -58,15 +83,9 @@ export default config({
       label: 'Event basics',
       path: 'content/settings',
       schema: {
-        eventName: fields.text({
-          label: 'Event name',
-          description: 'Always the full name: TEDxSantaClaraUniversity. Do not shorten it.',
-          defaultValue: 'TEDxSantaClaraUniversity',
-          validation: { isRequired: true },
-        }),
         themeName: fields.text({
           label: 'Theme name',
-          description: 'The big title on the home page, e.g. Fine Print. Keep it short.',
+          description: `The big title on the home page, e.g. Fine Print. Keep it short. (The event name itself, ${SITE_NAME}, is fixed by the TEDx licence and set in the site's code, so there is no field for it.)`,
           defaultValue: 'Fine Print',
           validation: { isRequired: true, length: { max: 40 } },
         }),
@@ -80,19 +99,19 @@ export default config({
           description: 'A few short paragraphs about the theme. Separate paragraphs with an empty line.',
           multiline: true,
         }),
-        dateISO: fields.text({
+        dateISO: fields.date({
           label: 'Event date',
-          description: 'Year-month-day, e.g. 2027-04-23. The site writes it out as “Friday, April 23, 2027”.',
+          description: 'Pick the day of the event. The site writes it out as “Friday, April 23, 2027”.',
           defaultValue: '2027-04-23',
-          validation: { pattern: { regex: /^\d{4}-\d{2}-\d{2}$/, message: 'Write the date as YYYY-MM-DD, e.g. 2027-04-23.' } },
+          validation: { isRequired: true },
         }),
         doorsTime: timeField('Doors open at'),
         talksTime: timeField('Talks start at'),
         endTime: timeField('Event ends at'),
         capacity: fields.integer({
-          label: 'Seat capacity',
+          label: 'Seat capacity (a whole number from 1 to 100)',
           description:
-            'How many guests the event can seat. Shown in the hero, Venue, Tickets (the seat ruler draws one tick per seat), the Partners page, the share image and search descriptions. TEDx rules cap a standard licence at 100 attendees, so it can never be more than 100. Lower it only if the room is smaller.',
+            'Required. How many guests the event can seat, e.g. 100. Shown in the hero, Venue, Tickets (the seat ruler draws one tick per seat), the Partners page, the share image and search descriptions. TEDx rules cap a standard licence at 100 attendees, so it can never be more than 100. Lower it only if the room is smaller.',
           defaultValue: TEDX_MAX_CAPACITY,
           validation: { isRequired: true, min: 1, max: TEDX_MAX_CAPACITY },
         }),
@@ -284,14 +303,14 @@ export default config({
           description:
             'Shown in the footer of every page under “About TEDx”. Paste the current official text from TED’s TEDx organizer guide exactly. Do not edit the wording.',
           multiline: true,
-          validation: { isRequired: true },
+          validation: TED_TEXT_VALIDATION,
         }),
         aboutTed: fields.text({
           label: 'About TED',
           description:
             'Shown in the footer of every page under “About TED”. Paste the current official text from TED’s TEDx organizer guide exactly. Do not edit the wording.',
           multiline: true,
-          validation: { isRequired: true },
+          validation: TED_TEXT_VALIDATION,
         }),
       },
     }),
@@ -307,16 +326,17 @@ export default config({
         }),
         items: fields.array(
           fields.object({
-            time: fields.text({ label: 'Time', description: 'e.g. 5:30 PM, or TBA' }),
+            time: fields.text({ label: 'Time', description: 'Shown as typed, e.g. 5:30 PM, or TBA.' }),
             title: fields.text({ label: 'Title' }),
             description: fields.text({ label: 'Description (optional)', multiline: true }),
             kind: fields.select({
               label: 'Kind',
+              description: 'The small label shown next to the item on the site. Use Program for anything else (welcome, reception, closing).',
               options: [
-                { label: 'Talk', value: 'talk' },
-                { label: 'Break', value: 'break' },
-                { label: 'Doors', value: 'doors' },
-                { label: 'Other', value: 'other' },
+                { label: SCHEDULE_KIND_LABEL.talk, value: 'talk' },
+                { label: SCHEDULE_KIND_LABEL.break, value: 'break' },
+                { label: SCHEDULE_KIND_LABEL.doors, value: 'doors' },
+                { label: SCHEDULE_KIND_LABEL.other, value: 'other' },
               ],
               defaultValue: 'talk',
             }),
@@ -336,14 +356,15 @@ export default config({
             answer: fields.text({
               label: 'Answer',
               description:
-                'Plain text. Line breaks are kept. Write {capacity} where the seat count belongs; the site fills in the number from Event basics.',
+                'Plain text. Line breaks are kept. Instead of typing details that may change, write a placeholder and the site fills it in: {date} (the event date, e.g. Friday, April 23, 2027), {venue} (the building), {campus} (e.g. Santa Clara University), {capacity} (the seat count) and {eventName} (TEDxSantaClaraUniversity). They also work in the question.',
               multiline: true,
               validation: { isRequired: true },
             }),
           }),
           {
             label: 'Questions',
-            description: 'Drag to reorder. Each one is numbered as a clause (§ 7.01, § 7.02 …).',
+            description:
+              'To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Each one is numbered as a clause (§ 7.01, § 7.02 …). Answers can use placeholders such as {date}, {venue}, {campus}, {capacity} and {eventName}, filled in from Event basics and Venue; open a question to see what each one means.',
             itemLabel: (props) => props.fields.question.value || 'Question',
           },
         ),
@@ -364,6 +385,7 @@ export default config({
             }),
             tiers: fields.multiRelationship({
               label: 'Included in these tiers',
+              description: 'Click the box and pick each tier; tiers are listed by their slug, e.g. founding-partner.',
               collection: 'tiers',
             }),
           }),
@@ -387,10 +409,10 @@ export default config({
       schema: {
         name: fields.slug({
           name: { label: 'Name', description: 'Full name as it should appear on the site.' },
-          slug: {
-            label: 'Page address (slug)',
-            description: 'Becomes /speakers/<slug>. Set it once when announcing and avoid changing it afterwards.',
-          },
+          slug: slugPart(
+            'Page address (slug)',
+            'Becomes /speakers/<slug>. After typing the Name, click Regenerate; set it once when announcing and avoid changing it afterwards.',
+          ),
         }),
         announced: fields.checkbox({
           label: 'Announced',
@@ -414,7 +436,7 @@ export default config({
         photo: fields.image({
           label: 'Portrait',
           description:
-            'A portrait photo (JPG, PNG or WebP; not SVG), ideally 1200×1500 px or larger (4:5). It is shown in black and white.',
+            'A portrait photo: JPG or PNG (WebP also works; not HEIC, not PDF, not SVG), under 2 MB, ideally about 1200×1500 px (4:5). It is shown in black and white. A file of the wrong type is left out and the page shows “Portrait to follow”.',
           directory: 'public/images/speakers',
           publicPath: '/images/speakers/',
         }),
@@ -443,7 +465,10 @@ export default config({
       slugField: 'role',
       columns: ['role', 'name', 'order'],
       schema: {
-        role: fields.slug({ name: { label: 'Role', description: 'e.g. VP of Production' } }),
+        role: fields.slug({
+          name: { label: 'Role', description: 'e.g. VP of Production' },
+          slug: slugPart('File name (slug)', 'Made from the role. Leave it as generated.'),
+        }),
         name: fields.text({ label: 'Name (optional)', description: 'Only shown when “Show name publicly” is ticked.' }),
         showName: fields.checkbox({
           label: 'Show name publicly',
@@ -452,7 +477,7 @@ export default config({
         }),
         photo: fields.image({
           label: 'Photo (optional)',
-          description: 'Square headshot (JPG, PNG or WebP; not SVG). Only shown together with the name.',
+          description: 'Square headshot: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG). Only shown together with the name.',
           directory: 'public/images/team',
           publicPath: '/images/team/',
         }),
@@ -466,7 +491,13 @@ export default config({
       slugField: 'name',
       columns: ['name', 'order'],
       schema: {
-        name: fields.slug({ name: { label: 'Tier name', description: 'e.g. Founding Partner' } }),
+        name: fields.slug({
+          name: { label: 'Tier name', description: 'e.g. Founding Partner' },
+          slug: slugPart(
+            'Slug',
+            'Made from the tier name. Leave it as generated: partner benefits and logos refer to the tier by it (e.g. founding-partner).',
+          ),
+        }),
         description: fields.text({ label: 'Description', description: 'One or two sentences.', multiline: true }),
         amount: fields.text({
           label: 'Contribution (optional)',
@@ -487,12 +518,19 @@ export default config({
       slugField: 'name',
       columns: ['name', 'tier', 'published'],
       schema: {
-        name: fields.slug({ name: { label: 'Organization name' } }),
-        tier: fields.relationship({ label: 'Tier', collection: 'tiers' }),
+        name: fields.slug({
+          name: { label: 'Organization name' },
+          slug: slugPart('File name (slug)', 'Made from the name. Leave it as generated.'),
+        }),
+        tier: fields.relationship({
+          label: 'Tier',
+          description: 'Tiers are listed by their slug, e.g. founding-partner for Founding Partner.',
+          collection: 'tiers',
+        }),
         logo: fields.image({
           label: 'Logo',
           description:
-            'A white or light version on a transparent background (PNG or SVG). Shown on /partners only, at most 24 px tall and 72 px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED’s prohibited sponsors. Sponsors can never be speakers.',
+            'A white or light version on a transparent background (PNG or SVG, under 2 MB). Shown on /partners only, at most 24 px tall and 72 px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED’s prohibited sponsors. Sponsors can never be speakers.',
           directory: 'public/images/sponsors',
           publicPath: '/images/sponsors/',
         }),

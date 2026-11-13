@@ -24,6 +24,15 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Content problems that would stop the build (a file that is not valid YAML, an
+      # impossible option): fail here first, with a message that names the file and field.
+      - name: Content check (blocking errors)
+        run: npm run check:content -- --errors-only
+      # Everything else the site works around (a link without https://, a photo of the
+      # wrong type or over 2 MB, an invalid slug…). Shown as a warning, never blocks.
+      - name: Content check (warnings)
+        run: npm run check:content
+        continue-on-error: true
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run build

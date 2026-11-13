@@ -1,6 +1,12 @@
 import type { Settings } from './content';
 
 export const SITE_URL = 'https://fineprint.tedxscu.com';
+/**
+ * The licensed event name, exactly as TED issued it. It is a constant, not
+ * content: TEDx rules require the full name, never shortened or restyled, and it
+ * can only change with a new licence. Every page reads `settings.eventName`,
+ * which is always this value. The admin shows it read-only (Event basics).
+ */
 export const SITE_NAME = 'TEDxSantaClaraUniversity';
 /** The year-round club site. Fallback destination for partner enquiries. */
 export const CLUB_URL = 'https://tedxscu.com';
@@ -14,6 +20,23 @@ export const TED_URL = 'https://www.ted.com';
  * (`settings.capacity`), never this constant.
  */
 export const TEDX_MAX_CAPACITY = 100;
+
+/** Schedule item kinds: the admin's options and the labels on the site are the same words. */
+export const SCHEDULE_KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', other: 'Program' } as const;
+
+/**
+ * TED's required "About TEDx" / "About TED" texts, as pasted from the TEDx
+ * organizer guide. The footer must always carry them, so the loader falls back to
+ * these when the admin fields are blank or too short to be the real text.
+ */
+export const TED_LANGUAGE_DEFAULTS = {
+  aboutTedx:
+    'In the spirit of ideas worth spreading, TEDx is a program of local, self-organized events that bring people together to share a TED-like experience. At a TEDx event, TEDTalks video and live speakers combine to spark deep discussion and connection in a small group. These local, self-organized events are branded TEDx, where x = independently organized TED event. The TED Conference provides general guidance for the TEDx program, but individual TEDx events are self-organized (subject to certain rules and regulations).',
+  aboutTed:
+    "TED is a nonprofit organization devoted to Ideas Worth Spreading. Started as a four-day conference in California 30 years ago, TED has grown to support its mission with multiple initiatives. The two annual TED Conferences invite the world's leading thinkers and doers to speak for 18 minutes or less. Many of these talks are then made available, free, at TED.com.",
+} as const;
+/** Shorter than this, a TED text cannot be the official wording (both are several sentences). */
+export const TED_TEXT_MIN_LENGTH = 100;
 
 /**
  * A plain email address, or blank. Used by the admin's email fields and again by
