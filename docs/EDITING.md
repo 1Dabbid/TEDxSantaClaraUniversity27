@@ -168,7 +168,7 @@ The home page shows a compact roster (initials or photo, name, role) and a link,
 - **Newsletter sign-up link (SendFox)**: while blank, the site shows "list opening soon".
 - **Contact email**: shown in the footer and FAQ.
 - **Partnerships email**: used by every "Become a partner" button (falls back to tedxscu.com while blank).
-- **Social links**: **Instagram**, **LinkedIn**, **YouTube**, **TikTok** (full links starting with `https://`, e.g. `https://www.instagram.com/scutedx`, not `@scutedx`; blank ones are hidden). **YouTube**: club channel only. Full TEDx talks may only be published through TED's uploader, never on this channel.
+- **Social links**: **Instagram**, **LinkedIn**, **YouTube**, **TikTok** (full links starting with `https://`, e.g. `https://www.instagram.com/scutedx` or the club page `https://www.linkedin.com/company/scutedx`, not `@scutedx`; blank ones are hidden). Filled-in links appear in the footer and are given to search engines as the club's profiles. **YouTube**: club channel only. Full TEDx talks may only be published through TED's uploader, never on this channel.
 - **Livestream link (optional)**: see "Add the livestream link" below.
 
 ### Add the livestream link

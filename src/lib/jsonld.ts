@@ -51,14 +51,15 @@ function attendanceJsonLd(s: Settings) {
     : { eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', location: placeJsonLd(s) };
 }
 
-/** The club that organizes the event. */
+/** The club that organizes the event; sameAs: its filled-in social profiles (Contact > Social links). */
 function organizerJsonLd(s: Settings) {
+  const sameAs = [s.socials.instagram, s.socials.linkedin, s.socials.youtube, s.socials.tiktok].filter(Boolean);
   return {
     '@type': 'Organization',
     '@id': ORG_ID,
     name: SITE_NAME,
     url: CLUB_URL,
-    ...(s.socials.instagram ? { sameAs: [s.socials.instagram] } : {}),
+    ...(sameAs.length ? { sameAs } : {}),
   };
 }
 
