@@ -10,26 +10,4 @@ themeStory: |-
 dateISO: '2027-04-23'
 doorsTime: ''
 endTime: ''
-venueName: Locatelli Student Activity Center
-venueAddress: |-
-  Santa Clara University
-  500 El Camino Real
-  Santa Clara, CA 95053
-mapUrl: https://www.google.com/maps/search/?api=1&query=Locatelli+Student+Activity+Center+Santa+Clara+University
-directionsNotes: Parking, accessibility and arrival details will be published closer to the event.
-ticketState: coming-soon
-ticketUrl: ''
-ticketEmbedUrl: ''
-ticketPriceNote: Tickets will be priced at no more than $100, in line with TEDx guidelines.
-speakerApplicationsState: coming-soon
-speakerApplicationsUrl: ''
-newsletterUrl: ''
-contactEmail: ''
-partnershipsEmail: ''
-livestreamUrl: ''
-socials:
-  instagram: ''
-  linkedin: ''
-  youtube: ''
-  tiktok: ''
 accentColor: '#EB0028'

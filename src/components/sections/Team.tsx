@@ -1,33 +1,80 @@
 import Image from 'next/image';
 import type { TeamMember } from '@/lib/content';
+import { getSettings } from '@/lib/content';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { ClauseNo } from '@/components/print/Print';
 import { SectionShell, SectionTitle } from './SectionShell';
 
-export function Team({ team }: { team: TeamMember[] }) {
+/** One signatory: a signature space, a hairline, and the role typed beneath it. */
+function SignatureBlock({ member, index }: { member: TeamMember; index: number }) {
+  return (
+    <li className="flex flex-col">
+      <div className="flex items-baseline justify-between">
+        <ClauseNo>6.{index + 1}</ClauseNo>
+        <span className="fine-print">Signatory</span>
+      </div>
+      {/* Signature space */}
+      <div className="relative mt-6 flex h-24 items-end gap-4 pb-3 sm:h-28">
+        {member.name ? (
+          <>
+            {member.photo ? (
+              <Image
+                src={member.photo}
+                alt=""
+                width={64}
+                height={64}
+                className="size-14 shrink-0 rounded-full object-cover grayscale sm:size-16"
+              />
+            ) : null}
+            <p className="text-2xl leading-tight font-light tracking-tight text-white sm:text-3xl">{member.name}</p>
+          </>
+        ) : (
+          <span aria-hidden="true" className="font-mono text-sm text-subtle">
+            ✕
+          </span>
+        )}
+      </div>
+      <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/40" />
+      <p className="mt-3 font-medium text-white">{member.role}</p>
+      <p className="fine-print mt-1">
+        {member.name ? 'For TEDxSantaClaraUniversity' : 'Name to be announced'}
+      </p>
+    </li>
+  );
+}
+
+export async function Team({ team }: { team: TeamMember[] }) {
+  const settings = await getSettings();
+  if (!settings.sections.showTeam || team.length === 0) return null;
+
   return (
     <SectionShell id="team" scrim="solid" className="py-32 sm:py-44">
       <div className="shell">
-        <SectionLabel index={6}>Team</SectionLabel>
-        <SectionTitle id="team">The people behind the details.</SectionTitle>
-        <p className="mt-6 max-w-xl text-lg text-mute">
-          TEDxSantaClaraUniversity is independently organized by a team at Santa Clara University. Names will be shared closer to the event.
+        <div className="grid gap-10 md:grid-cols-12 md:items-end">
+          <div className="md:col-span-7">
+            <div data-reveal="fade">
+              <SectionLabel index={6}>Team</SectionLabel>
+            </div>
+            <SectionTitle id="team">
+              <span data-reveal="lines" className="block">
+                The undersigned.
+              </span>
+            </SectionTitle>
+          </div>
+          <p data-reveal="fade" className="max-w-md text-lg text-mute md:col-span-5">
+            {settings.eventName} is independently organized by a team at Santa Clara University. Names are added as each
+            member of the board is announced.
+          </p>
+        </div>
+
+        <p data-reveal="fade" className="fine-print mt-20 max-w-xl sm:mt-28">
+          In witness whereof, the board below has agreed to organize {settings.eventName} on{' '}
+          <time dateTime={settings.dateISO}>{settings.dateLong}</time>, and to read every clause.
         </p>
-        <ul className="mt-16 grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-3">
+
+        <ul data-reveal="stagger" className="mt-12 grid gap-x-10 gap-y-16 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-16">
           {team.map((m, i) => (
-            <li key={m.slug} className="flex items-center gap-4 border-b border-white/15 py-6 sm:pr-6">
-              {m.photo ? (
-                <Image src={m.photo} alt="" width={56} height={56} className="size-14 rounded-full object-cover grayscale" />
-              ) : null}
-              <div className="grid grid-cols-[3.25rem_1fr] items-baseline gap-2">
-                <span aria-hidden="true" className="fine-print">
-                  §&nbsp;6.{i + 1}
-                </span>
-                <div>
-                  <p className="font-medium text-white">{m.role}</p>
-                  {m.name ? <p className="text-sm text-mute">{m.name}</p> : null}
-                </div>
-              </div>
-            </li>
+            <SignatureBlock key={m.slug} member={m} index={i} />
           ))}
         </ul>
       </div>

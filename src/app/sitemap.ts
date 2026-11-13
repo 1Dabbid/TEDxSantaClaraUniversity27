@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { getSpeakers } from '@/lib/content';
 import { SITE_URL } from '@/lib/site';
 
+/** Public, indexable pages only. Unannounced speaker pages are noindex and left out. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const speakers = await getSpeakers();
   return [

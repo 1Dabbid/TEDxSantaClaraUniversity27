@@ -1,0 +1,18 @@
+venueName: Locatelli Student Activity Center
+campus: Santa Clara University
+addressLabel: University main address
+street: 500 El Camino Real
+city: Santa Clara
+region: CA
+postalCode: '95053'
+mapUrl: https://www.google.com/maps/search/?api=1&query=Locatelli+Student+Activity+Center+Santa+Clara+University
+latitude: '37.3496'
+longitude: '-121.9390'
+coordinatesNote: Campus, approximate
+notes:
+  - title: Directions
+    body: ''
+  - title: Parking
+    body: ''
+  - title: Accessibility
+    body: ''
