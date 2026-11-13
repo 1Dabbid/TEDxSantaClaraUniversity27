@@ -347,7 +347,7 @@ export const PORTRAIT_SHOTS: Shot[] = [
     // The barrel slides up behind the hero title ("Print" and its red footnote mark): keep it dim there.
     scrim: 0.6,
     scrimEdge: 0.9,
-    shade: 0.85,
+    shade: 1,
   },
   { at: 0.85, ...barrel(PHI_HERO + 0.05, 0.08, 0.085, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [0.6, 2.3, 0.3] },
   { at: 1.4, ...barrel(PHI_HERO + 0.35, 0.074, 0.08, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [1.0, 2.2, 0.3] },
