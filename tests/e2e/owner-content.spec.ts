@@ -73,17 +73,91 @@ test.describe('team', () => {
     }
   });
 
-  test('without photos each member gets a monogram, never an empty box', async ({ page }) => {
+  test('/team groups the board by level: the president alone, the executive board, then operations', async ({ page }) => {
     await page.goto('/team');
-    const marks = page.locator('[data-team-member] [data-team-monogram]');
-    await expect(marks).toHaveCount(team.length);
-    await expect(marks.first()).toHaveText('DS');
+    const groups = page.locator('section[aria-labelledby^="board-"]');
+    const group = (name: string) => groups.filter({ has: page.getByRole('heading', { level: 2, name, exact: true }) });
+    await expect(groups.getByRole('heading', { level: 2 })).toHaveText([/President$/, /Executive board$/, /Operations$/]);
+    await expect(group('President').locator('[data-team-member] h3')).toHaveText(['David Simmons']);
+    await expect(group('Executive board').locator('[data-team-member] h3')).toHaveText(['Liam Aldwinckle', 'Diego Velasco']);
+    await expect(group('Operations').locator('[data-team-member] h3')).toHaveCount(6);
+    // The president's portrait is the larger one.
+    const lead = (await group('President').locator('.portrait').boundingBox())!;
+    const card = (await group('Operations').locator('.portrait').first().boundingBox())!;
+    expect(lead.width).toBeGreaterThan(card.width * 1.2);
   });
 
-  test('the home roster shows the nine names in order and links to /team', async ({ page }) => {
+  test('every member has a 4:5 portrait, black and white until hovered', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/team');
+    const portraits = page.locator('[data-team-member] [data-portrait-toggle]');
+    await expect(portraits).toHaveCount(team.length);
+    const box = (await portraits.first().boundingBox())!;
+    expect(box.width / box.height).toBeCloseTo(0.8, 2);
+    const img = (i: number) => portraits.nth(i).locator('img');
+    await expect(img(0)).toHaveAttribute('alt', '');
+    const filter = (i: number) => img(i).evaluate((el) => getComputedStyle(el).filter);
+    expect(await filter(1)).toContain('grayscale(1)');
+    await portraits.nth(1).hover();
+    await expect.poll(() => filter(1)).toContain('grayscale(0)');
+    // The neighbour stays black and white.
+    expect(await filter(2)).toContain('grayscale(1)');
+  });
+
+  test('keyboard focus shows the colour, on the portrait and on the LinkedIn link of the same card', async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.goto('/team');
+    const card = page.locator('[data-team-member]').nth(3);
+    const link = card.getByRole('link', { name: /on LinkedIn/ });
+    const filter = () => card.locator('img').evaluate((el) => getComputedStyle(el).filter);
+    expect(await filter()).toContain('grayscale(1)');
+    await link.focus();
+    await page.keyboard.press('Shift+Tab');
+    await expect(card.getByRole('button', { name: `${team[3].name} in colour` })).toBeFocused();
+    await expect.poll(filter).toContain('grayscale(0)');
+    await page.keyboard.press('Tab');
+    await expect(link).toBeFocused();
+    await expect.poll(filter).toContain('grayscale(0)');
+  });
+
+  test('phones: two columns, a tap toggles colour and the LinkedIn link stays reachable', async ({ browser }) => {
+    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, reducedMotion: 'reduce' });
+    const page = await ctx.newPage();
+    await page.goto('/team');
+    const ops = page.locator('section#board-operations, section[aria-labelledby="board-operations"]');
+    const cards = ops.locator('[data-team-member]');
+    const [a, b] = [(await cards.nth(0).boundingBox())!, (await cards.nth(1).boundingBox())!];
+    expect(Math.abs(a.y - b.y)).toBeLessThan(2);
+    expect(b.x).toBeGreaterThan(a.x + a.width - 1);
+    const button = cards.nth(0).getByRole('button', { name: `${team[3].name} in colour` });
+    const filter = () => button.locator('img').evaluate((el) => getComputedStyle(el).filter);
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await button.tap();
+    await expect(button).toHaveAttribute('aria-pressed', 'true');
+    await expect.poll(filter).toContain('grayscale(0)');
+    await button.tap();
+    await expect(button).toHaveAttribute('aria-pressed', 'false');
+    await expect.poll(filter).toContain('grayscale(1)');
+    // The link is its own target, below the portrait, and large enough to tap.
+    const link = cards.nth(0).getByRole('link', { name: `${team[3].name} on LinkedIn (opens in a new tab)` });
+    const lb = (await link.boundingBox())!;
+    const pb = (await button.boundingBox())!;
+    expect(lb.y).toBeGreaterThanOrEqual(pb.y + pb.height);
+    expect(lb.height).toBeGreaterThanOrEqual(44);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    await ctx.close();
+  });
+
+  test('the home strip shows the nine portraits in order, lazily loaded at small sizes, and links to /team', async ({ page }) => {
     await page.goto('/');
-    const names = page.locator('#team [data-sign] [data-sign-mark] p');
+    const names = page.locator('#team [data-sign] [data-sign-name]');
     expect(await names.allTextContents()).toEqual(team.map((m) => m.name));
+    const imgs = page.locator('#team [data-portrait-toggle] img');
+    await expect(imgs).toHaveCount(team.length);
+    for (const img of await imgs.all()) {
+      await expect(img).toHaveAttribute('loading', 'lazy');
+      expect(await img.getAttribute('sizes')).toContain('9vw');
+    }
     await expect(page.locator('#team').getByRole('link', { name: 'The team' })).toHaveAttribute('href', '/team');
   });
 

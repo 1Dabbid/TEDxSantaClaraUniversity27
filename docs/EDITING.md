@@ -45,7 +45,7 @@ The home page shows what is true today and grows by itself as you publish. You n
 | **Schedule** | A short note: date, "Running order to follow". Not in the menu. | Ticking **Show the running order** shows the full timeline and adds **Schedule** to the menu. |
 | **Speaker applications** | Shown in the Speakers section: "Applications are not open yet". | **Open** + a link: an **Apply to speak** button under the Speakers heading and in the closing links at the bottom of the home page (with the deadline, if filled in). **Closed**: "Applications for this event are closed." |
 | **Tickets** | "Not on sale yet.", when sales are expected (**Expected on-sale month**, e.g. "Tickets are expected to go on sale in February 2027."), and the mailing list button. | **On sale** + a link: **Get tickets** everywhere. |
-| **Team** | Hidden (not on the page, not in the menu). | Appears as soon as one person has **Show name publicly** ticked and a name: a compact roster of the named people (initials or photo, name, role). |
+| **Team** | Hidden (not on the page, not in the menu). | Appears as soon as one person has **Show name publicly** ticked and a name: a compact strip of the named people (portrait or initials, name, role), grouped by level. |
 | **Partners** | A short text invitation on the home page (never names or logos) linking to `/partners`. On `/partners`, **Current partners** is hidden. | **Published** partners appear on `/partners` only. |
 | **Hero buttons** | **Tickets** and **Get updates** (mailing list). | Once a speaker is announced: **Tickets** and **Speakers**. |
 
@@ -57,7 +57,7 @@ Besides the home page (the scroll story), each topic has its own page with an ad
 | --- | --- | --- |
 | **/venue** | The street address and **Open in Maps** at the top, the coordinates, and Directions, Parking and Accessibility with one line saying the details follow (Directions points to the address; Accessibility to the contact email). The times show as one line, "Doors and talk times to follow". | Each **Getting there** note you fill in (**Venue & directions**) appears under its title; **Doors open at**, **Talks start at**, **Event ends at** appear at the top. |
 | **/schedule** | The date, "Running order to follow" and the mailing list button. | The full running order (**Show the running order**). |
-| **/team** | Every board role from **People > Team**, as a plain list of roles. | For people with **Show name publicly** ticked: name, role, photo (or initials), major, class year and LinkedIn link. Turning off the Team switch, or removing every role, removes the page. |
+| **/team** | Every board role from **People > Team**, grouped by level (President, Executive board, Operations), each with an empty frame and the role. | For people with **Show name publicly** ticked: portrait (or initials), name, role, major, class year and LinkedIn link. Turning off the Team switch, or removing every role, removes the page. |
 | **/faq** | Every question. Each has its own link (e.g. `/faq#tickets-on-sale`, made from the question's words): send it to someone and the answer opens. Rewording a question changes its link. Turning off the FAQ switch removes the page. | |
 
 Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The team", "All 10 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
@@ -139,14 +139,19 @@ Tiers and benefits first, then the partner:
 
 ### Show team names and details
 
-1. **People > Team**: one entry per board role (**Role**, e.g. "President"; leave the **File name (slug)** under it as generated). **Order** sets the order on the site (1 first).
+1. **People > Team**: one entry per board role (**Role**, e.g. "President"; leave the **File name (slug)** under it as generated). **Order** sets the order on the site (1 first) within each level.
 2. Fill in **Name (optional)**, then the optional details: **Major (optional)** (e.g. "Mechanical Engineering"; minors can be left out), **Class year (optional)** (four digits, e.g. 2029, shown as "Class of 2029") and **LinkedIn profile (optional)** (the full address starting with `https://`, e.g. `https://www.linkedin.com/in/their-name`). Never add a personal email address or phone number anywhere on the site.
-3. **Photo (optional)**: upload a square headshot (see image sizes below). Until there is one, the site shows the person's initials in a small circle, in the same place.
-4. Tick **Show name publicly** (ask the person first) and **Save**.
+3. **Photo (optional)**: upload a 4:5 portrait headshot, about 960 × 1200 px (see image sizes below). Until there is one, the site shows the person's initials in the same frame, so the board still lines up.
+4. **Level**: leave it on **Automatic (from the role)**. The site then groups the board like the club's org chart: a role called **President** comes first, on its own and larger; roles starting **VP of …** or **Vice President …** form the **Executive board**; every other role (the directors) is **Operations**. Pick **President**, **Executive board** or **Operations** only when a role's name says otherwise (say, a "Treasurer" who sits on the executive board).
+5. Tick **Show name publicly** (ask the person first) and **Save**.
 
-The home page shows a compact roster (initials or photo, name, role) and a link, "The team", to **/team**, which adds the major, class year and a LinkedIn link (it opens in a new tab and is announced to screen readers as "<name> on LinkedIn (opens in a new tab)"). The Team section stays hidden until at least one person has a public name; then it lists the named people only, and **Team** appears in the menu. The whole section can also be switched off in **Contact & site > Show / hide sections > Show the Team section on the home page (it appears once at least one name is public)**.
+Changing who is on the board next year is only these fields: rename the **Role**, change the **Name** and details, replace the **Photo**. Nothing in the code needs to change.
 
-**Adding photos without the admin.** A photo can also be put straight into the repository, at `public/images/team/<file name>/photo.jpg` (or `photo.png`, `photo.webp`), where `<file name>` is the entry's **File name (slug)**: `president`, `vp-of-production`, `vp-of-finance`, `director-of-compliance`, `director-of-marketing`, `director-of-creative`, `director-of-speakers`, `director-of-partnerships`, `director-of-community`. The file name must be lowercase `photo` and the folder must match the slug exactly. The site picks it up on the next build when the **Photo** field is empty; it is the same place the admin's upload writes to.
+Portraits are shown in black and white, with a slight contrast curve and a thin frame so photos taken against different backgrounds still look like one set. They turn to full colour when a visitor points at one with a mouse, moves to it with the keyboard, or taps it on a phone (tap again for black and white). The name, role and LinkedIn link are always printed beside the photo, never only inside it.
+
+The home page shows a compact strip of portraits (photo or initials, name, role), grouped by level, and a link, "The team", to **/team**, which adds the major, class year and a LinkedIn link (it opens in a new tab and is announced to screen readers as "<name> on LinkedIn (opens in a new tab)"). The Team section stays hidden until at least one person has a public name; then it lists the named people only, and **Team** appears in the menu. The whole section can also be switched off in **Contact & site > Show / hide sections > Show the Team section on the home page (it appears once at least one name is public)**.
+
+**Adding photos without the admin.** A photo can also be put straight into the repository, at `public/images/team/<file name>/photo.jpg` (or `photo.png`, `photo.webp`), where `<file name>` is the entry's **File name (slug)**: `president`, `vp-of-production`, `vp-of-finance`, `director-of-compliance`, `director-of-marketing`, `director-of-creative`, `director-of-speakers`, `director-of-partnerships`, `director-of-community`. The file name must be lowercase `photo` and the folder must match the slug exactly. The site picks it up on the next build when the **Photo** field is empty; it is the same place the admin's upload writes to. Crop it to 4:5 (960 × 1200 px), with the head about the same size and height as in the other photos.
 
 ### The "All year, not one night" card (Partners page)
 
@@ -211,7 +216,7 @@ Only the Director of Compliance (or the licence holder) should change these. The
 | Image | Size | Format |
 | --- | --- | --- |
 | Speaker **Portrait** | 4:5 portrait, about 1200 × 1500 px | JPG or PNG, under 2 MB |
-| Team **Photo (optional)** | square, about 600 × 600 px, face centred (it is cropped to a circle) | JPG or PNG, under 2 MB |
+| Team **Photo (optional)** | 4:5 portrait, about 960 × 1200 px; head and shoulders, the face in the upper third, heads about the same size from photo to photo | JPG or PNG, under 2 MB |
 | Partner **Logo** | white or light version on a transparent background, wide rather than tall; it is shown at most 24px tall and 72px wide; always smaller than the event logo | SVG (best) or PNG at least 216 px wide, under 2 MB |
 
 Keep every photo under 2 MB; JPG or PNG (not HEIC, not PDF). iPhone photos are often HEIC: export or share them as JPG first ("Most Compatible" in the camera settings). A file of the wrong type is left out (the page shows "Portrait to follow") and a file over 2 MB is flagged in the build log. Use plain file names without spaces (e.g. `jane-doe.jpg`). The site resizes and compresses photos for visitors automatically.

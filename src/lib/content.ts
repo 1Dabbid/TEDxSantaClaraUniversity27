@@ -14,6 +14,7 @@ import {
   TIME_PATTERN,
 } from './content-checks';
 import { checkImage, findTeamPhoto } from './content-images';
+import { resolveLevel, type TeamLevel } from './team';
 import { formatCalendarDate } from './dates';
 import {
   BENEFIT_GROUP_LABEL,
@@ -379,6 +380,8 @@ export type TeamMember = {
   /** Their LinkedIn profile (https), '' when not given. */
   linkedin: string;
   photo: string | null;
+  /** Where they sit on the board (President, Executive board, Operations): see src/lib/team.ts. */
+  level: TeamLevel;
   order: number;
 };
 
@@ -639,6 +642,9 @@ function classYearOf(v: number | null | undefined, file: string): number | null 
  * Photo: the uploaded Photo field, or, when it is empty, a file dropped in at
  * the path the admin itself would use: public/images/team/<slug>/photo.jpg (or
  * .jpeg, .png, .webp). Either way it goes through the same image checks.
+ *
+ * Level: the admin's Level field, or, when it is Automatic, missing or not
+ * recognised, the level the role implies (src/lib/team.ts). Never fails.
  */
 export const getTeam = cache(async (): Promise<TeamMember[]> => {
   const entries = await readCollection('team');
@@ -655,6 +661,7 @@ export const getTeam = cache(async (): Promise<TeamMember[]> => {
         classYear: visible ? classYearOf(entry.classYear, file) : null,
         linkedin: visible ? link(entry.linkedin, file, 'LinkedIn profile') : '',
         photo: visible ? checkImage(photo, { file, field: 'Photo' }) : null,
+        level: resolveLevel(entry.level, entry.role),
         order: entry.order ?? 0,
       };
     })
