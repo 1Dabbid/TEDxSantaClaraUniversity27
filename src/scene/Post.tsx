@@ -28,19 +28,46 @@ const VERT = /* glsl */ `
 const HASH = /* glsl */ `
   float hash(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * 0.1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }`;
 
-/** Single fullscreen composite: fake DOF (mip blur at the edges), mip bloom, vignette, tone map, grain. */
+/**
+ * Single fullscreen composite (high tier): edge chromatic aberration, fake
+ * depth of field around a focus point (mip blur), thresholded mip bloom on
+ * true highlights only, a short anamorphic streak on the brightest speculars,
+ * vignette, scrims, tone map, a black-point toe for rich blacks, fine grain.
+ */
 const COMPOSITE_FRAG = /* glsl */ `
-  uniform sampler2D tScene; uniform vec2 uRes; uniform float uTime; uniform float uDof; uniform float uVig;
-  uniform float uGrain; uniform float uBloom; uniform float uShade;
+  uniform sampler2D tScene; uniform vec2 uRes; uniform float uTime; uniform float uDof; uniform vec2 uFocus;
+  uniform float uVig; uniform float uGrain; uniform float uBloom; uniform float uShade; uniform float uScrim;
+  uniform float uStreak; uniform float uCA; uniform float uEdge;
   varying vec2 vUv;
   ${HASH}
-  vec3 tap(vec2 uv, float lod) { return textureLod(tScene, uv, lod).rgb; }
+  // NaN / Inf guard: a single bad pixel would otherwise smear through every mip as a box.
+  vec3 tap(vec2 uv, float lod) {
+    vec3 c = textureLod(tScene, uv, lod).rgb;
+    return (any(isnan(c)) || any(isinf(c))) ? vec3(0.0) : min(c, vec3(64.0));
+  }
+  // Keep only the part of a colour above a luminance threshold (soft knee).
+  vec3 hi(vec3 c, float thr) {
+    c = min(c, vec3(3.0));
+    float l = dot(c, vec3(0.2126, 0.7152, 0.0722));
+    float k = max(l - thr, 0.0);
+    return c * (k * k / (k + 0.25 * thr)) / max(l, 1e-4);
+  }
+  // Four diagonal taps around a mip level: hides the box shape of single mip texels.
+  vec3 soft(vec2 uv, float lod) {
+    vec2 o = exp2(lod) * 0.75 / uRes;
+    return 0.25 * (hi(tap(uv + vec2(o.x, o.y), lod), 1.3) + hi(tap(uv + vec2(-o.x, o.y), lod), 1.3)
+                 + hi(tap(uv + vec2(o.x, -o.y), lod), 1.3) + hi(tap(uv + vec2(-o.x, -o.y), lod), 1.3));
+  }
   void main() {
     vec2 uv = vUv;
-    vec2 c = uv - 0.5; c.x *= uRes.x / uRes.y;
+    float aspect = uRes.x / uRes.y;
+    vec2 c = uv - 0.5; c.x *= aspect;
     float r = length(c);
-    vec3 col = tap(uv, 0.0);
-    float blur = uDof * smoothstep(0.16, 0.78, r);
+    vec2 fc = uv - uFocus; fc.x *= aspect;
+    float rf = length(fc);
+    vec2 ca = (uv - 0.5) * uCA * smoothstep(0.45, 1.0, r);
+    vec3 col = vec3(tap(uv - ca, 0.0).r, tap(uv, 0.0).g, tap(uv + ca, 0.0).b);
+    float blur = uDof * smoothstep(0.1, 0.72, rf);
     if (blur > 0.004) {
       float lod = blur * 4.5;
       vec2 px = exp2(lod) / uRes;
@@ -48,27 +75,42 @@ const COMPOSITE_FRAG = /* glsl */ `
              + tap(uv + vec2(-px.x, -0.5 * px.y), lod) + tap(uv + vec2(0.5 * px.x, -px.y), lod);
       col = mix(col, b * 0.25, smoothstep(0.0, 0.3, blur));
     }
-    vec3 bl = tap(uv, 3.0) * 0.25 + tap(uv, 5.0) * 0.4 + tap(uv, 7.0) * 0.35;
-    float bll = dot(bl, vec3(0.2126, 0.7152, 0.0722));
-    col += bl * uBloom * smoothstep(0.05, 0.9, bll);
-    col *= mix(1.0, smoothstep(1.15, 0.2, r), uVig);
+    vec3 bl = hi(tap(uv, 2.0), 1.2) * 0.4 + soft(uv, 3.5) * 0.35 + soft(uv, 5.0) * 0.3;
+    col += bl * uBloom;
+    if (uStreak > 0.001) {
+      vec3 sk = vec3(0.0);
+      for (int i = 1; i <= 6; i++) {
+        float fi = float(i);
+        vec2 d = vec2(fi * 11.0 / uRes.x, 0.0);
+        float w = exp(-fi * 0.5);
+        sk += (hi(tap(uv + d, 2.0), 2.5) + hi(tap(uv - d, 2.0), 2.5)) * w;
+      }
+      col += sk * uStreak * vec3(0.7, 0.82, 1.0);
+    }
+    col *= mix(1.0, smoothstep(1.2, 0.18, r), uVig);
     col *= 1.0 - uShade * smoothstep(0.52, 0.78, uv.x);
+    col *= 1.0 - uScrim * (1.0 - smoothstep(0.3, 0.66, uv.x));
+    col *= 1.0 - uEdge * max(1.0 - smoothstep(0.0, 0.17, uv.y), smoothstep(0.78, 0.9, uv.y));
     gl_FragColor = vec4(max(col, 0.0), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
+    // Black point toe: the darkest values sink to true black, mids untouched.
+    vec3 g0 = gl_FragColor.rgb;
+    gl_FragColor.rgb = g0 * smoothstep(0.0, 0.06, g0) ;
+    float lum = dot(g0, vec3(0.333));
     float g = hash(gl_FragCoord.xy + fract(uTime * 7.13) * 917.0) - 0.5;
-    gl_FragColor.rgb += g * uGrain;
+    gl_FragColor.rgb += g * uGrain * (0.35 + 0.65 * smoothstep(0.0, 0.25, lum));
   }`;
 
-/** Low tier: no offscreen pass, just a blended vignette + grain veil over the frame. */
+/** Low tier: no offscreen pass, just a blended vignette + scrim + grain veil over the frame. */
 const OVERLAY_FRAG = /* glsl */ `
-  uniform vec2 uRes; uniform float uTime; uniform float uVig; uniform float uGrain; uniform float uShade;
+  uniform vec2 uRes; uniform float uTime; uniform float uVig; uniform float uGrain; uniform float uShade; uniform float uScrim; uniform float uEdge;
   varying vec2 vUv;
   ${HASH}
   void main() {
     vec2 c = vUv - 0.5; c.x *= uRes.x / uRes.y;
-    float v = (1.0 - smoothstep(1.15, 0.2, length(c))) * uVig;
-    v = 1.0 - (1.0 - v) * (1.0 - uShade * smoothstep(0.52, 0.78, vUv.x));
+    float v = (1.0 - smoothstep(1.2, 0.18, length(c))) * uVig;
+    v = 1.0 - (1.0 - v) * (1.0 - uShade * smoothstep(0.52, 0.78, vUv.x)) * (1.0 - uScrim * (1.0 - smoothstep(0.3, 0.66, vUv.x))) * (1.0 - uEdge * max(1.0 - smoothstep(0.0, 0.17, vUv.y), smoothstep(0.78, 0.9, vUv.y)));
     float g = hash(gl_FragCoord.xy + fract(uTime * 7.13) * 917.0) - 0.5;
     float lift = max(g, 0.0) * uGrain;
     float a = clamp(v + max(-g, 0.0) * uGrain, 0.0, 1.0);
@@ -117,10 +159,15 @@ export default function Post({ post }: { post: boolean }) {
         uRes: { value: new Vector2(1, 1) },
         uTime: { value: 0 },
         uDof: { value: 0 },
+        uFocus: { value: new Vector2(0.5, 0.5) },
         uVig: { value: 0.6 },
         uGrain: { value: 0.035 },
-        uBloom: { value: 0.35 },
+        uBloom: { value: 0.6 },
         uShade: { value: 0 },
+        uScrim: { value: 0 },
+        uStreak: { value: 0.12 },
+        uCA: { value: 0.0015 },
+        uEdge: { value: 0 },
       },
       vertexShader: VERT,
       fragmentShader: COMPOSITE_FRAG,
@@ -134,6 +181,8 @@ export default function Post({ post }: { post: boolean }) {
         uVig: { value: 0.6 },
         uGrain: { value: 0.03 },
         uShade: { value: 0 },
+        uScrim: { value: 0 },
+        uEdge: { value: 0 },
       },
       vertexShader: VERT,
       fragmentShader: OVERLAY_FRAG,
@@ -167,6 +216,12 @@ export default function Post({ post }: { post: boolean }) {
     (res.overlay.uniforms.uRes.value as Vector2).set(w, h);
   }, [post, res, size, dpr, get]);
 
+  // Compile the composite / overlay programs before they are first needed.
+  useEffect(() => {
+    const { gl } = get();
+    gl.compileAsync(post ? res.compScene : res.overScene, res.cam).catch(() => {});
+  }, [get, res, post]);
+
   useEffect(
     () => () => {
       res.rt.dispose();
@@ -193,7 +248,11 @@ export default function Post({ post }: { post: boolean }) {
       u.uDof.value = look.dof;
       u.uVig.value = look.vignette;
       u.uShade.value = look.shade;
-      u.uGrain.value = 0.03 * Math.min(1, look.exposure * 2);
+      u.uScrim.value = look.scrim;
+      u.uEdge.value = look.scrimEdge;
+      u.uBloom.value = 0.45 * look.bloom;
+      (u.uFocus.value as Vector2).set(look.focusX, look.focusY);
+      u.uGrain.value = 0.028 * Math.min(1, look.exposure * 2);
       gl.setRenderTarget(res.rt);
       gl.clear();
       gl.render(scene, camera);
@@ -204,6 +263,8 @@ export default function Post({ post }: { post: boolean }) {
       u.uTime.value = t;
       u.uVig.value = Math.min(1, look.vignette + look.dof * 0.25);
       u.uShade.value = look.shade;
+      u.uScrim.value = look.scrim * 0.8;
+      u.uEdge.value = look.scrimEdge;
       u.uGrain.value = 0.028 * Math.min(1, look.exposure * 2);
       gl.render(scene, camera);
       const auto = gl.autoClear;

@@ -1,4 +1,14 @@
-import { DataTexture, LinearFilter, LinearMipmapLinearFilter, RedFormat, RepeatWrapping, UnsignedByteType, ClampToEdgeWrapping } from 'three';
+import {
+  CanvasTexture,
+  ClampToEdgeWrapping,
+  DataTexture,
+  LinearFilter,
+  LinearMipmapLinearFilter,
+  RedFormat,
+  RepeatWrapping,
+  UnsignedByteType,
+  type Texture,
+} from 'three';
 import { ENGRAVING_ROWS, ENGRAVING_SEPARATOR } from './engraving';
 import { MIC, barrelRadius } from './layout';
 
@@ -15,13 +25,24 @@ function placeholder(): DataTexture {
 
 export const EMPTY_MASK = placeholder();
 
+/** Yield to the main thread (idle time when available) so the build never blocks scrolling. */
+const yieldToIdle = () =>
+  new Promise<void>((resolve) => {
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) window.requestIdleCallback(() => resolve(), { timeout: 120 });
+    else setTimeout(resolve, 16);
+  });
+
 /**
  * Engraving mask atlas: 1 where metal has been laser-etched away.
  * u wraps the full barrel circumference, v runs up the engraved band.
  * Each row is drawn with a horizontal scale that compensates for the taper,
  * so letters keep their proportions on the barrel.
+ *
+ * Built incrementally (rows drawn in ~8 ms slices between idle callbacks) straight into a canvas that is
+ * uploaded to the GPU as is: no pixel readback, no CPU blur. The canvas text
+ * antialiasing gives the walls their slope; mipmaps are generated on the GPU.
  */
-export async function createEngravingMask(width: number, height: number): Promise<DataTexture> {
+export async function createEngravingMask(width: number, height: number): Promise<Texture> {
   try {
     await document.fonts?.ready;
   } catch {
@@ -37,7 +58,7 @@ export async function createEngravingMask(width: number, height: number): Promis
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
-  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const ctx = canvas.getContext('2d');
   if (!ctx) return EMPTY_MASK;
   ctx.fillStyle = '#000';
   ctx.fillRect(0, 0, width, height);
@@ -53,7 +74,13 @@ export async function createEngravingMask(width: number, height: number): Promis
   const unit = (height - margin * 2) / total;
 
   let yTop = margin;
+  let slice = performance.now();
   for (const row of ENGRAVING_ROWS) {
+    // Time-sliced: draw rows for ~8 ms, then give the main thread back.
+    if (performance.now() - slice > 8) {
+      await yieldToIdle();
+      slice = performance.now();
+    }
     const h = unit * (row.kind === 'rule' ? ROW_WEIGHT.rule : ROW_WEIGHT[row.style]);
     const yMid = yTop + h / 2;
     // Canvas y=0 is the top of the band (nearest the grille).
@@ -99,17 +126,8 @@ export async function createEngravingMask(width: number, height: number): Promis
     yTop += h;
   }
 
-  // Soften so the derived normals have rounded walls.
-  const data = ctx.getImageData(0, 0, width, height).data;
-  const out = new Uint8Array(width * height);
-  for (let y = 0; y < height; y++) {
-    const src = (height - 1 - y) * width * 4; // flip: v = 0 at the bottom of the band
-    const dst = y * width;
-    for (let x = 0; x < width; x++) out[dst + x] = data[src + x * 4];
-  }
-  blurRows(out, width, height);
-
-  const tex = new DataTexture(out, width, height, RedFormat, UnsignedByteType);
+  const tex = new CanvasTexture(canvas);
+  // flipY (default) puts v = 0 at the bottom of the band, like the old mask.
   tex.wrapS = RepeatWrapping;
   tex.wrapT = ClampToEdgeWrapping;
   tex.magFilter = LinearFilter;
@@ -129,26 +147,5 @@ function drawTracked(ctx: CanvasRenderingContext2D, s: string, x: number, y: num
   for (const ch of s) {
     ctx.fillText(ch, cx, y);
     cx += ctx.measureText(ch).width + tracking;
-  }
-}
-
-/** Cheap separable 3-tap blur (two passes ≈ 5-tap), wraps horizontally. */
-function blurRows(a: Uint8Array, w: number, h: number) {
-  const tmp = new Uint8Array(a.length);
-  for (let pass = 0; pass < 2; pass++) {
-    for (let y = 0; y < h; y++) {
-      const o = y * w;
-      for (let x = 0; x < w; x++) {
-        const l = a[o + ((x - 1 + w) % w)];
-        const r = a[o + ((x + 1) % w)];
-        tmp[o + x] = (l + 2 * a[o + x] + r) >> 2;
-      }
-    }
-    for (let y = 0; y < h; y++) {
-      const o = y * w;
-      const up = Math.max(0, y - 1) * w;
-      const dn = Math.min(h - 1, y + 1) * w;
-      for (let x = 0; x < w; x++) a[o + x] = (tmp[up + x] + 2 * tmp[o + x] + tmp[dn + x]) >> 2;
-    }
   }
 }

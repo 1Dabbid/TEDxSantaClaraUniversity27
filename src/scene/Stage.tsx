@@ -14,12 +14,24 @@ import {
 } from 'three';
 import { machinedLathe } from './geometry';
 import { RUG_RADIUS, SPOT_ANGLE, SPOT_HEIGHT } from './layout';
-import { createConeMaterial, createDustMaterial, createFloorMaterial, createRugMaterial } from './materials';
+import {
+  createConeMaterial,
+  createCurtainMaterial,
+  createDustMaterial,
+  createFloorMaterial,
+  createRugMaterial,
+} from './materials';
 import { look } from './look';
 
 const R = RUG_RADIUS;
 
-/** Floor, red rug, overhead spot with a visible cone and drifting dust. */
+/** Upstage curtain: distance behind the stage centre, width, height. */
+const CURTAIN = { z: -4.6, width: 34, height: 8 };
+
+/**
+ * Polished floor with spike tape, the red rug (thick pile, fuzzy edge), the
+ * overhead spot with a visible beam and sparkling dust, a faint back curtain.
+ */
 export default function Stage({ quality }: { quality: 'high' | 'low' }) {
   const high = quality === 'high';
   const spot = useRef<SpotLight>(null);
@@ -29,21 +41,23 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
   const geo = useMemo(() => {
     const floor = new PlaneGeometry(90, 90, 1, 1);
     floor.rotateX(-Math.PI / 2);
+    // Rug: ~18 mm pile with a rounded, slightly sagging lip.
     const rug = machinedLathe(
       [
-        [R + 0.012, 0.0008, true],
-        [R + 0.0085, 0.0062],
-        [R + 0.003, 0.0098],
-        [R - 0.006, 0.0116],
-        [R - 0.03, 0.012],
-        [0, 0.012],
+        [R + 0.014, 0.0006, true],
+        [R + 0.0115, 0.008],
+        [R + 0.006, 0.0145],
+        [R - 0.004, 0.0172],
+        [R - 0.03, 0.0182],
+        [R - 0.4, 0.0185],
+        [0, 0.0185],
       ],
-      high ? 192 : 96,
+      high ? 256 : 96,
     );
     const cone = new CylinderGeometry(0.11, Math.tan(SPOT_ANGLE) * SPOT_HEIGHT, SPOT_HEIGHT, high ? 72 : 40, 1, true);
     cone.translate(0, SPOT_HEIGHT / 2, 0);
 
-    const count = high ? 650 : 260;
+    const count = high ? 700 : 260;
     const pos = new Float32Array(count * 3);
     const seed = new Float32Array(count * 4);
     let s = 1337;
@@ -59,7 +73,10 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     dust.setAttribute('position', new BufferAttribute(pos, 3));
     dust.setAttribute('seed', new BufferAttribute(seed, 4));
     dust.computeBoundingSphere();
-    return { floor, rug, cone, dust };
+
+    const curtain = new PlaneGeometry(CURTAIN.width, CURTAIN.height, high ? 400 : 200, 1);
+    curtain.translate(0, CURTAIN.height / 2, 0);
+    return { floor, rug, cone, dust, curtain };
   }, [high]);
 
   const mats = useMemo(
@@ -68,6 +85,7 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
       rug: createRugMaterial(!high),
       cone: createConeMaterial(),
       dust: createDustMaterial(),
+      curtain: createCurtainMaterial(),
     }),
     [high],
   );
@@ -93,22 +111,25 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
       d.uniforms.uIntensity.value = look.cone;
       d.uniforms.uScale.value = (state.size.height * state.viewport.dpr * 0.5) / Math.tan((look.fov * Math.PI) / 360);
     }
-    if (spot.current) spot.current.intensity = 240 * look.spot;
+    if (cone.current) cone.current.visible = look.cone > 0.01;
+    if (dust.current) dust.current.visible = look.cone > 0.01;
+    if (spot.current) spot.current.intensity = 260 * look.spot;
   });
 
   return (
     <group>
       <mesh geometry={geo.floor} material={mats.floor} />
       <mesh geometry={geo.rug} material={mats.rug} />
+      <mesh geometry={geo.curtain} material={mats.curtain} position={[0, 0, CURTAIN.z]} />
       <spotLight
         ref={spot}
         position={[0, SPOT_HEIGHT, 0]}
-        angle={SPOT_ANGLE * 1.2}
-        penumbra={0.75}
+        angle={SPOT_ANGLE * 1.08}
+        penumbra={0.55}
         decay={2}
         distance={0}
-        intensity={180}
-        color="#fff4e8"
+        intensity={200}
+        color="#fff2e4"
       />
       <mesh ref={cone} geometry={geo.cone} material={mats.cone} renderOrder={5} frustumCulled={false} />
       <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} />
