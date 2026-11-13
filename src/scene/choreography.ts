@@ -78,6 +78,9 @@ export type ResolvedShot = {
   at: number;
   pos: Vector3;
   target: Vector3;
+  /** Unit offset from the target to the camera, and the log of that distance (the rig damps these, not pos). */
+  dir: Vector3;
+  logDist: number;
   up: Vector3;
   fov: number;
   exposure: number;
@@ -105,19 +108,24 @@ export type ResolvedShot = {
 };
 
 /**
- * Camera rig tuning. The position follows the sampled path with a critically
- * damped spring (`follow`, seconds); the look-at target uses an under-damped
- * spring so it overshoots slightly and settles, like a heavy fluid head; the
- * camera banks a little into lateral moves.
+ * Camera rig tuning. The rig follows the sampled path as a target point plus
+ * an offset (direction on the sphere, distance in log space), each critically
+ * damped (`follow`, seconds), so the camera can never pass through its own
+ * subject however fast the page is flung. The view direction then trails
+ * that composition through a lightly under-damped spring (a heavy fluid head:
+ * a small, bounded angular overshoot), and the camera banks a little into
+ * lateral moves.
  */
 export const RIG = {
   /** Smoothing of the journey coordinate itself (seconds). */
   journeySmooth: 0.12,
-  /** Position follow time (seconds). */
+  /** Offset (direction, distance) follow time (seconds). */
   follow: 0.7,
-  /** Look-at spring frequency (Hz) and damping ratio (< 1 overshoots). */
-  targetFreq: 0.62,
-  targetZeta: 0.68,
+  /** Target point follow time (seconds). */
+  targetFollow: 0.6,
+  /** View-direction spring frequency (Hz) and damping ratio (< 1 overshoots). */
+  targetFreq: 0.9,
+  targetZeta: 0.78,
   /** Bank angle per unit of lateral angular velocity (rad per rad/s), and its limit. */
   rollGain: 0.05,
   rollMax: 0.035,
@@ -385,10 +393,13 @@ export function resolveShot(s: Shot): ResolvedShot {
     micToWorld(target, target);
   }
   const up = s.up ? new Vector3(...s.up).normalize() : mic ? MIC_AXIS.clone() : WORLD_UP.clone();
+  const off = pos.clone().sub(target);
   return {
     at: s.at,
     pos,
     target,
+    dir: off.clone().normalize(),
+    logDist: Math.log(Math.max(1e-4, off.length())),
     up,
     fov: s.fov,
     exposure: s.exposure,
@@ -418,15 +429,40 @@ export function resolveShot(s: Shot): ResolvedShot {
 
 export const resolveShots = (shots: Shot[]) => shots.map(resolveShot);
 
-function catmull(p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, t: number, out: Vector3) {
-  const t2 = t * t;
-  const t3 = t2 * t;
-  out.set(0, 0, 0)
-    .addScaledVector(p0, -0.5 * t3 + t2 - 0.5 * t)
-    .addScaledVector(p1, 1.5 * t3 - 2.5 * t2 + 1)
-    .addScaledVector(p2, -1.5 * t3 + 2 * t2 + 0.5 * t)
-    .addScaledVector(p3, 0.5 * t3 - 0.5 * t2);
-  return out;
+/**
+ * Centripetal Catmull-Rom (Barry-Goldman). Unlike the uniform form it never
+ * overshoots or loops when neighbouring shots are very different distances
+ * apart (a 4 cm macro move next to a 6 m crane move).
+ */
+const cr = {
+  q0: new Vector3(),
+  q3: new Vector3(),
+  a1: new Vector3(),
+  a2: new Vector3(),
+  a3: new Vector3(),
+  b1: new Vector3(),
+  b2: new Vector3(),
+};
+function lerpKnots(a: Vector3, b: Vector3, ta: number, tb: number, u: number, out: Vector3) {
+  const d = tb - ta;
+  return out.copy(a).multiplyScalar((tb - u) / d).addScaledVector(b, (u - ta) / d);
+}
+function centripetal(p0: Vector3, p1: Vector3, p2: Vector3, p3: Vector3, t: number, out: Vector3) {
+  const d12 = p1.distanceTo(p2);
+  if (d12 < 1e-7) return out.copy(p1);
+  // A repeated end point (first / last shot, or a hold) continues the segment in a straight line.
+  const q0 = p0.distanceTo(p1) < 1e-7 ? cr.q0.copy(p1).multiplyScalar(2).sub(p2) : cr.q0.copy(p0);
+  const q3 = p3.distanceTo(p2) < 1e-7 ? cr.q3.copy(p2).multiplyScalar(2).sub(p1) : cr.q3.copy(p3);
+  const t1 = Math.sqrt(q0.distanceTo(p1));
+  const t2 = t1 + Math.sqrt(d12);
+  const t3 = t2 + Math.sqrt(q3.distanceTo(p2));
+  const u = t1 + (t2 - t1) * t;
+  const A1 = lerpKnots(q0, p1, 0, t1, u, cr.a1);
+  const A2 = lerpKnots(p1, p2, t1, t2, u, cr.a2);
+  const A3 = lerpKnots(p2, q3, t2, t3, u, cr.a3);
+  const B1 = lerpKnots(A1, A2, 0, t2, u, cr.b1);
+  const B2 = lerpKnots(A2, A3, t1, t3, u, cr.b2);
+  return lerpKnots(B1, B2, t1, t2, u, out);
 }
 
 const scalarKeys = [
@@ -468,8 +504,11 @@ export function sampleShots(shots: ResolvedShot[], J: number, out: ResolvedShot)
   const t = raw + (smooth - raw) * 0.7;
   const p0 = shots[Math.max(0, i - 1)];
   const p3 = shots[Math.min(n - 1, i + 2)];
-  catmull(p0.pos, a.pos, b.pos, p3.pos, t, out.pos);
-  catmull(p0.target, a.target, b.target, p3.target, t, out.target);
+  centripetal(p0.target, a.target, b.target, p3.target, t, out.target);
+  // Offset: direction lerped on the sphere, distance in log space; the camera never crosses its target.
+  out.dir.copy(a.dir).lerp(b.dir, t).normalize();
+  out.logDist = a.logDist + (b.logDist - a.logDist) * t;
+  out.pos.copy(out.target).addScaledVector(out.dir, Math.exp(out.logDist));
   out.up.copy(a.up).lerp(b.up, t).normalize();
   out.keyDir.copy(a.keyDir).lerp(b.keyDir, t);
   for (const k of scalarKeys) out[k] = a[k] + (b[k] - a[k]) * t;
@@ -480,6 +519,8 @@ export function sampleShots(shots: ResolvedShot[], J: number, out: ResolvedShot)
 function copyShot(s: ResolvedShot, out: ResolvedShot) {
   out.pos.copy(s.pos);
   out.target.copy(s.target);
+  out.dir.copy(s.dir);
+  out.logDist = s.logDist;
   out.up.copy(s.up);
   out.keyDir.copy(s.keyDir);
   for (const k of scalarKeys) out[k] = s[k];
