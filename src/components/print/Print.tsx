@@ -38,6 +38,10 @@ type RegisterOption<T extends string> = { value: T; label: string };
 /**
  * A row of tick boxes, like a status field on a form. The current option is
  * marked with a cross (shape, not colour) and announced as current.
+ *
+ * Screen readers hear the answer first ("Ticket status: Coming soon"), then
+ * the full list of stages with the current one marked, so the form metaphor
+ * never has to be decoded visually.
  */
 export function StatusRegister<T extends string>({
   label,
@@ -50,21 +54,28 @@ export function StatusRegister<T extends string>({
   value: T;
   className?: string;
 }) {
+  const currentLabel = options.find((o) => o.value === value)?.label;
   return (
     <div className={className}>
-      <p className="fine-print">{label}</p>
-      <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:flex sm:flex-wrap">
+      <p className="fine-print text-mute">
+        {label}
+        {currentLabel ? <span className="sr-only">: {currentLabel}.</span> : null}
+      </p>
+      <ul
+        aria-label={`${label}, all stages`}
+        className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:flex sm:flex-wrap"
+      >
         {options.map((o) => {
           const current = o.value === value;
           return (
             <li
               key={o.value}
               aria-current={current ? 'true' : undefined}
-              className={`fine-print flex items-center gap-2 ${current ? 'text-white' : 'text-subtle'}`}
+              className={`fine-print flex items-center gap-2 ${current ? 'text-white' : 'text-mute'}`}
             >
               <span
                 aria-hidden="true"
-                className={`relative inline-block size-3 border ${current ? 'border-white' : 'border-white/35'}`}
+                className={`relative inline-block size-3 shrink-0 border ${current ? 'border-white' : 'border-white/50'}`}
               >
                 {current ? (
                   <svg viewBox="0 0 12 12" className="absolute inset-0 size-full text-accent" fill="none">

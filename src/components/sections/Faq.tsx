@@ -15,7 +15,7 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
   return (
     <SectionShell id="faq" scrim="solid" className="py-32 sm:py-44">
       <JsonLd json={jsonLdString(faqJsonLd(items))} />
-      <div className="shell grid gap-14 md:grid-cols-12">
+      <div className="shell grid grid-cols-1 gap-14 md:grid-cols-12">
         <div className="md:col-span-4">
           <div className="md:sticky md:top-[calc(var(--header-h)+3rem)]">
             <div data-reveal="fade">
@@ -49,21 +49,22 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
             <li key={i} className="border-b border-white/15">
               <details className="group">
                 <summary
-                  className="grid cursor-pointer list-none grid-cols-[3.75rem_1fr_2rem] items-baseline gap-2 py-7 text-lg font-medium text-white transition-colors hover:text-mute focus-visible:outline-2 focus-visible:outline-offset-[-2px] sm:grid-cols-[5rem_1fr_2.5rem] sm:text-2xl sm:tracking-tight [&::-webkit-details-marker]:hidden"
+                  className="grid cursor-pointer list-none grid-cols-[3.75rem_minmax(0,1fr)_2rem] items-baseline gap-2 py-7 text-lg font-medium text-white transition-colors hover:text-mute focus-visible:outline-2 focus-visible:outline-offset-[-2px] sm:grid-cols-[5rem_minmax(0,1fr)_2.5rem] sm:text-2xl sm:tracking-tight [&::-webkit-details-marker]:hidden"
                 >
                   <span aria-hidden="true" className="fine-print text-white tabular-nums">
                     §&nbsp;{clause(7, i + 1)}
                   </span>
-                  <span className="text-balance">{item.question}</span>
+                  {/* overflow-wrap: the long event name must not push the page sideways at 320px. */}
+                  <span className="text-balance [overflow-wrap:anywhere]">{item.question}</span>
                   {/* Plus that turns into a minus: shape change, not colour. */}
                   <span aria-hidden="true" className="relative ml-auto block size-4 self-center">
                     <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-current" />
                     <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-current transition-transform duration-300 group-open:scale-y-0" />
                   </span>
                 </summary>
-                <div className="grid grid-cols-[3.75rem_1fr_2rem] gap-2 pb-9 sm:grid-cols-[5rem_1fr_2.5rem]">
+                <div className="grid grid-cols-[3.75rem_minmax(0,1fr)_2rem] gap-2 pb-9 sm:grid-cols-[5rem_minmax(0,1fr)_2.5rem]">
                   <span aria-hidden="true" />
-                  <p className="max-w-2xl leading-relaxed whitespace-pre-line text-mute sm:text-lg">{item.answer}</p>
+                  <p className="max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{item.answer}</p>
                 </div>
               </details>
             </li>

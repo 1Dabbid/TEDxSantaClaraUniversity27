@@ -80,7 +80,7 @@ function TierCard({ tier, index, benefits }: { tier: Tier; index: number; benefi
     <li className="flex flex-col border border-white/15 bg-black/80 p-6 sm:p-8">
       <div className="flex items-baseline justify-between gap-4">
         <ClauseNo>2.{index + 1}</ClauseNo>
-        <span className="fine-print">Schedule {String.fromCharCode(65 + index)}</span>
+        <span className="fine-print text-mute">Schedule {String.fromCharCode(65 + index)}</span>
       </div>
       <h3 className="mt-10 text-3xl font-semibold tracking-tight text-balance sm:text-4xl">{tier.name}</h3>
       {tier.description ? <p className="mt-4 max-w-md text-mute">{tier.description}</p> : null}
@@ -101,7 +101,7 @@ function TierCard({ tier, index, benefits }: { tier: Tier; index: number; benefi
           <dl className="grid grid-cols-2 gap-4 border-t border-white/15 pt-4">
             {terms.map((t) => (
               <div key={t.k}>
-                <dt className="fine-print">{t.k}</dt>
+                <dt className="fine-print text-mute">{t.k}</dt>
                 <dd className="mt-1 text-xl font-semibold tracking-tight tabular-nums">{t.v}</dd>
               </div>
             ))}
@@ -151,7 +151,7 @@ function BenefitsComparison({ tiers, benefits }: { tiers: Tier[]; benefits: Part
           <caption className="sr-only">Benefits included in each partnership tier</caption>
           <thead>
             <tr className="border-b border-white/30">
-              <th scope="col" className="fine-print py-4 pr-6 font-normal">
+              <th scope="col" className="fine-print py-4 pr-6 font-normal text-mute">
                 Benefit
               </th>
               {tiers.map((t) => (
@@ -184,7 +184,7 @@ function BenefitsComparison({ tiers, benefits }: { tiers: Tier[]; benefits: Part
           return (
             <li key={b.benefit} className="border-b border-white/15 py-5">
               <p className="text-white">{b.benefit}</p>
-              <p className="fine-print mt-2">{names.length ? names.join(' · ') : 'Not yet assigned to a tier'}</p>
+              <p className="fine-print mt-2 text-mute">{names.length ? names.join(' · ') : 'Not yet assigned to a tier'}</p>
             </li>
           );
         })}
@@ -235,15 +235,17 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
           data-cursor="link"
           className="group flex min-h-56 flex-col justify-between border border-dashed border-white/30 bg-black p-6 transition-colors hover:bg-white/[0.03] sm:col-span-2 sm:row-span-2 sm:min-h-80 sm:p-10"
         >
-          <span className="fine-print">Vacant</span>
+          <span className="fine-print text-mute">Vacant</span>
           <span className="block text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
             {founding}: this space is open.
           </span>
-          <span className="fine-print text-white group-hover:underline">Claim it →</span>
+          <span className="fine-print text-white group-hover:underline">
+            Claim it <span aria-hidden="true">→</span>
+          </span>
         </a>
         {[0, 1].map((i) => (
           <div key={i} aria-hidden="true" className="hidden min-h-36 flex-col justify-between bg-black p-6 sm:flex">
-            <span className="fine-print">Reserved</span>
+            <span className="fine-print text-mute">Reserved</span>
             <span className="block h-px w-full border-t border-dashed border-white/20" />
           </div>
         ))}
@@ -293,7 +295,7 @@ export default async function PartnersPage() {
 
       {/* Hero */}
       <section aria-labelledby="partners-title" className="shell pb-24 pt-20 sm:pb-32 sm:pt-32">
-        <p data-reveal="fade" className="fine-print">
+        <p data-reveal="fade" className="fine-print text-mute">
           Partners · Prospectus · {settings.themeName}
         </p>
         <h1
@@ -327,7 +329,7 @@ export default async function PartnersPage() {
             ['Capacity', 'Up to 100 guests'],
           ].map(([k, v], i) => (
             <div key={k} className={i === 0 ? 'col-span-2 sm:col-span-1' : undefined}>
-              <dt className="fine-print">{k}</dt>
+              <dt className="fine-print text-mute">{k}</dt>
               <dd className="mt-1.5 text-sm text-white break-words sm:text-base">{v}</dd>
             </div>
           ))}
@@ -346,13 +348,13 @@ export default async function PartnersPage() {
         <ol data-reveal="stagger" className="mt-14 grid gap-px border border-white/10 bg-white/10 sm:grid-cols-2 lg:grid-cols-4">
           {REASONS.map((r, i) => (
             <li key={r.title} className="flex flex-col bg-black p-6 sm:p-8">
-              <span className="fine-print">Whereas ({String.fromCharCode(97 + i)})</span>
+              <span className="fine-print text-mute">Whereas ({String.fromCharCode(97 + i)})</span>
               <span
                 aria-hidden="true"
                 className="mt-8 block text-[clamp(3.5rem,6vw,5.5rem)] leading-none font-semibold tracking-[-0.05em] tabular-nums"
               >
                 {r.figure}
-                {r.figureNote ? <span className="fine-print ml-2 align-top tracking-[0.14em]">{r.figureNote}</span> : null}
+                {r.figureNote ? <span className="fine-print ml-2 align-top tracking-[0.14em] text-mute">{r.figureNote}</span> : null}
               </span>
               <h3 className="mt-8 text-xl font-semibold tracking-tight">{r.title}</h3>
               <p className="mt-3 text-mute">{r.body}</p>
@@ -371,7 +373,7 @@ export default async function PartnersPage() {
             Partnership tiers.
           </h2>
           {tiers.every((t) => !t.amount) ? (
-            <p className="fine-print max-w-xs">Packages in draft. Contributions and slots on request.</p>
+            <p className="fine-print max-w-xs text-mute">Packages in draft. Contributions and slots on request.</p>
           ) : null}
         </div>
         {tiers.length ? (
@@ -446,7 +448,7 @@ export default async function PartnersPage() {
       {/* CTA */}
       <section aria-labelledby="partner-cta-title" className="shell pb-32 pt-12 sm:pb-44">
         <div className="border border-white/15 bg-black p-6 sm:p-14">
-          <p className="fine-print">§ 06 · Execution</p>
+          <p className="fine-print text-mute">§ 06 · Execution</p>
           <h2
             id="partner-cta-title"
             data-reveal="lines"
@@ -466,14 +468,14 @@ export default async function PartnersPage() {
                 <span className="text-xl font-light tracking-tight text-mute sm:text-2xl">Your organization</span>
               </div>
               <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/50" />
-              <p className="fine-print mt-3">Party of the second part</p>
+              <p className="fine-print mt-3 text-mute">Party of the second part</p>
             </div>
             <div className="flex flex-col gap-3 sm:items-end">
-              <Button href={cta.href} size="lg">
+              <Button href={cta.href} size="lg" className="h-auto! min-h-14 py-3 text-center whitespace-normal! [overflow-wrap:anywhere]">
                 {ctaLabel}
               </Button>
               {cta.kind === 'email' ? (
-                <p className="fine-print">Partnerships, sponsorships and corporate enquiries</p>
+                <p className="fine-print text-mute">Partnerships, sponsorships and corporate enquiries</p>
               ) : null}
             </div>
           </div>
