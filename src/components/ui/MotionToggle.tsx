@@ -57,9 +57,10 @@ export function MotionToggle({ className = '' }: { className?: string }) {
       data-cursor="link"
       className={`group inline-flex min-h-11 items-center gap-3 rounded-sm pr-1 text-sm text-mute transition-colors duration-300 hover:text-white focus-visible:text-white focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white aria-disabled:cursor-default ${className}`}
     >
-      {/* The switch: the knob moves right and turns red when on (shape and position, not colour alone). */}
+      {/* The switch: the knob moves right and turns red when on (position, not colour alone).
+          The knob is drawn with a border, not a background, so it survives forced colors. */}
       <span aria-hidden="true" className="relative inline-flex h-4 w-7 shrink-0 items-center rounded-full border border-current">
-        <span className="ml-[3px] size-2 rounded-full bg-current transition-[translate,background-color] duration-300 group-aria-pressed:translate-x-3 group-aria-pressed:bg-accent" />
+        <span className="ml-[3px] size-2 rounded-full border-4 border-current transition-[translate,border-color] duration-300 group-aria-pressed:translate-x-3 group-aria-pressed:border-accent" />
       </span>
       <span>Reduce motion</span>
       <span aria-hidden="true" className="fine-print text-mute">
