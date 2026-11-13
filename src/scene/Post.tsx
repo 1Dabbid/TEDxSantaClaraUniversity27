@@ -96,9 +96,11 @@ const COMPOSITE_FRAG = /* glsl */ `
     gl_FragColor = vec4(max(col, 0.0), 1.0);
     #include <tonemapping_fragment>
     #include <colorspace_fragment>
-    // Black point toe: the darkest values sink to true black, mids untouched.
-    vec3 g0 = gl_FragColor.rgb;
-    gl_FragColor.rgb = g0 * smoothstep(0.0, 0.06, g0) ;
+    // Black point toe (the darkest values sink to true black) and a gentle S-curve: the low mids
+    // drop away instead of sitting as a grey veil, highlights get a little more snap.
+    vec3 g0 = clamp(gl_FragColor.rgb, 0.0, 1.0);
+    vec3 gt = g0 * smoothstep(0.0, 0.07, g0);
+    gl_FragColor.rgb = mix(gt, gt * gt * (3.0 - 2.0 * gt), 0.22);
     float lum = dot(g0, vec3(0.333));
     float g = hash(gl_FragCoord.xy + fract(uTime * 7.13) * 917.0) - 0.5;
     gl_FragColor.rgb += g * uGrain * (0.35 + 0.65 * smoothstep(0.0, 0.25, lum));

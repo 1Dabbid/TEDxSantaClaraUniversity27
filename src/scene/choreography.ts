@@ -253,7 +253,7 @@ const RUG_HOLD = { pos: [3.25, 0.95, 4.6] as V3, target: [-1.35, 0.3, -0.7] as V
 /** Rug while the card strip runs along the lower edge: higher, looking down, rug in the upper-middle band. */
 const RUG_CARDS = { pos: [3.0, 2.35, 4.9] as V3, target: [-1.0, -1.0, -0.75] as V3 };
 
-const HERO_LOOK = { fov: 30, exposure: 1.05, drift: 0.012, parallax: 0.022, cone: 0.18, spot: 0.45, key: 1.15, rim: 1.5, rimAng: 0.45, haze: 1, vignette: 0.6, bloom: 1 };
+const HERO_LOOK = { fov: 30, exposure: 1.05, drift: 0.012, parallax: 0.022, cone: 0.05, spot: 0.45, key: 1.15, rim: 1.5, rimAng: 0.45, haze: 1, vignette: 0.6, bloom: 1 };
 
 export const DESKTOP_SHOTS: Shot[] = [
   { at: 0, ...heroDesk, ...HERO_LOOK },
@@ -269,7 +269,7 @@ export const DESKTOP_SHOTS: Shot[] = [
     dof: 0.45,
     drift: 0.004,
     parallax: 0.006,
-    cone: 0.05,
+    cone: 0.015,
     spot: 0.15,
     key: 0.7,
     keyCam: 0.7,
@@ -298,7 +298,7 @@ export const DESKTOP_SHOTS: Shot[] = [
     dof: 0.3,
     drift: 0.008,
     parallax: 0.015,
-    cone: 0.3,
+    cone: 0.1,
     spot: 0.04,
     key: 0.9,
     keyCam: 0.3,
@@ -313,11 +313,11 @@ export const DESKTOP_SHOTS: Shot[] = [
   { at: 2.3, pos: [3.1, 1.05, 4.45], target: [-1.35, 0.28, -0.7], fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 1.3, spot: 1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.1 },
   { at: 2.48, ...RUG_CARDS, fov: 34, exposure: 0.95, drift: 0.025, parallax: 0.04, cone: 1.15, spot: 0.95, key: 0.5, rim: 0.8, rimAng: -0.6, vignette: 0.66 },
   { at: 3.05, pos: [2.4, 2.45, 5.3], target: [-1.15, -1.08, -0.7], fov: 34, exposure: 0.95, drift: 0.025, parallax: 0.04, cone: 1.15, spot: 0.95, key: 0.5, rim: 0.8, rimAng: -0.6, vignette: 0.66 },
-  { at: 3.3, ...stageOrbit(0.5, 0.32, 6.6, 1.3, 0.5), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
-  { at: 3.6, ...stageOrbit(0.12, 0.3, 6.6, 1.3, 0.45), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
-  { at: 3.9, ...stageOrbit(-0.3, 0.28, 6.6, 1.2, 0.4), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
-  { at: 4.5, pos: [0.9, 3.3, 15.2], target: [0, 0.55, 0], fov: 30, exposure: 1, drift: 0.04, parallax: 0.08, cone: 0.8, key: 0.3, vignette: 0.6, scrimEdge: 0.7 },
-  { at: 5.5, pos: [-1.4, 4.9, 18.4], target: [0, 0.4, 0], fov: 28, exposure: 0.85, drift: 0.04, parallax: 0.08, cone: 0.9, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
+  { at: 3.3, ...stageOrbit(0.5, 0.32, 6.6, 1.3, 0.5), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.4, spot: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 3.6, ...stageOrbit(0.12, 0.3, 6.6, 1.3, 0.45), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.4, spot: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 3.9, ...stageOrbit(-0.3, 0.28, 6.6, 1.2, 0.4), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.4, spot: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 4.5, pos: [0.9, 3.3, 15.2], target: [0, 0.55, 0], fov: 30, exposure: 1, drift: 0.04, parallax: 0.08, cone: 1.35, spot: 1.1, key: 0.3, vignette: 0.6, scrimEdge: 0.7 },
+  { at: 5.5, pos: [-1.4, 4.9, 18.4], target: [0, 0.4, 0], fov: 28, exposure: 0.9, drift: 0.04, parallax: 0.08, cone: 1.35, spot: 1.1, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
   { at: 6.0, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
   { at: 9.5, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
 ];
@@ -325,9 +325,9 @@ export const DESKTOP_SHOTS: Shot[] = [
 /** Portrait hero: mic head in the lower 30% of the frame against the right edge, cropped (the tagline and buttons sit above it); rim-lit with a key. */
 const heroPortrait = orbit(micPoint(0.105), 0.56, -0.02, 0.5, 0.08, -0.12);
 
-const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 0.85, dof: 0.6, key: 0.5, motes: 0.6, focus: [0.66, 0.45] as const, scrim: 0.35, bloom: 0.9 };
+const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 1.15, dof: 0.6, key: 0.85, motes: 0.6, focus: [0.66, 0.45] as const, scrim: 0.35, bloom: 0.9 };
 
-const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.06, spot: 0.15, key: 0.75, rim: 3.4, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
+const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.02, spot: 0.15, key: 0.75, rim: 3.4, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
 
 export const PORTRAIT_SHOTS: Shot[] = [
   { at: 0, ...heroPortrait, ...HERO_PORTRAIT_LOOK },
@@ -341,7 +341,7 @@ export const PORTRAIT_SHOTS: Shot[] = [
     exposure: 0.78,
     dof: 0.3,
     drift: 0.004,
-    cone: 0.05,
+    cone: 0.015,
     spot: 0.1,
     key: 0.7,
     keyCam: 0.7,
@@ -359,14 +359,14 @@ export const PORTRAIT_SHOTS: Shot[] = [
   { at: 0.85, ...barrel(PHI_HERO + 0.05, 0.08, 0.085, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [0.6, 2.3, 0.3] },
   { at: 1.4, ...barrel(PHI_HERO + 0.35, 0.074, 0.08, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [1.0, 2.2, 0.3] },
   { at: 1.75, ...barrel(PHI_HERO + 0.55, 0.068, 0.085, 0, 0.008), ...MACRO_PORTRAIT, keyDir: [1.3, 2.0, 0.3] },
-  { at: 1.95, ...pullBackLevel(PHI_HERO + 0.72, 0.95, 0.04, micPoint(0.07)), keyCam: 0.3, fov: 36, exposure: 0.8, dof: 0.2, drift: 0.008, cone: 0.3, spot: 0.04, key: 0.9, rim: 1.4, rimAng: -0.5, haze: 0.3, vignette: 0.7 },
-  { at: 2.1, pos: [8.6, 3.0, 3.6], target: [0.15, 0.0, -0.1], fov: 40, exposure: 0.9, drift: 0.02, cone: 1.2, spot: 0.95, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
-  { at: 2.3, pos: [8.4, 3.1, 3.4], target: [0.15, 0.0, -0.1], fov: 40, exposure: 0.9, drift: 0.02, cone: 1.2, spot: 0.95, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
-  { at: 2.6, pos: [8.0, 3.8, 3.8], target: [0.1, -0.2, -0.1], fov: 40, exposure: 0.75, drift: 0.03, cone: 1.1, spot: 0.8, key: 0.5, rim: 0.8, vignette: 0.66 },
-  { at: 3.2, ...stageOrbit(0.55, 0.32, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
-  { at: 3.9, ...stageOrbit(-0.3, 0.3, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
-  { at: 4.5, pos: [0.4, 2.6, 15.5], target: [0, 0.6, 0], fov: 40, exposure: 0.8, drift: 0.04, cone: 0.85, key: 0.3, vignette: 0.6, scrimEdge: 0.6 },
-  { at: 5.5, pos: [-0.8, 4.4, 19], target: [0, 0.3, 0], fov: 38, exposure: 0.7, drift: 0.04, cone: 1.2, key: 0.3, vignette: 0.65 },
+  { at: 1.95, ...pullBackLevel(PHI_HERO + 0.72, 0.95, 0.04, micPoint(0.07)), keyCam: 0.3, fov: 36, exposure: 0.8, dof: 0.2, drift: 0.008, cone: 0.1, spot: 0.04, key: 0.9, rim: 1.4, rimAng: -0.5, haze: 0.3, vignette: 0.7 },
+  { at: 2.1, pos: [8.6, 3.0, 3.6], target: [0.15, 0.0, -0.1], fov: 40, exposure: 1.05, drift: 0.02, cone: 1.35, spot: 1.1, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
+  { at: 2.3, pos: [8.4, 3.1, 3.4], target: [0.15, 0.0, -0.1], fov: 40, exposure: 1.05, drift: 0.02, cone: 1.35, spot: 1.1, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
+  { at: 2.6, pos: [8.0, 3.8, 3.8], target: [0.1, -0.2, -0.1], fov: 40, exposure: 0.95, drift: 0.03, cone: 1.25, spot: 1.0, key: 0.5, rim: 0.8, vignette: 0.66 },
+  { at: 3.2, ...stageOrbit(0.55, 0.32, 7.4), fov: 40, exposure: 1.0, drift: 0.03, cone: 1.35, spot: 1.1, key: 0.5, vignette: 0.6 },
+  { at: 3.9, ...stageOrbit(-0.3, 0.3, 7.4), fov: 40, exposure: 1.0, drift: 0.03, cone: 1.35, spot: 1.1, key: 0.5, vignette: 0.6 },
+  { at: 4.5, pos: [0.4, 2.6, 15.5], target: [0, 0.6, 0], fov: 40, exposure: 1.0, drift: 0.04, cone: 1.6, spot: 1.15, key: 0.3, vignette: 0.6, scrimEdge: 0.6 },
+  { at: 5.5, pos: [-0.8, 4.4, 19], target: [0, 0.3, 0], fov: 38, exposure: 0.85, drift: 0.04, cone: 1.6, spot: 1.1, key: 0.3, vignette: 0.65 },
   { at: 6.0, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
   { at: 9.5, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
 ];
@@ -379,7 +379,7 @@ export const AWAY_SHOT: Shot = {
   exposure: 0.5,
   drift: 0.02,
   parallax: 0.025,
-  cone: 0.15,
+  cone: 0.04,
   spot: 0.4,
   key: 0.8,
   rim: 1.2,
@@ -414,13 +414,15 @@ export type ShotOptions = {
 /**
  * Rug hold for the speakers pin while nothing is announced, seen from the
  * front of the house: rug centred right and mid-height, clear of the heading
- * (top left) and the wide glass panel (bottom left); the stand runs up the
- * right edge past the end of the heading. A slow push across the pin.
+ * (top left) and the wide glass panel (bottom left). Seen from house right,
+ * so the stand stands at the front-right edge of the light, around 75-80% of
+ * the frame width: the place where someone will stand and speak. A slow push
+ * that arcs to the right across the pin keeps it there.
  */
 const RUG_CENTRE = new Vector3(0, 0.1, 0);
-const RUG_TBA_A = orbit(RUG_CENTRE, 0.2, 0.2, 7.5, 1.12, 0.6);
-const RUG_TBA_B = orbit(RUG_CENTRE, 0.15, 0.2, 7.2, 1.2, 0.6);
-const RUG_TBA_C = orbit(RUG_CENTRE, 0.11, 0.21, 6.95, 1.25, 0.62);
+const RUG_TBA_A = orbit(RUG_CENTRE, 0.72, 0.2, 7.5, 1.12, 0.6);
+const RUG_TBA_B = orbit(RUG_CENTRE, 0.82, 0.2, 7.2, 1.2, 0.6);
+const RUG_TBA_C = orbit(RUG_CENTRE, 0.9, 0.21, 6.95, 1.25, 0.62);
 
 /** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
 export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
@@ -434,8 +436,8 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
       return [{ ...sh, ...stageOrbit(mid + (o.az - mid) * k, o.el, o.dist, o.shiftRight, o.shiftUp) }];
     }
     if (!opts.speakersTba || portrait) return [sh];
-    // The beam rises behind the heading here: keep the haze low.
-    const hold = { fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 0.7, scrimEdge: 0.45, spot: 1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.1 };
+    // The shaft comes down right of the heading's left half; its brightest part (low, over the pool) stays centre-right.
+    const hold = { fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 1.9, scrimEdge: 0.45, spot: 1.1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.2 };
     if (sh.at === 2.1) return [{ at: 2.1, ...RUG_TBA_A, ...hold }];
     if (sh.at === 2.3) return [{ at: 2.4, ...RUG_TBA_B, ...hold }];
     if (sh.at === 2.48) return [{ at: 2.75, ...RUG_TBA_C, ...hold, exposure: 0.97 }];
