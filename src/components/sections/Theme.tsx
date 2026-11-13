@@ -1,38 +1,125 @@
 import type { Settings } from '@/lib/content';
 import { paragraphs } from '@/lib/content';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { ThemeMotion } from '@/motion/sections/ThemeMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
+/** Splits the tagline into (up to) three phrases of near-equal word counts, front-loaded. */
+function phrasesOf(tagline: string): string[] {
+  const words = tagline.trim().split(/\s+/).filter(Boolean);
+  const n = Math.min(3, words.length);
+  if (n === 0) return [];
+  const out: string[] = [];
+  let at = 0;
+  for (let i = 0; i < n; i++) {
+    const size = Math.ceil((words.length - at) / (n - i));
+    out.push(words.slice(at, at + size).join(' '));
+    at += size;
+  }
+  return out;
+}
+
+const lowerFirst = (s: string) => (s ? s[0].toLowerCase() + s.slice(1) : s);
+const SUB = ['a', 'b', 'c'];
+
 /**
- * Tall wrapper (250vh on md+) with a sticky inner panel: the scroll runway for
- * the camera's macro push-in to the engraved fine print. Static by default.
+ * § 01 · The theme. The fine print made literal.
+ *
+ * Markup is one readable document in every mode: a heading, the theme story as
+ * numbered clauses, and a definitions clause containing the tagline. The huge
+ * three-line statement is a decorative (aria-hidden) echo of that clause.
+ *
+ * - Static / no JS: natural height, readable clauses, the statement set large.
+ * - Motion, md+: a 250vh runway with a sticky stage. The clauses shrink to a 9px
+ *   contract footer and, as you scroll, each phrase of the definition grows out
+ *   of its exact spot in the small type until it fills the screen, then settles
+ *   (ThemeMotion). A clause counter ticks in the corner. The loupe cursor reads
+ *   the small type.
+ * - Motion, mobile: natural height, masked line reveals.
  */
 export function Theme({ settings }: { settings: Settings }) {
   const paras = paragraphs(settings.themeStory);
+  const phrases = phrasesOf(settings.themeTagline);
+  const defIndex = paras.length + 1;
+
   return (
-    <SectionShell id="theme" scrim="none" className="md:h-[250vh]">
-      <div className="md:sticky md:top-[var(--header-h)] md:flex md:h-[calc(100svh-var(--header-h))] md:items-center">
+    <SectionShell id="theme" scrim="none" className="theme-runway">
+      <div data-theme-stage data-def-index={defIndex} className="theme-stage relative">
         <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 scrim-left" />
-        <div className="shell grid gap-12 py-28 md:grid-cols-12 md:items-end md:py-12">
-          <div className="md:col-span-7">
+        <div
+          aria-hidden="true"
+          data-theme-scrim
+          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_40%_50%,rgb(0_0_0/0.82),rgb(0_0_0/0.55)_70%)] opacity-0"
+        />
+        <div className="theme-stage-inner shell py-28 md:py-36">
+          <div className="flex items-start justify-between gap-6">
             <SectionLabel index={1}>The theme</SectionLabel>
-            <SectionTitle id="theme">
+            <div aria-hidden="true" data-theme-counter className="theme-counter fine-print items-baseline gap-3 text-right">
+              <span className="text-white tabular-nums">
+                §&nbsp;<span data-theme-clause className="normal-case">1.0</span>
+              </span>
+              <span className="tabular-nums">
+                <span data-theme-step>00</span>&nbsp;/&nbsp;{String(phrases.length).padStart(2, '0')}
+              </span>
+            </div>
+          </div>
+
+          <div data-theme-title-wrap>
+            <SectionTitle id="theme" reveal={false} className="max-w-4xl">
               Read the <span className="whitespace-nowrap">fine print.</span>
             </SectionTitle>
-            <p className="mt-8 max-w-xl text-xl text-balance text-white sm:text-2xl">{settings.themeTagline}</p>
           </div>
-          <ol className="space-y-6 md:col-span-5" aria-label="Theme statement">
-            {paras.map((p, i) => (
-              <li key={i} className="grid grid-cols-[3.25rem_1fr] gap-2 border-t border-white/15 pt-4">
-                <span aria-hidden="true" className="fine-print text-white">
-                  §&nbsp;1.{i + 1}
+
+          <p aria-hidden="true" data-theme-stack className="theme-stack my-16 md:my-20">
+            {phrases.map((p, i) => (
+              <span key={i} className="theme-line" data-theme-line>
+                <span className="theme-line-inner" data-theme-line-inner>
+                  {p}
                 </span>
-                <p className="leading-relaxed text-mute">{p}</p>
-              </li>
+              </span>
             ))}
-          </ol>
+          </p>
+
+          <div
+            data-theme-fine
+            data-cursor="loupe"
+            data-cursor-zoom="2.6"
+            className="theme-fine mt-4 md:mt-auto"
+          >
+            <ol aria-label="Theme statement" className="theme-fine-columns">
+              {paras.map((p, i) => (
+                <li key={i} className="mb-3">
+                  <span aria-hidden="true" className="mr-2 text-white">
+                    §&nbsp;1.{i + 1}
+                  </span>
+                  {p}
+                </li>
+              ))}
+              <li className="mb-3">
+                <span aria-hidden="true" className="mr-2 text-white">
+                  §&nbsp;1.{defIndex}
+                </span>
+                <em className="not-italic text-white">Definitions.</em> “{settings.themeName}” means{' '}
+                {phrases.map((p, i) => (
+                  <span key={i}>
+                    {i > 0 ? ' ' : null}
+                    <span aria-hidden="true" className="text-subtle">
+                      ({SUB[i]})&nbsp;
+                    </span>
+                    <span className="theme-phrase" data-theme-phrase>
+                      {i === 0 ? lowerFirst(p) : p}
+                    </span>
+                  </span>
+                ))}
+              </li>
+            </ol>
+            <p data-theme-foot className="fine-print mt-2 text-[0.5625rem] tracking-[0.18em]">
+              <span className="text-accent">*</span> Read in full before proceeding. The details are binding.
+            </p>
+          </div>
         </div>
       </div>
+      <ThemeMotion />
     </SectionShell>
   );
 }
