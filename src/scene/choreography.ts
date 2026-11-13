@@ -434,7 +434,8 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
       return [{ ...sh, ...stageOrbit(mid + (o.az - mid) * k, o.el, o.dist, o.shiftRight, o.shiftUp) }];
     }
     if (!opts.speakersTba || portrait) return [sh];
-    const hold = { fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 1.3, spot: 1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.1 };
+    // The beam rises behind the heading here: keep the haze low.
+    const hold = { fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 0.7, scrimEdge: 0.45, spot: 1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.1 };
     if (sh.at === 2.1) return [{ at: 2.1, ...RUG_TBA_A, ...hold }];
     if (sh.at === 2.3) return [{ at: 2.4, ...RUG_TBA_B, ...hold }];
     if (sh.at === 2.48) return [{ at: 2.75, ...RUG_TBA_C, ...hold, exposure: 0.97 }];
