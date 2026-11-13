@@ -41,7 +41,6 @@ export function SceneStills() {
             <source media={PORTRAIT} type="image/webp" srcSet={`/stills/${name}-portrait.webp`} {...PORTRAIT_SIZE} />
             <source type="image/avif" srcSet={`/stills/${name}-landscape.avif`} {...LANDSCAPE_SIZE} />
             {/* A plain <picture>: art direction by orientation and format, and no JavaScript. */}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={`/stills/${name}-landscape.webp`}
               {...LANDSCAPE_SIZE}

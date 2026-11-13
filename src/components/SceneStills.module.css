@@ -42,9 +42,10 @@
 }
 
 /* Each still fades in over the previous one as its section's top passes the
-   middle of the viewport (between 65% and 35% of its height), and is rendered,
-   so its lazy image starts loading, once the section is 15% into the viewport. Scrolling back up reverses it. `forwards` only: before the range the
-   hidden base style applies. */
+   middle of the viewport (between 65% and 35% of the viewport height). It is
+   rendered, so its lazy image starts loading, once the section's top is 15% of
+   the viewport above the bottom edge. Scrolling back up reverses it. Fill
+   `forwards` only: before the range the hidden base style applies. */
 @supports (animation-timeline: view()) {
   @media (prefers-reduced-motion: no-preference) {
     .layer:not(.hero) {
