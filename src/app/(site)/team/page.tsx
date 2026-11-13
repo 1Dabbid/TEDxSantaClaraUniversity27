@@ -47,11 +47,13 @@ function BoardRole({ member, index }: { member: TeamMember; index: number }) {
 /**
  * /team: who runs the event. Every board role is listed (the home section waits
  * until a name is public and then lists named people only; this page is the
- * full board). Switched off with the Team switch: then a 404, linked from nowhere.
+ * full board). Switched off with the Team switch, or with no entries: then a 404,
+ * linked from nowhere.
  */
 export default async function TeamPage() {
   const [settings, team] = await Promise.all([getSettings(), getTeam()]);
-  if (!settings.sections.showTeam) notFound();
+  // An empty team counts as switched off (same rule as the header, footer and sitemap: nav.ts, sitemap.ts).
+  if (!settings.sections.showTeam || team.length === 0) notFound();
   const named = team.filter((m) => m.name).length;
   const campus = settings.venueCampus || 'Santa Clara University';
   const mail = settings.contactEmail

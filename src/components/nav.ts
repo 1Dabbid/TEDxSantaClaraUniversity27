@@ -27,7 +27,7 @@ import type { NavItem } from './nav-links';
  * - FAQ: only when switched on and non-empty.
  * Off the home page the header follows whether the PAGE exists, like the footer,
  * which is wider: /schedule always (it states the date), /team whenever the Team
- * switch is on (it lists the board roles even before a name is
+ * switch is on and has entries (it lists the board roles even before a name is
  * public). So a visitor on /schedule or /team always sees where they are, and
  * the header and footer list the same pages. Items that exist only off the home
  * page carry `homeHidden` (filtered by `headerItems`, nav-links.ts).
@@ -43,7 +43,7 @@ export type NavVisibility = {
   team: boolean;
   /** settings.sections.showFaq && faq.length > 0 (the home section and /faq) */
   faq: boolean;
-  /** settings.sections.showTeam: /team exists (it lists every board role, named or not). */
+  /** settings.sections.showTeam && at least one entry: /team exists (it lists every board role, named or not). */
   teamPage: boolean;
 };
 
@@ -80,6 +80,6 @@ export async function navVisibility(): Promise<NavVisibility> {
     schedule: schedule.published && schedule.items.length > 0,
     team: settings.sections.showTeam && team.some((m) => m.name),
     faq: settings.sections.showFaq && faq.length > 0,
-    teamPage: settings.sections.showTeam,
+    teamPage: settings.sections.showTeam && team.length > 0,
   };
 }
