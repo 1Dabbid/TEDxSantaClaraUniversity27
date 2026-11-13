@@ -1,0 +1,22 @@
+published: false
+items:
+  - time: TBA
+    title: Doors open
+    description: ''
+    kind: doors
+  - time: TBA
+    title: Session one
+    description: ''
+    kind: talk
+  - time: TBA
+    title: Intermission
+    description: ''
+    kind: break
+  - time: TBA
+    title: Session two
+    description: ''
+    kind: talk
+  - time: TBA
+    title: Closing
+    description: ''
+    kind: other

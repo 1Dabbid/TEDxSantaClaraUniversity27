@@ -1,0 +1,152 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens. Pure black, white, greys, one accent (TEDx red) used sparingly.
+ * Small text greys are chosen to pass WCAG AA on #000.
+ */
+@theme {
+  --color-ink: #000000;
+  --color-paper: #ffffff;
+  --color-accent: var(--accent, #eb0028);
+  --color-mute: #a6a6a6; /* ~8.6:1 on black */
+  --color-subtle: #8c8c8c; /* ~6.2:1 on black, fine print */
+  --color-line: #262626; /* hairlines, decorative */
+  --color-panel: #0a0a0a;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: ui-monospace, 'SFMono-Regular', 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --text-display: clamp(3.5rem, 13vw, 12.5rem);
+  --text-display--line-height: 0.88;
+  --text-headline: clamp(2.5rem, 7vw, 6.5rem);
+  --text-headline--line-height: 0.95;
+  --text-title: clamp(1.75rem, 3.6vw, 3rem);
+  --text-title--line-height: 1.05;
+  --text-fine: 0.6875rem;
+  --text-fine--line-height: 1.5;
+
+  --ease-cinema: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root {
+  --header-h: 5rem;
+  --z-canvas: 0;
+  --z-content: 10;
+  --z-header: 50;
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    background: #000;
+    color: #fff;
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-padding-top: var(--header-h);
+  }
+
+  @media (prefers-reduced-motion: no-preference) {
+    html:not([data-smooth-scroll]) {
+      scroll-behavior: smooth;
+    }
+  }
+
+  body {
+    background: #000;
+    color: #fff;
+    font-family: var(--font-sans);
+    font-feature-settings: 'ss01', 'cv11';
+    min-height: 100svh;
+  }
+
+  ::selection {
+    background: var(--color-accent);
+    color: #fff;
+  }
+
+  :focus-visible {
+    outline: 2px solid #fff;
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  [id] {
+    scroll-margin-top: var(--header-h);
+  }
+}
+
+/* Lenis (smooth scroll) required styles */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis:not(.lenis-autoToggle).lenis-stopped {
+  overflow: clip;
+}
+.lenis [data-lenis-prevent] {
+  overscroll-behavior: contain;
+}
+.lenis.lenis-smooth iframe {
+  pointer-events: none;
+}
+
+@layer components {
+  /* The fixed WebGL layer. Content sits above it at --z-content. */
+  .scene-canvas {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-canvas);
+    pointer-events: none;
+    animation: scene-in 1.6s var(--ease-cinema) both;
+  }
+
+  /* Fine-print caption: tiny mono small caps. The recurring typographic motif. */
+  .fine-print {
+    font-family: var(--font-mono);
+    font-size: var(--text-fine);
+    line-height: var(--text-fine--line-height);
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-subtle);
+  }
+
+  /* Readability scrims over the canvas. Never rely on the 3D for contrast. */
+  .scrim-y {
+    background: linear-gradient(to bottom, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.55) 30%, rgb(0 0 0 / 0.55) 70%, rgb(0 0 0 / 0.85));
+  }
+  .scrim-left {
+    background: linear-gradient(to right, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.6) 55%, rgb(0 0 0 / 0.15));
+  }
+  .scrim-solid {
+    background: rgb(0 0 0 / 0.78);
+  }
+
+  .shell {
+    margin-inline: auto;
+    width: 100%;
+    max-width: 88rem;
+    padding-inline: clamp(1.25rem, 4vw, 3.5rem);
+  }
+}
+
+@keyframes scene-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
