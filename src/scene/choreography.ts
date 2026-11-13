@@ -350,13 +350,15 @@ export const DESKTOP_SHOTS: Shot[] = [
   // Schedule: the same frame drifts back a few percent; the light carries the change (denser haze, a little dimmer).
   { at: 3.92, aim: { stand: 0.88 }, dist: 6.55, anchor: [0.68, 0.45], ...STAGE_LOOK, cone: 1.5, spot: 0.95, exposure: 0.97 },
   // Venue -> Tickets: the same track backs out over the seats with a slow crane rise; the rows enter from the bottom.
+  // The stage also rises slowly on screen (lens shift, no turn) into the upper right, above the
+  // Tickets fact list (x 0.59-0.95, y 0.24-0.56 when the section is centred) and the numerals.
   { at: 4.6, aim: { stand: 0.72 }, dist: 10.5, lift: 0.3, anchor: [0.68, 0.44], ...STAGE_LOOK, fov: 31, cone: 0.42, spot: 0.95, key: 0.35, vignette: 0.6, scrimEdge: 0.5 },
-  { at: 5.3, aim: { stand: 0.56 }, dist: 15.2, lift: 0.85, anchor: [0.68, 0.43], ...STAGE_LOOK, fov: 30, exposure: 0.95, cone: 0.38, spot: 0.95, key: 0.3, vignette: 0.62, scrimEdge: 0.7 },
+  { at: 5.3, aim: { stand: 0.56 }, dist: 15.2, lift: 0.85, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, exposure: 0.95, cone: 0.38, spot: 0.95, key: 0.3, vignette: 0.62, scrimEdge: 0.7 },
   // The wide room: stage small, subject still at the anchor, seats as silhouettes below. Locked off.
-  { at: 5.78, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.43], ...STAGE_LOOK, fov: 30, exposure: 0.9, cone: 0.28, spot: 0.95, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
+  { at: 5.78, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, exposure: 0.9, cone: 0.28, spot: 0.95, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
   // After Tickets the lights go down. No camera move.
-  { at: 6.0, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.43], ...STAGE_LOOK, fov: 30, ...DARK },
-  { at: 9.5, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.43], ...STAGE_LOOK, fov: 30, ...DARK },
+  { at: 6.0, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, ...DARK },
+  { at: 9.5, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, ...DARK },
 ];
 
 /** Portrait: the same axis, the subject centred, in the lower middle (the copy sits above it on full-width scrims). */
