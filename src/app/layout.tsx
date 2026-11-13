@@ -7,7 +7,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { SkipLink } from '@/components/SkipLink';
 import { getSettings } from '@/lib/content';
-import { SITE_NAME, SITE_URL, venueLine } from '@/lib/site';
+import { isIndexable, SITE_NAME, SITE_URL, venueLine } from '@/lib/site';
 import MotionRoot from '@/motion/MotionRoot';
 import SmoothScroll from '@/motion/SmoothScroll';
 import SceneGate from '@/motion/SceneGate';
@@ -22,11 +22,12 @@ const inter = localFont({
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
-  const title = `${s.themeName} · ${SITE_NAME}`;
-  const description = `${SITE_NAME} presents ${s.themeName}: ${s.themeTagline} ${s.dateLong}, ${venueLine(s)}. Limited to ${s.capacity} seats.`;
+  const title = `${SITE_NAME}: ${s.themeName} · ${s.dateShort}`;
+  const description = `${SITE_NAME}: ${s.themeName}. ${s.themeTagline} ${s.dateLong}, ${venueLine(s)}.`;
   return {
     metadataBase: new URL(SITE_URL),
-    title: { default: title, template: `%s · ${SITE_NAME}` },
+    // Every title leads with the full event name.
+    title: { default: title, template: `${SITE_NAME} · %s` },
     description,
     applicationName: SITE_NAME,
     alternates: { canonical: '/' },
@@ -39,6 +40,14 @@ export async function generateMetadata(): Promise<Metadata> {
       locale: 'en_US',
     },
     twitter: { card: 'summary_large_image', title, description },
+    other: {
+      'twitter:label1': 'Date',
+      'twitter:data1': s.dateLong,
+      'twitter:label2': 'Venue',
+      'twitter:data2': venueLine(s),
+    },
+    // Vercel preview/development builds are never indexed (see isIndexable and robots.ts).
+    ...(isIndexable() ? {} : { robots: { index: false, follow: false } }),
     formatDetection: { telephone: false, address: false, email: false },
   };
 }

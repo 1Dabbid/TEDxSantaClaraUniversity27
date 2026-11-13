@@ -4,7 +4,7 @@ import Image from 'next/image';
 import type { PartnerBenefit, Sponsor, Tier } from '@/lib/content';
 import { getPartnerBenefits, getSettings, getSponsors, getTiers } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
-import { ogAlt, SITE_NAME, venueLine } from '@/lib/site';
+import { SITE_NAME, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
@@ -12,7 +12,8 @@ import { PartnersMotion } from '@/motion/sections/PartnersMotion';
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
-  const description = `Partner with ${SITE_NAME}: support the first mainstage event${s.venueCampus ? ` at ${s.venueCampus}` : ''}, up to ${s.capacity} guests, with talks published on the TEDx YouTube channel.`;
+  const description = `Partner with ${SITE_NAME}: support the first ${SITE_NAME} mainstage event, up to ${s.capacity} guests; talks are recorded and submitted for publication on the TEDx Talks YouTube channel.`;
+  // Share image: the root opengraph-image.tsx (file convention, hashed URL), never set here.
   return {
     title: 'Partners',
     description,
@@ -20,13 +21,12 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       type: 'website',
       siteName: SITE_NAME,
-      title: `Partners · ${SITE_NAME}`,
+      title: `${SITE_NAME} · Partners`,
       description,
       url: '/partners',
       locale: 'en_US',
-      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: ogAlt(s) }],
     },
-    twitter: { card: 'summary_large_image', title: `Partners · ${SITE_NAME}`, description },
+    twitter: { card: 'summary_large_image', title: `${SITE_NAME} · Partners`, description },
   };
 }
 

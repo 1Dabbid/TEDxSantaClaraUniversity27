@@ -2,12 +2,17 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getFaq, getSettings } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
+import { SITE_NAME } from '@/lib/site';
 
 export const metadata: Metadata = {
   // Plain wording for the tab and history; the visible page keeps the clause conceit.
   title: 'Page not found (404)',
   description: 'This page does not exist.',
   robots: { index: false, follow: true },
+  // No canonical (the layout's would point at the home page) and a plain share title.
+  alternates: { canonical: null },
+  openGraph: { title: `${SITE_NAME} · Page not found (404)`, description: 'This page does not exist.', url: null },
+  twitter: { title: `${SITE_NAME} · Page not found (404)`, description: 'This page does not exist.' },
 };
 
 export default async function NotFound() {
