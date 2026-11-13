@@ -1114,6 +1114,158 @@ html.has-cursor [contenteditable] {
   visibility: hidden;
 }
 
+/* --- Higher contrast, forced colours, print ------------------------------- */
+/* "Increase contrast": brighter greys for secondary text, a dimmer scene. */
+@media (prefers-contrast: more) {
+  :root {
+    --color-mute: #dcdcdc;
+    --color-subtle: #cfcfcf;
+  }
+  .scene-canvas {
+    filter: brightness(0.5);
+  }
+}
+/* Windows high contrast: author backgrounds (and so every scrim) are dropped,
+   so the live canvas would sit straight behind system-coloured text. Remove
+   it; give the pill buttons and redaction bars a visible shape. */
+@media (forced-colors: active) {
+  .scene-canvas,
+  .scene-gate {
+    display: none !important;
+  }
+  .btn {
+    border: 1px solid ButtonText;
+  }
+  .redacted {
+    forced-color-adjust: none;
+    background: GrayText;
+  }
+  [data-progress] {
+    forced-color-adjust: none;
+    background: Highlight;
+  }
+  /* The lockup is white type on transparency: keep it on its black ground. */
+  img[alt='TEDxSantaClaraUniversity'] {
+    forced-color-adjust: none;
+    background: #000;
+  }
+}
+/* Print: the static document, black on white. No scene, no chrome beyond the
+   logo, no motion states, no tall scroll runways. */
+@media print {
+  @page {
+    margin: 16mm 14mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+    color: #000 !important;
+  }
+  *,
+  *::before,
+  *::after {
+    color: #000 !important;
+    -webkit-text-fill-color: #000 !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    border-color: #999 !important;
+    opacity: 1 !important;
+    animation: none !important;
+    transition: none !important;
+    clip-path: none !important;
+  }
+  main * {
+    transform: none !important;
+  }
+  .scene-gate,
+  .scene-canvas,
+  .site-header nav,
+  .site-header .btn,
+  .site-header button,
+  .menu-panel,
+  [data-progress],
+  .cursor,
+  .curtain,
+  a[href='#main'],
+  .theme-line-ghost,
+  .theme-fig,
+  .theme-counter,
+  .scroll-cue,
+  .mo-strip,
+  iframe {
+    display: none !important;
+  }
+  .mo-ghost {
+    visibility: visible !important;
+  }
+  .site-header {
+    position: static !important;
+    height: auto !important;
+    border: 0 !important;
+  }
+  /* The approved on-white lockup, never a recolour of the on-black one. */
+  header img,
+  footer img[alt='TEDxSantaClaraUniversity'] {
+    content: url('/brand/logo-on-white.png');
+  }
+  html.motion .theme-runway,
+  html.motion .speakers-runway,
+  html.motion .speakers-head,
+  html.motion .speakers-stage,
+  html.motion .theme-stage,
+  html.motion .theme-stage-inner,
+  html.motion .speakers-head-inner {
+    height: auto !important;
+    min-height: 0 !important;
+    position: static !important;
+    overflow: visible !important;
+  }
+  html.motion .theme-stack,
+  html.motion .speakers-strip {
+    position: static !important;
+    transform: none !important;
+  }
+  html.motion .theme-stack {
+    margin-block: 2.5rem !important;
+  }
+  [data-section='hero'] {
+    min-height: 0 !important;
+  }
+  #site-footer {
+    break-before: page;
+  }
+  html.motion .speakers-track {
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    width: auto !important;
+  }
+  html.motion .speakers-track > .speaker-card {
+    width: auto !important;
+  }
+  /* Redaction bars and hairlines (translucent white on screen) print grey. */
+  .redacted,
+  [class*='bg-white/'] {
+    background: #d4d4d4 !important;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  .btn {
+    border: 1px solid #000 !important;
+  }
+  section,
+  li,
+  figure {
+    break-inside: avoid;
+  }
+  h1,
+  h2,
+  h3 {
+    break-after: avoid;
+  }
+}
+
 /* --- Touch ---------------------------------------------------------------- *
  * No hover on touch screens: pressed states instead (transform/opacity only,
  * quick in, eased out), and nothing that waits for a hover to be readable.   */
