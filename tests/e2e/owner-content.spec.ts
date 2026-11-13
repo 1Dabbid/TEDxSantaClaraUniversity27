@@ -116,7 +116,7 @@ test.describe('partners', () => {
     await expect(row('Listed on the Partners page').locator('td')).toHaveText(['Largest logo', 'Large logo', 'Logo', 'Name']);
     await expect(row('Reserved seats').locator('td')).toHaveText(['4', '2', '1', /Not included/]);
     await expect(table.getByText('To be confirmed')).toHaveCount(2);
-    await expect(row('Logo on the sponsor slide of the talk videos')).toContainText('To be confirmed');
+    await expect(row('Logo on the sponsor slide of the April 23 talk videos')).toContainText('To be confirmed');
     await expect(row('Logo on event merchandise')).toContainText('To be confirmed');
   });
 

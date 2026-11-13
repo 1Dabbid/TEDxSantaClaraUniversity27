@@ -11,7 +11,7 @@ items:
       - tier: fine-print-supporter
         detail: Name
     toBeConfirmed: false
-  - benefit: Logo on the sponsor slide of the talk videos
+  - benefit: Logo on the sponsor slide of the April 23 talk videos
     group: web
     included:
       - tier: cornerstone-partner
