@@ -6,12 +6,14 @@ import { useSectionMotion, type MotionKit } from '../useSectionMotion';
 /** Keep in sync with the stage media block in globals.css (Speakers). */
 const STAGE = '(min-width: 1024px) and (min-height: 44rem)';
 
-/* Timeline positions (0..1 over the pinned runway). The camera lands on the rug
-   at about 0.46 of the runway (section progress 0.5), so the strip only rises
-   once the stage moment has had its hold. */
-const STRIP_IN = 0.42;
-const STRIP_IN_END = 0.5;
-const TRAVEL_START = 0.5;
+/* Timeline positions (0..1 over the pinned part of the runway, 225vh / 200vh in
+   globals.css). The rug is already lit when the stage pins; it holds alone for
+   about the first third (roughly 0.4 of a screen of scroll), then the strip
+   rises (at journey J ≈ 2.44, where the camera moves to the cards view) and,
+   if the cards are wider than the screen, travels sideways. */
+const STRIP_IN = 0.34;
+const STRIP_IN_END = 0.44;
+const TRAVEL_START = 0.44;
 const TRAVEL_END = 0.96;
 
 /**
@@ -99,7 +101,7 @@ function setup({ gsap, root }: MotionKit) {
 
     // Keyboard: bring the focused card into view by scrolling the runway.
     const onFocusIn = (e: FocusEvent) => {
-      const card = (e.target as HTMLElement | null)?.closest<HTMLElement>('.speaker-card');
+      const card = (e.target as HTMLElement | null)?.closest<HTMLElement>('.speaker-card, .speakers-panel');
       const st = tl.scrollTrigger;
       if (!card || !st) return;
       const ex = endX();

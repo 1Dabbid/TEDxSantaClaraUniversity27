@@ -729,15 +729,23 @@ html:not(.motion) .reading-progress {
 /* Stage moment. Static / no JS: normal flow on black (none of this applies).
    Keep the two media blocks in sync with STAGE in SpeakersMotion. */
 @media (min-width: 1024px) and (min-height: 44rem) {
-  /* Desktop: a tall runway with a sticky full-viewport stage. Camera timing keys
-     off section progress, so the rug lands at ~0.46 of the runway. */
+  /* Desktop: a runway with a sticky full-viewport stage. The camera keys off
+     section progress (0..1), so the height only sets the pace: about 0.4 of a
+     screen of unobstructed rug once pinned, then the strip rises (SpeakersMotion).
+     Nothing announced yet: one panel and no sideways travel, so a shorter runway. */
   html.motion .speakers-runway {
-    height: 340vh;
+    height: 225vh;
     padding-block: 0;
+  }
+  html.motion .speakers-runway--tba {
+    height: 200vh;
   }
   @media (pointer: coarse) {
     html.motion .speakers-runway {
-      height: 280vh;
+      height: 200vh;
+    }
+    html.motion .speakers-runway--tba {
+      height: 180vh;
     }
   }
   html.motion .speakers-stage {
@@ -786,18 +794,17 @@ html:not(.motion) .reading-progress {
     aspect-ratio: auto;
     padding: 1.5rem;
   }
-  html.motion .speakers-track .speaker-num {
-    display: none;
-  }
-  html.motion .speakers-track .speaker-body,
-  html.motion .speakers-track .speaker-foot {
-    margin-top: 1.25rem;
-  }
   html.motion .speakers-track .speaker-photo {
     aspect-ratio: 16 / 10;
   }
   html.motion .speakers-track .speaker-text {
     padding: 1.25rem 0 0;
+  }
+  /* The "to be announced" panel: one block, no travel. */
+  html.motion .speakers-runway--tba .speakers-track {
+    display: block;
+    width: auto;
+    max-width: 60rem;
   }
 }
 @media (max-width: 1023.98px), (max-height: 43.99rem) {
@@ -807,7 +814,7 @@ html:not(.motion) .reading-progress {
     padding-top: 0;
   }
   html.motion .speakers-head {
-    height: 150svh;
+    height: 125svh;
   }
   html.motion .speakers-head-inner {
     position: sticky;
@@ -1251,6 +1258,9 @@ html.has-cursor [contenteditable] {
   }
   html.motion .speakers-track > .speaker-card {
     width: auto !important;
+  }
+  html.motion .speakers-runway--tba .speakers-track {
+    display: block !important;
   }
   /* Redaction bars and hairlines (translucent white on screen) print grey. */
   .redacted,
