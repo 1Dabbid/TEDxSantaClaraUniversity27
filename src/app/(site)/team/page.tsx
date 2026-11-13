@@ -148,7 +148,7 @@ export default async function TeamPage() {
         <ClosingBand
           current="/team"
           heading="Get involved."
-          body="One short form to help organize the event, join the club’s contact list, or register your interest in speaking."
+          body="One form to help organize the event, join the club’s contact list, or register your interest in speaking."
           action={{ label: 'Get involved', href: settings.interestUrl }}
           secondary={mail ? { label: settings.contactEmail, href: mail } : undefined}
         />
