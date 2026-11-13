@@ -194,6 +194,7 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
   const adaptive = searchFlag('perf') !== 'off';
   const debug = searchFlag('scene-debug') !== null;
   const envOffset = debug ? Number(searchFlag('envrot') ?? 0) : 0;
+  const keyMul = debug ? Number(searchFlag('keymul') ?? 1) : 1;
 
   useFrame((state, rawDt) => {
     const rig = (rigRef.current ??= createRig());
@@ -274,7 +275,7 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
       const kc = rig.keyCam.step(s.keyCam, 0.6, dt);
       k.position.lerpVectors(rig.keyA, rig.keyB, kc);
       k.angle = 0.1 + kc * 0.5;
-      k.intensity = 4.5 * look.key * k.position.distanceToSquared(kp);
+      k.intensity = keyMul * 11 * look.key * k.position.distanceToSquared(kp);
     }
     scene.environmentRotation.set(0, Math.sin(t * 0.045) * 0.3 + rig.envRot.step(s.envRot + envOffset, 0.8, dt), 0);
 

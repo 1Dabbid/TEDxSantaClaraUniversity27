@@ -154,9 +154,9 @@ export const DESKTOP_SHOTS: Shot[] = [
     key: 1.1,
     vignette: 0.7,
   },
-  { at: 1.22, ...barrel(PHI_HERO + 0.05, 0.088, 0.047), fov: 28, exposure: 1.1, dof: 0.8, drift: 0.0015, parallax: 0.002, cone: 0.3, spot: 0.3, key: 1.3, vignette: 0.8, shade: 0.45 },
-  { at: 1.5, ...barrel(PHI_HERO + 0.3, 0.077, 0.045), fov: 28, exposure: 1.1, dof: 0.85, drift: 0.0015, parallax: 0.002, cone: 0.3, spot: 0.3, key: 1.3, vignette: 0.8, shade: 0.45 },
-  { at: 1.8, ...barrel(PHI_HERO + 0.58, 0.066, 0.045), fov: 28, exposure: 1.1, dof: 0.85, drift: 0.0015, parallax: 0.002, cone: 0.3, spot: 0.3, key: 1.3, vignette: 0.8, shade: 0.45 },
+  { at: 1.22, ...barrel(PHI_HERO + 0.05, 0.088, 0.047), fov: 28, exposure: 1.1, dof: 0.8, drift: 0.0015, parallax: 0.002, cone: 0.3, spot: 0.3, key: 0.55, vignette: 0.8, shade: 0.45 },
+  { at: 1.5, ...barrel(PHI_HERO + 0.3, 0.077, 0.045), fov: 28, exposure: 1.1, dof: 0.85, drift: 0.0015, parallax: 0.002, cone: 0.3, spot: 0.3, key: 0.55, vignette: 0.8, shade: 0.45 },
+  { at: 1.8, ...barrel(PHI_HERO + 0.58, 0.066, 0.045), fov: 28, exposure: 1.1, dof: 0.85, drift: 0.0015, parallax: 0.002, cone: 0.3, spot: 0.3, key: 0.55, vignette: 0.8, shade: 0.45 },
   {
     at: 2.05,
     ...pullBack(PHI_HERO + 0.7, 0.62, -0.18),
@@ -184,8 +184,8 @@ export const DESKTOP_SHOTS: Shot[] = [
 const heroPortrait = orbit(micPoint(0.08), 0.5, 0.06, 1.2, 0.05, -0.13);
 
 export const PORTRAIT_SHOTS: Shot[] = [
-  { at: 0, ...heroPortrait, fov: 34, exposure: 0.72, drift: 0.02, parallax: 0, cone: 1, key: 0.9, vignette: 0.6 },
-  { at: 0.55, ...heroPortrait, fov: 34, exposure: 0.72, drift: 0.02, parallax: 0, cone: 1, key: 0.9, vignette: 0.6 },
+  { at: 0, ...heroPortrait, fov: 34, exposure: 0.8, drift: 0.02, parallax: 0, cone: 1, key: 1.1, vignette: 0.6 },
+  { at: 0.55, ...heroPortrait, fov: 34, exposure: 0.8, drift: 0.02, parallax: 0, cone: 1, key: 1.1, vignette: 0.6 },
   {
     at: 1.0,
     ...orbit(micPoint(0.08), 0.52, 0.02, 0.32, 0, 0),
@@ -198,8 +198,8 @@ export const PORTRAIT_SHOTS: Shot[] = [
     key: 1.1,
     vignette: 0.7,
   },
-  { at: 1.25, ...barrel(PHI_HERO + 0.05, 0.086, 0.04), fov: 34, exposure: 0.9, dof: 0.6, drift: 0.0015, cone: 0.3, spot: 0.3, key: 1.3, vignette: 0.8, shade: 0.45 },
-  { at: 1.75, ...barrel(PHI_HERO + 0.5, 0.068, 0.038), fov: 34, exposure: 0.9, dof: 0.6, drift: 0.0015, cone: 0.3, spot: 0.3, key: 1.3, vignette: 0.8, shade: 0.45 },
+  { at: 1.25, ...barrel(PHI_HERO + 0.05, 0.08, 0.085), fov: 34, exposure: 0.9, dof: 0.6, drift: 0.0015, cone: 0.3, spot: 0.3, key: 0.55, vignette: 0.8, shade: 0.45 },
+  { at: 1.75, ...barrel(PHI_HERO + 0.5, 0.072, 0.08), fov: 34, exposure: 0.9, dof: 0.6, drift: 0.0015, cone: 0.3, spot: 0.3, key: 0.55, vignette: 0.8, shade: 0.45 },
   { at: 2.05, ...pullBack(PHI_HERO + 0.7, 0.95, -0.25), keyCam: 0.3, fov: 36, exposure: 0.8, dof: 0.2, drift: 0.01, cone: 0.8, spot: 0.8, key: 1, vignette: 0.65 },
   { at: 2.5, pos: [3.6, 1.6, 6.6], target: [0.5, 0.0, 0], fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.6, vignette: 0.6 },
   { at: 3.1, ...orbit(STAGE, 0.55, 0.32, 6.6), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },

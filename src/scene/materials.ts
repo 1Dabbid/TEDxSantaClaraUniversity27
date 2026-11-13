@@ -9,7 +9,7 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
-import { MIC, RUG_RADIUS, SPOT_HEIGHT } from './layout';
+import { MIC, RUG_RADIUS, SPOT_HEIGHT, STAND_BASE } from './layout';
 import { EMPTY_MASK } from './textures';
 
 /* ------------------------------------------------------------------------- */
@@ -224,10 +224,11 @@ export function createGrilleMaterial(cheap: boolean) {
       vec3 nDet = normalize(mix(N, nw, mask));
       float cov = 1.0 - (1.0 - 2.0 * uWire) * (1.0 - 2.0 * uWire);
       cov = mix(cov, 1.0, (1.0 - ndv) * 0.6);
-      vec3 cAvg = mix(foam, diffuseColor.rgb * 0.85, cov);
+      // Unresolved mesh: countless tiny wire highlights scatter almost diffusely.
+      vec3 cAvg = mix(foam, diffuseColor.rgb * 0.9, cov);
       diffuseColor.rgb = mix(cAvg, cDet, aa);
-      metalnessFactor = mix(cov, metDet, aa);
-      roughnessFactor = mix(0.42, rouDet, aa);
+      metalnessFactor = mix(cov * 0.85, metDet, aa);
+      roughnessFactor = mix(0.45, rouDet, aa);
       normal = normalize(mix(N, nDet, aa));`,
   });
   return { material: m, uniforms };
@@ -256,11 +257,16 @@ export function createHardwareMaterial() {
 export function createFloorMaterial(cheap: boolean) {
   const m = new MeshStandardMaterial({ color: lin('#060606'), metalness: 0, roughness: 0.65, envMapIntensity: 0.1 });
   patch(m, `floor-${cheap ? 1 : 0}`, {
-    uniforms: {},
+    uniforms: { uRugR: { value: RUG_RADIUS }, uStand: { value: [STAND_BASE.x, STAND_BASE.z] } },
+    fragmentHead: 'uniform float uRugR; uniform vec2 uStand;',
     fragmentBody: `
       vec2 p = vWorld.xz;
+      // Contact shadows: rug edge and stand base.
+      float ao = 1.0 - 0.55 * (1.0 - smoothstep(uRugR, uRugR + 0.18, length(p)));
+      ao *= 1.0 - 0.6 * (1.0 - smoothstep(0.12, 0.32, length(p - uStand)));
+      diffuseColor.rgb *= ao;
       float broad = vnoise(p * 0.35) * 0.6 + vnoise(p * 1.3 + 4.0) * 0.4;
-      roughnessFactor = clamp(0.58 + 0.2 * broad, 0.05, 1.0);
+      roughnessFactor = clamp(0.58 + 0.2 * broad, 0.05, 1.0) + (1.0 - ao) * 0.3;
       diffuseColor.rgb *= 0.85 + 0.3 * broad;`,
   });
   return m;
@@ -296,10 +302,15 @@ export function createRugMaterial(cheap: boolean) {
 export function createSeatMaterial() {
   const m = new MeshStandardMaterial({ color: lin('#232327'), metalness: 0.0, roughness: 0.55, envMapIntensity: 0.6 });
   patch(m, 'seat', {
-    uniforms: {},
+    uniforms: { uRim: { value: lin('#aab4c8').multiplyScalar(0.06) } },
+    fragmentHead: 'uniform vec3 uRim;',
     fragmentBody: `
       float n = vnoise(vWorld.xy * 260.0 + vWorld.zx * 190.0);
-      diffuseColor.rgb *= 0.85 + 0.3 * n;`,
+      diffuseColor.rgb *= 0.85 + 0.3 * n;
+      // Rim: grazing edges that face up catch the stage spill.
+      float ndv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+      float up = dot(normal, normalize((viewMatrix * vec4(0.0, 1.0, 0.0, 0.0)).xyz));
+      totalEmissiveRadiance += uRim * pow(1.0 - ndv, 3.0) * smoothstep(-0.1, 0.9, up);`,
   });
   return m;
 }
