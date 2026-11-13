@@ -4,6 +4,7 @@ import dynamic from 'next/dynamic';
 import { usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useQuality } from '@/lib/quality';
+import type { EngravingFacts } from './engraving';
 
 const SceneCanvas = dynamic(() => import('./SceneCanvas'), { ssr: false, loading: () => null });
 
@@ -12,7 +13,7 @@ const SceneCanvas = dynamic(() => import('./SceneCanvas'), { ssr: false, loading
  * page has painted and the main thread is idle. Lives in the root layout so
  * the canvas persists across client-side route changes.
  */
-export default function SceneLoader() {
+export default function SceneLoader({ engraving }: { engraving?: Partial<EngravingFacts> } = {}) {
   const quality = useQuality();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
@@ -36,5 +37,5 @@ export default function SceneLoader() {
   }, [quality, ready]);
 
   if (quality === 'static' || !ready || pathname.startsWith('/keystatic')) return null;
-  return <SceneCanvas quality={quality} />;
+  return <SceneCanvas quality={quality} engraving={engraving} />;
 }
