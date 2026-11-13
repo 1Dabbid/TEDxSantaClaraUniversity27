@@ -339,20 +339,21 @@ export const DESKTOP_SHOTS: Shot[] = [
   { at: 2.0825, aim: { stand: 1.5 }, dist: 1.271, anchor: [0.685, 0.43], roll: 0.16, ...PULL_STAND, fov: 31 },
   // The overhead spot stays low until the framing has settled: the stand and the rug arrive in
   // the key light and a faint warm-up of the spot.
-  { at: 2.155, aim: { stand: 1.395 }, dist: 2.29, anchor: [0.68, 0.44], roll: 0.09, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.18, cone: 0.05, key: 0.7, rim: 1.05 },
-  { at: 2.2275, aim: { stand: 1.195 }, dist: 3.942, anchor: [0.68, 0.445], roll: 0.02, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.24, cone: 0.07, key: 0.65, rim: 1.0 },
-  // Speakers: locked off on the microphone on the red circle. The light coming on is the event:
+  { at: 2.155, aim: { stand: 1.395 }, dist: 2.29, anchor: [0.68, 0.43], roll: 0.09, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.18, cone: 0.05, key: 0.7, rim: 1.05 },
+  { at: 2.2275, aim: { stand: 1.195 }, dist: 3.942, anchor: [0.68, 0.425], roll: 0.02, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.24, cone: 0.07, key: 0.65, rim: 1.0 },
+  // Speakers: locked off on the microphone on the red circle (the stand's foot about y 0.65, clear
+  // of the glass panel along the bottom, x 0.05-0.72, y 0.73-0.96). The light coming on is the event:
   // the frame holds while the spot and its shaft fade up over the first part of the pin.
-  { at: 2.3, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK, ...STAGE_WARM },
-  { at: 2.4, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK, spot: 0.72, cone: 0.6, key: 0.55, haze: 0 },
-  { at: 2.5, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
-  { at: 2.96, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
+  { at: 2.3, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.42], ...STAGE_LOOK, ...STAGE_WARM },
+  { at: 2.4, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.42], ...STAGE_LOOK, spot: 0.72, cone: 0.6, key: 0.55, haze: 0 },
+  { at: 2.5, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.42], ...STAGE_LOOK },
+  { at: 2.96, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.42], ...STAGE_LOOK },
   // Schedule: the same frame drifts back a few percent; the light carries the change (denser haze, a little dimmer).
-  { at: 3.92, aim: { stand: 0.88 }, dist: 6.55, anchor: [0.68, 0.45], ...STAGE_LOOK, cone: 1.5, spot: 0.95, exposure: 0.97 },
+  { at: 3.92, aim: { stand: 0.88 }, dist: 6.55, anchor: [0.68, 0.42], ...STAGE_LOOK, cone: 1.5, spot: 0.95, exposure: 0.97 },
   // Venue -> Tickets: the same track backs out over the seats with a slow crane rise; the rows enter from the bottom.
   // The stage also rises slowly on screen (lens shift, no turn) into the upper right, above the
   // Tickets fact list (x 0.59-0.95, y 0.24-0.56 when the section is centred) and the numerals.
-  { at: 4.6, aim: { stand: 0.72 }, dist: 10.5, lift: 0.3, anchor: [0.68, 0.44], ...STAGE_LOOK, fov: 31, cone: 0.42, spot: 0.95, key: 0.35, vignette: 0.6, scrimEdge: 0.5 },
+  { at: 4.6, aim: { stand: 0.72 }, dist: 10.5, lift: 0.3, anchor: [0.68, 0.41], ...STAGE_LOOK, fov: 31, cone: 0.42, spot: 0.95, key: 0.35, vignette: 0.6, scrimEdge: 0.5 },
   { at: 5.3, aim: { stand: 0.56 }, dist: 15.2, lift: 0.85, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, exposure: 0.95, cone: 0.38, spot: 0.95, key: 0.3, vignette: 0.62, scrimEdge: 0.7 },
   // The wide room: stage small, subject still at the anchor, seats as silhouettes below. Locked off.
   { at: 5.78, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, exposure: 0.9, cone: 0.28, spot: 0.95, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
