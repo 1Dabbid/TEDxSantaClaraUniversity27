@@ -118,14 +118,14 @@ export type ResolvedShot = {
  */
 export const RIG = {
   /** Smoothing of the journey coordinate itself (seconds). */
-  journeySmooth: 0.12,
+  journeySmooth: 0.5,
   /** Offset (direction, distance) follow time (seconds). */
-  follow: 0.7,
+  follow: 0.3,
   /** Target point follow time (seconds). */
-  targetFollow: 0.6,
+  targetFollow: 0.3,
   /** View-direction spring frequency (Hz) and damping ratio (< 1 overshoots). */
-  targetFreq: 0.9,
-  targetZeta: 0.78,
+  targetFreq: 1.2,
+  targetZeta: 0.9,
   /** Bank angle per unit of lateral angular velocity (rad per rad/s), and its limit. */
   rollGain: 0.05,
   rollMax: 0.035,

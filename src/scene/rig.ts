@@ -1,6 +1,7 @@
 import { Vector3 } from 'three';
 import { RIG, emptyShot, sampleShots, type ResolvedShot } from './choreography';
 import { Damped, DampedVec3, SpringVec3 } from './damp';
+import { clearance } from './clearance';
 import type { look as lookState } from './look';
 
 /**
@@ -72,6 +73,8 @@ export function createRigOut() {
     dist: 1,
     roll: 0,
     near: 0.1,
+    /** Distance from the camera to the nearest solid surface (m). */
+    gap: 1,
     rimAng: 0.5,
     keyDir: new Vector3(),
     keyCam: 0,
@@ -95,6 +98,8 @@ export type RigInput = {
   snap: boolean;
   /** Optional camera override [px,py,pz,tx,ty,tz] (debug). */
   camOverride?: number[] | null;
+  /** Viewport width / height (near-plane corner distance). */
+  aspect?: number;
 };
 
 /** Near plane for a focus distance: tight in macro, generous on wide shots. */
@@ -214,7 +219,11 @@ export function stepRig(
   out.up.copy(out.camUp).multiplyScalar(cr).addScaledVector(out.right, sr);
   out.dist = dist;
   out.roll = roll;
-  out.near = nearFor(dist);
+  // Never let the near plane cut into a surface the camera grazes on a fast move.
+  const ty = Math.tan((look.fov * Math.PI) / 360);
+  const corner = Math.sqrt(1 + ty * ty * (1 + (input.aspect ?? 1.6) ** 2));
+  out.gap = clearance(out.position)[0];
+  out.near = Math.max(0.0015, Math.min(nearFor(dist), (out.gap * 0.7) / corner));
   copyInto(out.s, s);
   return out;
 }
@@ -222,6 +231,8 @@ export function stepRig(
 function copyInto(dst: ResolvedShot, src: ResolvedShot) {
   dst.pos.copy(src.pos);
   dst.target.copy(src.target);
+  dst.dir.copy(src.dir);
+  dst.logDist = src.logDist;
   dst.up.copy(src.up);
   dst.keyDir.copy(src.keyDir);
   dst.at = src.at;

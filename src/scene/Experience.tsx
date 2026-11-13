@@ -282,7 +282,7 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
       fs.rig,
       shots,
       away,
-      { J, dt, t, pointerX: scrollState.pointer.x, pointerY: scrollState.pointer.y, snap, camOverride },
+      { J, dt, t, pointerX: scrollState.pointer.x, pointerY: scrollState.pointer.y, snap, camOverride, aspect: state.size.width / Math.max(1, state.size.height) },
       look,
       fs.out,
     );
