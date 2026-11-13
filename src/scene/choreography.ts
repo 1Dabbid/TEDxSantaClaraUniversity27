@@ -466,15 +466,18 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
   const base = portrait ? PORTRAIT_SHOTS : DESKTOP_SHOTS;
   const k = Math.min(1, Math.max(0.4, opts.scheduleScale));
   const hold = base.find((s) => s.at === 2.96);
+  // Speakers announced (landscape): when the card strip comes up along the lower edge, the frame
+  // drifts a little further back and the stage rises into the upper-middle band, on the same axis.
+  const announced = !opts.speakersTba && !portrait && hold ? { ...hold, aim: { stand: 0.6 }, dist: 7.0, anchor: [0.68, 0.36] as const } : null;
   return base.flatMap((sh): Shot[] => {
-    // A short schedule: the drift back is shorter (never a push back in).
-    if (sh.at === 3.92 && hold) return [{ ...sh, dist: hold.dist + (sh.dist - hold.dist) * k }];
-    // Speakers announced (landscape): when the card strip comes up along the lower edge, the frame
-    // drifts a little further back and the stage rises into the upper-middle band, on the same axis.
-    if (!opts.speakersTba && !portrait && sh.at === 2.96) {
-      const up = { ...sh, aim: { stand: 0.6 }, dist: 7.0, anchor: [0.68, 0.36] as const };
-      return [{ ...up, at: 2.58 }, up];
+    // Schedule: the drift back continues from the hold that actually comes before it (never a
+    // push back in); a short schedule drifts back less.
+    if (sh.at === 3.92 && hold) {
+      const prev = announced ?? hold;
+      const drop = 'stand' in sh.aim && 'stand' in hold.aim ? hold.aim.stand - sh.aim.stand : 0;
+      return [{ ...sh, aim: 'stand' in prev.aim ? { stand: prev.aim.stand - drop } : sh.aim, anchor: prev.anchor, dist: prev.dist + (sh.dist - hold.dist) * k }];
     }
+    if (announced && sh.at === 2.96) return [{ ...announced, at: 2.58 }, announced];
     return [sh];
   });
 }

@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { SPINE, journey, micPoint, type ResolvedShot } from './choreography';
+import { SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
 import { clearance } from './clearance';
 import { createRig, createRigOut, nearCorner, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
@@ -88,6 +88,17 @@ function project(f: Frame, P: Vector3, aspect: number): [number, number, number]
   return [f.shift[0] + d.dot(right) / (z * ty * aspect) / 2, f.shift[1] - d.dot(up) / (z * ty) / 2, z];
 }
 
+/** The shot list Experience would use for this viewport, with some content options overridden. */
+function contentShots(L: Layout, over: Partial<ShotOptions>): ResolvedShot[] {
+  const portrait = window.innerWidth / Math.max(1, window.innerHeight) < 0.9;
+  const sched = L.heights.schedule;
+  const base: ShotOptions = {
+    speakersTba: !!document.querySelector('.speakers-runway--tba'),
+    scheduleScale: sched ? Math.min(1, Math.max(0.4, sched / (1.45 * L.vh))) : 1,
+  };
+  return resolveShots(shotsFor(portrait, { ...base, ...over }));
+}
+
 const r3 = (v: Vector3): [number, number, number] => [+v.x.toFixed(8), +v.y.toFixed(8), +v.z.toFixed(8)];
 
 export function installSim(getShots: () => { shots: ResolvedShot[]; away: ResolvedShot }) {
@@ -98,9 +109,12 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
      * Steps the rig at a fixed dt over `ys` (scroll px per step) or `js`
      * (journey values per step). The first value is snapped to.
      */
-    run(opts: { ys?: number[]; js?: number[]; dt?: number; t0?: number; drift?: boolean }): Frame[] {
+    run(opts: { ys?: number[]; js?: number[]; dt?: number; t0?: number; drift?: boolean; content?: Partial<ShotOptions> }): Frame[] {
       const L = measure();
-      const { shots, away } = getShots();
+      const live = getShots();
+      const away = live.away;
+      // `content` swaps the page-content variant (e.g. { speakersTba: false }) without changing the page.
+      const shots = opts.content ? contentShots(L, opts.content) : live.shots;
       const dt = opts.dt ?? 1 / 60;
       const seq = opts.js ?? (opts.ys ?? []).map((y) => journeyAt(L, y));
       const rig = createRig();
@@ -139,14 +153,14 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       return frames;
     },
   };
-  const metrics = (opts: { from?: number; to?: number; outFrom?: number; step?: number } = {}) => {
+  const metrics = (opts: { from?: number; to?: number; outFrom?: number; step?: number; content?: Partial<ShotOptions> } = {}) => {
     const from = opts.from ?? 2.0; // start of Speakers
     const to = opts.to ?? 6.0; // end of Tickets
     const outFrom = opts.outFrom ?? 1.72; // the macro's last shot: the pull back starts here
     const step = opts.step ?? 0.001;
     const js: number[] = [];
     for (let J = 0; J <= to + 1e-9; J += step) js.push(+J.toFixed(5));
-    const F = api.run({ js, drift: false });
+    const F = api.run({ js, drift: false, content: opts.content });
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);
     const yaw = (f: Frame) => Math.atan2(f.tgt[0] - f.pos[0], f.tgt[2] - f.pos[2]);
     const sp = F.filter((f) => f.J >= from && f.J <= to);
@@ -268,7 +282,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       const ys: number[] = [];
       for (let i = 0; i <= n; i++) ys.push(y0 + ((y1 - y0) * i) / n);
       for (let i = 0; i < 120; i++) ys.push(y1);
-      const R = api.run({ ys, drift: false });
+      const R = api.run({ ys, drift: false, content: opts.content });
       let maxW = 0;
       let at = 0;
       let mc = Infinity;
