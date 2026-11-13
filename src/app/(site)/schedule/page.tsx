@@ -72,7 +72,10 @@ export default async function SchedulePage() {
               Running order
             </h2>
             {published ? (
-              <p className="mt-4 max-w-xs text-mute">Every moment of the evening, in order.</p>
+              <p className="mt-4 max-w-xs text-mute">
+                {/* While the times carry the approximate note, only the outline is published. */}
+                {timesNoteOf(settings) ? 'The evening at a glance.' : 'Every moment of the evening, in order.'}
+              </p>
             ) : null}
           </div>
           <div className="md:col-span-8">
