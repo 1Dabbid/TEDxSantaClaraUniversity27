@@ -19,7 +19,7 @@ import { MOTION_OFF } from './useSectionMotion';
  */
 
 let enginePromise: Promise<typeof import('./engine')> | null = null;
-// A failed load is not cached: the next mount (quality change, route) tries again.
+// A rejected import is not kept around: after a failure the next call imports afresh.
 const loadEngine = () =>
   (enginePromise ??= import('./engine').catch((err: unknown) => {
     enginePromise = null;
@@ -45,9 +45,9 @@ function motionOff(err: unknown) {
 
 // Start fetching the engine chunk during hydration when motion is likely on.
 if (typeof window !== 'undefined' && document.documentElement.classList.contains('motion')) {
-  loadEngine().catch(() => {
-    // Reported (and handled) by MotionRoot's effect, which loads it again.
-  });
+  // Failed during hydration: show the static page now rather than after the effect's
+  // own attempt (which only starts once hydration is done).
+  loadEngine().catch(motionOff);
 }
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
@@ -75,7 +75,8 @@ export default function MotionRoot() {
   }, [quality, admin]);
 
   useEffect(() => {
-    if (!active) return;
+    // Motion stays off for this page view once the engine failed (a reload tries again).
+    if (!active || engineFailed) return;
     let cancelled = false;
     loadEngine()
       .then(({ startEngine }) => {
