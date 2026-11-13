@@ -22,7 +22,7 @@ export const THEME_COPY_DEFAULTS = {
   /** Caption of the 3D engraving in the theme section (after "Fig. 1"; motion only). */
   themeFigureCaption: 'The fine print, engraved. Read it closely.',
   /** Footnote under the theme story (after a red "*"). Blank: hidden. */
-  themeFootnote: 'Read in full before proceeding. The details are binding.',
+  themeFootnote: 'Returning to campus for the first time since 2020. The details are binding.',
   /** Speakers heading while no speaker is announced (home page and /speakers). */
   speakersEmptyHeading: 'Speakers to be announced.',
   /** Schedule while the running order is not published. */
@@ -32,21 +32,22 @@ export const THEME_COPY_DEFAULTS = {
   /** Closing newsletter heading. */
   newsletterHeading: 'Don’t miss the fine print.',
   /** Home page partner band. Body: placeholders. */
-  partnerBandHeading: 'Help make the first one happen.',
+  partnerBandHeading: 'Help bring it back.',
   partnerBandBody:
-    '{eventName} is student-run and this is its first mainstage event: one evening, {capacity} seats, talks recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to support it.',
+    '{eventName} returns, student-run and back on campus for the first time since 2020: one evening, {capacity} seats, talks recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to support it.',
   /** /partners heading. */
   partnersHeading: 'Put your name in the fine print.',
   /** /partners intro, after "Become a partner of TEDxSantaClaraUniversity." Placeholders. */
   partnersIntro:
-    'It is the club’s first mainstage event, organized by students at Santa Clara University: one evening of live talks for up to {capacity} guests, recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to make it possible.',
+    'It returns on {date}, the first {eventName} since 2020, organized by students at {campus}: one evening of live talks for up to {capacity} guests, recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to make it possible.',
   /** /partners search and link-preview description. Placeholders. */
   partnersDescription:
-    'Partner with {eventName}: support the first {eventName} mainstage event, up to {capacity} guests; talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
+    'Partner with {eventName}, returning for the first time since 2020: up to {capacity} guests; talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
   /** /partners, first "What your support makes possible" card. Blank title: the card is left out. Body: placeholders. */
-  partnersEditionFigure: '1st',
-  partnersEditionTitle: 'The first mainstage.',
-  partnersEditionBody: 'Partners who join now are part of it from the start.',
+  partnersEditionFigure: '2020',
+  partnersEditionTitle: 'The first since 2020.',
+  partnersEditionBody:
+    'The club went dormant after its 2020 event. A new student board is bringing {eventName} back, and partners who join now are part of the return.',
   /** 404 page. */
   notFoundHeading: 'This page does not exist.',
   notFoundBody: 'The link may be out of date, or the page may have moved.',

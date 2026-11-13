@@ -2,12 +2,12 @@ import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import Image from 'next/image';
 import type { PartnerBenefit, Settings, Sponsor, Tier } from '@/lib/content';
-import { getPartnerBenefits, getSettings, getSponsors, getTiers } from '@/lib/content';
+import { getPartnerBenefits, getPartnerNotes, getSettings, getSponsors, getTiers } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
-import { SITE_NAME, venueLine } from '@/lib/site';
+import { BENEFIT_GROUP_LABEL, type BenefitGroup, SITE_NAME, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { EventName, keepTedxCase } from '@/components/ui/KeepCase';
+import { EventName, keepTedxCase, Tedx } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, JsonLd, Tba } from '@/components/print/Print';
 import { ClosingBand } from '@/components/pages/ClosingBand';
 import { Breadcrumb } from '@/components/pages/PageHeader';
@@ -84,7 +84,7 @@ const reasons = (
         {
           figure: <LoopMark />,
           title: 'All year, not one night.',
-          body: 'Beyond the mainstage, TEDxSantaClaraUniversity runs general-meeting events throughout the year.',
+          body: 'Beyond the event itself, the student club behind it runs a speaker workshop series and general-meeting events through the year.',
         },
       ]
     : []),
@@ -96,12 +96,12 @@ const RULES = [
     body: 'Partners cannot speak or present from the stage, and have no say over the program or the speakers.',
   },
   {
-    title: 'Thanks, never mid-talk.',
-    body: 'Partners are thanked outside the talks, never during them, as TEDx rules require.',
+    title: 'Logos on stage: the thank-you slide only.',
+    body: 'In the room, partner logos appear only on the sponsor thank-you slide, never during a talk. Partners are thanked outside the talks, as TEDx rules require.',
   },
   {
     title: 'Recognition stays in its place.',
-    body: 'Partner logos appear on this page only, never on the home page, and always smaller than the event’s own mark.',
+    body: 'On this website, partner logos appear on this page only, never on the home page, and always smaller than the event’s own mark.',
   },
   {
     title: 'The list is for event news.',
@@ -109,11 +109,16 @@ const RULES = [
   },
 ];
 
-/** A tier as an open ledger row, not a boxed card. */
-function TierRow({ tier, index, benefits, href }: { tier: Tier; index: number; benefits: string[]; href: string }) {
+/**
+ * A tier as an open ledger row, not a boxed card: the name and what it is for,
+ * then the contribution and how many are available. What each tier includes is
+ * in the comparison below, so the four rows read in a few seconds.
+ */
+function TierRow({ tier, index, href }: { tier: Tier; index: number; href: string }) {
   const terms = [
     tier.amount ? { k: 'Contribution', v: tier.amount } : null,
-    tier.slots ? { k: 'Slots', v: String(tier.slots) } : null,
+    // No slot limit: "Open" once the tier has an amount (a tier still in draft shows neither).
+    tier.slots ? { k: 'Available', v: String(tier.slots) } : tier.amount ? { k: 'Available', v: 'Open' } : null,
   ].filter((x): x is { k: string; v: string } => x !== null);
 
   return (
@@ -126,18 +131,6 @@ function TierRow({ tier, index, benefits, href }: { tier: Tier; index: number; b
           {tier.name}
         </h3>
         {tier.description ? <p className="mt-4 max-w-md text-lg text-mute">{tier.description}</p> : null}
-        {benefits.length ? (
-          <ul className="mt-6 space-y-2 text-white">
-            {benefits.map((b) => (
-              <li key={b} className="grid grid-cols-[1.25rem_1fr]">
-                <span aria-hidden="true" className="text-subtle">
-                  ·
-                </span>
-                {b}
-              </li>
-            ))}
-          </ul>
-        ) : null}
       </div>
       <div className="md:col-span-4 md:pt-2">
         {terms.length ? (
@@ -175,10 +168,12 @@ function BenefitsComparison({
   tiers,
   benefits,
   draftHref,
+  dateISO,
 }: {
   tiers: Tier[];
   benefits: PartnerBenefit[];
   draftHref: string | null;
+  dateISO: string;
 }) {
   if (!benefits.length || !tiers.length) {
     return (
@@ -205,69 +200,169 @@ function BenefitsComparison({
       </div>
     );
   }
-  const Yes = () => (
-    <>
-      <span aria-hidden="true" className="text-white">
-        ●
-      </span>
-      <span className="sr-only">Included</span>
-    </>
-  );
-  const No = () => (
-    <>
-      <span aria-hidden="true" className="text-subtle">
-        —
-      </span>
-      <span className="sr-only">Not included</span>
-    </>
-  );
+  const groups = (Object.keys(BENEFIT_GROUP_LABEL) as BenefitGroup[])
+    .map((g) => ({ key: g, label: groupLabel(g, dateISO), rows: benefits.filter((b) => b.group === g) }))
+    .filter((g) => g.rows.length);
+  const anyTbc = benefits.some((b) => b.toBeConfirmed);
+
+  /** One cell: the tier's own wording ("Largest logo", "4"), a dot for a plain yes, a dash for no. */
+  const Cell = ({ b, t }: { b: PartnerBenefit; t: Tier }) => {
+    if (!b.tiers.includes(t.slug)) {
+      return (
+        <>
+          <span aria-hidden="true" className="text-subtle">
+            —
+          </span>
+          <span className="sr-only">Not included</span>
+        </>
+      );
+    }
+    const detail = b.details[t.slug];
+    return detail ? (
+      <span className="text-white">{detail}</span>
+    ) : (
+      <>
+        <span aria-hidden="true" className="text-white">
+          ●
+        </span>
+        <span className="sr-only">Included</span>
+      </>
+    );
+  };
+
   return (
     <>
-      {/* Wide screens: a real table. */}
+      {/* Wide screens: a real table, one column per tier, rows grouped under the three headings. */}
       <div className="mt-12 hidden md:block">
-        <table className="w-full border-collapse text-left">
-          <caption className="sr-only">Benefits included in each partnership tier</caption>
+        <table data-benefits-table className="w-full border-collapse text-left">
+          <caption className="sr-only">What each partnership tier includes</caption>
           <thead>
-            <tr className="border-b border-white/30">
+            <tr className="border-b border-white/30 align-bottom">
               <th scope="col" className="fine-print py-4 pr-6 font-normal text-mute">
                 Benefit
               </th>
               {tiers.map((t) => (
-                <th key={t.slug} scope="col" className="w-[14%] py-4 text-center text-sm font-medium text-white">
-                  {t.name}
+                <th key={t.slug} scope="col" className="w-[15%] px-2 py-4 text-center font-normal">
+                  <span className="block text-sm font-medium text-balance text-white">{t.name}</span>
+                  {t.amount ? (
+                    <span className="mt-1 block text-sm text-mute tabular-nums">{t.amount}</span>
+                  ) : null}
                 </th>
               ))}
             </tr>
           </thead>
-          <tbody>
-            {benefits.map((b) => (
-              <tr key={b.benefit} className="border-b border-white/10">
-                <th scope="row" className="py-5 pr-6 font-normal text-mute">
-                  {b.benefit}
+          {groups.map((g) => (
+            <tbody key={g.key}>
+              <tr>
+                <th
+                  scope="rowgroup"
+                  colSpan={tiers.length + 1}
+                  className="fine-print pt-10 pb-3 font-normal text-white"
+                >
+                  <span className="flex items-center gap-3">
+                    <span aria-hidden="true" className="h-px w-6 bg-accent" />
+                    {g.label}
+                  </span>
                 </th>
-                {tiers.map((t) => (
-                  <td key={t.slug} className="py-5 text-center">
-                    {b.tiers.includes(t.slug) ? <Yes /> : <No />}
-                  </td>
-                ))}
               </tr>
-            ))}
-          </tbody>
+              {g.rows.map((b) => (
+                <tr key={b.benefit} className="border-t border-white/10">
+                  <th scope="row" className="py-4 pr-6 font-normal text-mute">
+                    {b.benefit}
+                    {b.toBeConfirmed ? <Tbc /> : null}
+                  </th>
+                  {tiers.map((t) => (
+                    <td key={t.slug} className="px-2 py-4 text-center text-[0.9375rem]">
+                      <Cell b={b} t={t} />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          ))}
         </table>
       </div>
-      {/* Phones: one row per benefit, listing its tiers. */}
-      <ul className="mt-10 border-t border-white/15 md:hidden">
-        {benefits.map((b) => {
-          const names = tiers.filter((t) => b.tiers.includes(t.slug)).map((t) => t.name);
-          return (
-            <li key={b.benefit} className="border-b border-white/15 py-5">
-              <p className="text-white">{b.benefit}</p>
-              <p className="fine-print mt-2 text-mute">{names.length ? keepTedxCase(names.join(' · ')) : 'Not yet assigned to a tier'}</p>
-            </li>
-          );
-        })}
-      </ul>
+
+      {/* Phones: the same rows stacked, each listing the tiers that include it and what they get. */}
+      <div data-benefits-list className="mt-10 space-y-10 md:hidden">
+        {groups.map((g) => (
+          <section key={g.key} aria-labelledby={`benefits-${g.key}`}>
+            <h3 id={`benefits-${g.key}`} className="fine-print flex items-center gap-3 text-white">
+              <span aria-hidden="true" className="h-px w-6 bg-accent" />
+              {g.label}
+            </h3>
+            <ul className="mt-3 border-t border-white/15">
+              {g.rows.map((b) => {
+                const inTiers = tiers.filter((t) => b.tiers.includes(t.slug));
+                return (
+                  <li key={b.benefit} className="border-b border-white/15 py-4">
+                    <p className="text-white">
+                      {b.benefit}
+                      {b.toBeConfirmed ? <Tbc /> : null}
+                    </p>
+                    {inTiers.length ? (
+                      <dl className="mt-2.5 grid grid-cols-[minmax(0,1fr)_auto] gap-x-4 gap-y-1 text-sm">
+                        {inTiers.map((t) => (
+                          <div key={t.slug} className="contents">
+                            <dt className="text-mute">{t.name}</dt>
+                            <dd className="text-right text-white">{b.details[t.slug] || 'Included'}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    ) : (
+                      <p className="fine-print mt-2 text-mute">Not yet assigned to a tier</p>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        ))}
+      </div>
+      {anyTbc ? (
+        <p className="fine-print mt-6 max-w-xl text-mute">
+          Items marked “to be confirmed” are being checked against <Tedx /> rules and may change.
+        </p>
+      ) : null}
     </>
+  );
+}
+
+/** "At the April 23 event" (the date from Event basics); the other headings as in BENEFIT_GROUP_LABEL. */
+function groupLabel(g: BenefitGroup, dateISO: string): string {
+  if (g !== 'event' || !/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) return BENEFIT_GROUP_LABEL[g];
+  const day = new Intl.DateTimeFormat('en-US', { month: 'long', day: 'numeric', timeZone: 'UTC' }).format(
+    new Date(`${dateISO}T12:00:00Z`),
+  );
+  return `At the ${day} event`;
+}
+
+/** The small "to be confirmed" note on a benefit that still needs a yes from TED. */
+function Tbc() {
+  return (
+    <span className="fine-print ml-2 inline-block border-b border-dotted border-white/40 align-[0.1em] whitespace-nowrap text-mute">
+      To be confirmed
+    </span>
+  );
+}
+
+/** The small print under the tiers (Partner benefits > Small print under the tiers), as lettered terms. */
+function SmallPrint({ notes }: { notes: string[] }) {
+  if (!notes.length) return null;
+  return (
+    <div className="mt-12 grid gap-6 md:grid-cols-12">
+      <h3 className="fine-print text-white md:col-span-2">The small print</h3>
+      <ol className="grid gap-x-10 gap-y-3 text-mute sm:grid-cols-2 md:col-span-10">
+        {notes.map((n, i) => (
+          <li key={i} className="grid grid-cols-[2rem_minmax(0,1fr)]">
+            <span aria-hidden="true" className="fine-print pt-[0.2em] text-white">
+              ({'abcdefghijklmnopqrstuvwxyz'[i] ?? i + 1})
+            </span>
+            <span>{n}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -336,11 +431,12 @@ function CurrentPartners({ tiers, sponsors }: { tiers: Tier[]; sponsors: Sponsor
 }
 
 export default async function PartnersPage() {
-  const [settings, tiers, sponsors, benefits] = await Promise.all([
+  const [settings, tiers, sponsors, benefits, notes] = await Promise.all([
     getSettings(),
     getTiers(),
     getSponsors(),
     getPartnerBenefits(),
+    getPartnerNotes(),
   ]);
   const cta = partnerCta(settings);
   const mail = (subject: string) =>
@@ -470,7 +566,7 @@ export default async function PartnersPage() {
               <SectionLabel index={next()}>How it works</SectionLabel>
             </div>
             <h2 id="rules-title" data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight text-balance">
-              Partnership under TEDx rules.
+              How partnerships work under TEDx rules.
             </h2>
             <p data-reveal="fade" className="mt-6 max-w-sm text-mute">
               Every TEDx event follows rules set by TED. They keep the talks independent, which is what makes the room
@@ -515,7 +611,6 @@ export default async function PartnersPage() {
                 tier={tier}
                 index={i}
                 href={mail(tier.name)}
-                benefits={benefits.filter((b) => b.tiers.includes(tier.slug)).map((b) => b.benefit)}
               />
             ))}
           </ol>
@@ -524,6 +619,7 @@ export default async function PartnersPage() {
             <Tba>Tiers to be announced</Tba>
           </p>
         )}
+        <SmallPrint notes={notes} />
       </section>
 
       {/* Benefits */}
@@ -534,7 +630,12 @@ export default async function PartnersPage() {
         <h2 id="benefits-title" data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight">
           What each tier includes.
         </h2>
-        <BenefitsComparison tiers={tiers} benefits={benefits} draftHref={mail('Partner benefits')} />
+        <BenefitsComparison
+          tiers={tiers}
+          benefits={benefits}
+          draftHref={mail('Partner benefits')}
+          dateISO={settings.dateISO}
+        />
       </section>
 
       {/* Current partners: only once one is signed and published. */}

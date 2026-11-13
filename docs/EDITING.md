@@ -44,8 +44,8 @@ The home page shows what is true today and grows by itself as you publish. You n
 | **Speakers** | One heading, "Speakers to be announced", and one panel: **Join the mailing list** and how to apply to speak. No placeholder cards. | Ticking **Announced** on a speaker shows their card (linked to their page) and the heading becomes "Meet the speakers". Slots still unannounced appear as a single "More speakers to be announced" card. |
 | **Schedule** | A short note: date, "Running order to follow". Not in the menu. | Ticking **Show the running order** shows the full timeline and adds **Schedule** to the menu. |
 | **Speaker applications** | Shown in the Speakers section: "Applications are not open yet". | **Open** + a link: an **Apply to speak** button under the Speakers heading and in the closing links at the bottom of the home page (with the deadline, if filled in). **Closed**: "Applications for this event are closed." |
-| **Tickets** | "Not on sale yet.", with the mailing list button. | **On sale** + a link: **Get tickets** everywhere. |
-| **Team** | Hidden (not on the page, not in the menu). | Appears as soon as one person has **Show name publicly** ticked and a name; only named people are listed. |
+| **Tickets** | "Not on sale yet.", when sales are expected (**Expected on-sale month**, e.g. "Tickets are expected to go on sale in February 2027."), and the mailing list button. | **On sale** + a link: **Get tickets** everywhere. |
+| **Team** | Hidden (not on the page, not in the menu). | Appears as soon as one person has **Show name publicly** ticked and a name: a compact roster of the named people (initials or photo, name, role). |
 | **Partners** | A short text invitation on the home page (never names or logos) linking to `/partners`. On `/partners`, **Current partners** is hidden. | **Published** partners appear on `/partners` only. |
 | **Hero buttons** | **Tickets** and **Get updates** (mailing list). | Once a speaker is announced: **Tickets** and **Speakers**. |
 
@@ -57,10 +57,10 @@ Besides the home page (the scroll story), each topic has its own page with an ad
 | --- | --- | --- |
 | **/venue** | The street address and **Open in Maps** at the top, the coordinates, and Directions, Parking and Accessibility with one line saying the details follow (Directions points to the address; Accessibility to the contact email). The times show as one line, "Doors and talk times to follow". | Each **Getting there** note you fill in (**Venue & directions**) appears under its title; **Doors open at**, **Talks start at**, **Event ends at** appear at the top. |
 | **/schedule** | The date, "Running order to follow" and the mailing list button. | The full running order (**Show the running order**). |
-| **/team** | Every board role from **People > Team**, as a plain list of roles. | Names and photos for people with **Show name publicly** ticked. Turning off the Team switch, or removing every role, removes the page. |
+| **/team** | Every board role from **People > Team**, as a plain list of roles. | For people with **Show name publicly** ticked: name, role, photo (or initials), major, class year and LinkedIn link. Turning off the Team switch, or removing every role, removes the page. |
 | **/faq** | Every question. Each has its own link (e.g. `/faq#tickets-on-sale`, made from the question's words): send it to someone and the answer opens. Rewording a question changes its link. Turning off the FAQ switch removes the page. | |
 
-Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The whole team", "All 9 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
+Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The team", "All 10 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
 
 Unannounced speakers still have a page (`/speakers/speaker-01` and so on) so an old link never breaks, but nothing on the site links to it and search engines are told to ignore it.
 
@@ -83,11 +83,13 @@ To remove a slot entirely, untick **Published**.
 ### Publish the schedule
 
 1. **The event > Schedule**.
-2. Under **Running order**, click **Add** for each moment. A box opens with **Time** (e.g. 5:30 PM, shown as typed), **Title**, **Description (optional)** and **Kind** (Talk, Break, Doors or Program; the site shows the same word next to the item). Click **Add** (or **Done** when editing an existing item) to close the box.
+2. Under **Running order**, click **Add** for each moment. A box opens with **Time** (e.g. 5:30 PM, shown as typed), **Title**, **Description (optional)** and **Kind** (Talk, Break, Doors, Reception or Program; the site shows the same word next to the item: use Reception for doors with drinks or food, Program for anything else, such as the close). Click **Add** (or **Done** when editing an existing item) to close the box.
 3. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter.
 4. Tick **Show the running order** and **Save**. While it is unticked, the site shows a short "running order to follow" note and the menu has no Schedule link.
 
-Doors, talks and end time for the whole evening are in **The event > Event basics**: **Doors open at**, **Talks start at**, **Event ends at** (written like 5:30 PM). Search engines are given the evening's start (**Talks start at**, or **Doors open at** while that is blank) and end time in California time; while no time is set they only see the date.
+Doors, talks and end time for the whole evening are in **The event > Event basics**: **Doors open at**, **Talks start at**, **Event ends at** (written like 5:30 PM). Search engines are given the evening's start (**Talks start at**, or **Doors open at** while that is blank), the doors time and the end time in California time; while no time is set they only see the date.
+
+**Note about the times (optional)**, also in **Event basics**: one sentence shown wherever the times appear (the Schedule section and /schedule, the Venue section and /venue). In 2027 it says "Times are approximate and may shift slightly. The full running order follows once speakers are confirmed." Shorten it once the running order is final, and empty it once the times are firm. The FAQ answer "When and where" types the times out: update it when they change.
 
 ### Put tickets on sale
 
@@ -96,7 +98,7 @@ Doors, talks and end time for the whole evening are in **The event > Event basic
 3. Optional: **Ticket checkout embed link (optional)**, only if the ticketing service gives you an "embed" link. Leave blank if unsure. (Editing locally with `npm run dev`? The box stays blank until you restart `npm run dev`.) If the embedded checkout stays blank on the live site, tell the web team: some services need one more allowed address (`CSP_FRAME_SRC` on Vercel). The embedded checkout is never allowed to take over the whole page: if the service wants to switch to its own full page (for a payment step, say), that step opens in a new tab instead, and buyers come back to this tab afterwards.
 4. **Price note**: one short sentence, e.g. "Tickets will cost no more than $100." Our cap is **$100**; confirm the limit for our licence tier with the licence holder. Do not call it a TED rule on the site.
 5. **Ticket price in US dollars (optional)**: just the number, e.g. `25` (`0` if free). The admin will not accept more than 100. Search engines show it in event listings; visitors read the Price note.
-6. **Tickets on sale from (optional)**: the first day of sales (pick the date).
+6. **Tickets on sale from (optional)**: the first day of sales (pick the date). Until there is an exact date, use **Expected on-sale month (optional)** instead (e.g. "February 2027"): while the status is Coming soon the site says "Tickets are expected to go on sale in February 2027." in the hero, the Tickets section and at the end of /speakers, /schedule and /venue. Empty it once tickets are on sale.
 7. Set **Ticket status** to **On sale** and **Save**. Every Tickets button on the site updates. ("On sale" only shows the buy button when a ticket link is filled in.)
 8. **The event > FAQ**: update the answer to **Are tickets on sale?** (it still says "Not yet" until you change it), e.g. "Yes. Get them from the Tickets button; they cost $25." and **Save**.
 9. Later: switch to **Sold out** or **Closed (sales have ended)**, and update that FAQ answer again.
@@ -112,31 +114,48 @@ Search engines only receive ticket details (price, sale start, link) while the s
 5. **The event > FAQ**: update the answer to **How can I apply to speak?** (it says applications are coming soon until you change it) and **Save**. Do the same again when applications close.
 6. All speaker-application wording can be switched off in **Contact & site > Show / hide sections > Show speaker applications (in the Speakers section)**.
 
+### The interest form (speak, contact list, get involved)
+
+Until formal applications open, the club's interest form is the way in: one form to register interest in speaking (hear first when applications open, get an early look at pitching a talk), join the club's contact list, and help organize.
+
+1. **The event > Tickets & speaker applications > Interest form link (speak or get involved)**: the form's full address (2027: `https://bernard29020.softr.app`). **Save**.
+2. While applications are **Coming soon**, the Speakers section on the home page and **/speakers** show "Want to speak? Register your interest" with this link, and **/team** ends with **Get involved**. All of them open the form in a new tab. Once applications are **Open** (with an application link), the Apply to speak button replaces it in Speakers; **/team** keeps **Get involved**. Empty the field to remove all of them.
+3. The FAQ answers **How can I apply to speak?** and **How can I get involved?** use the `{interestUrl}` placeholder, so they follow this field (a full `https://` address in any FAQ answer becomes a link that opens in a new tab). If you empty the field, reword those two answers too; `npm run check:content` warns while they still use the placeholder.
+
 ### Add a sponsor (partner)
 
 Tiers and benefits first, then the partner:
 
-1. **Partners > Partner tiers**: each tier has **Tier name**, a **Slug** (made from the name, e.g. `founding-partner`: leave it as generated), **Description**, **Contribution (optional)** (e.g. $2,500; hidden while blank), **Number of slots (optional)** and **Order**. The list of tiers in the admin is sorted by slug; on the site they follow **Order**.
-2. **Partners > Partner benefits > Benefits comparison**: click **Add** for each row. In the box, write the **Benefit**, then click into **Included in these tiers** and pick each tier from the list; tiers are listed by their page address (e.g. `founding-partner`), not their name. Click **Add** (or **Done**), then **Save**. While the list is empty the page says the benefits for each tier are being finalized. Only benefits TEDx allows (no stage time, no say over the programme).
-3. **Partners > Partners (logos)** > **Add**: **Organization name** (leave the **File name (slug)** under it as generated), **Tier** (again listed by page address, e.g. `founding-partner`), **Logo**, **Website** (full address starting with `https://`). The logo is shown at most 24px tall and 72px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED's prohibited sponsors. Sponsors can never be speakers.
-4. Tick **Published** only once the partnership is signed and the logo approved, then **Save**. Partners appear on `/partners` only, never on the home page.
+1. **Partners > Partner tiers**: each tier has **Tier name**, a **Slug** (made from the name, e.g. `cornerstone-partner`: leave it as generated), **Description**, **Contribution (optional)** (e.g. $1,500; hidden while blank), **Number of slots (optional)** (shown as "Available: 4"; blank means no limit and shows "Available: Open" once a Contribution is filled in) and **Order**. The list of tiers in the admin is sorted by slug; on the site they follow **Order**. The 2027 tiers are Cornerstone Partner ($5,000, 1), Headline Partner ($1,500, 4), Bold Print Partner ($500, 6) and Fine Print Supporter ($150, open).
+2. **Partners > Partner benefits > Benefits comparison**: one row of the comparison table per benefit. Click **Add** (or open a row), then:
+   - **Benefit**: one line, e.g. "Reserved seats".
+   - **Heading**: which of the three headings it sits under: **On the website and in video**, **At the event** (the site writes "At the April 23 event", with the date from Event basics) or **During the year**. Within a heading, rows keep the order of the list.
+   - **Tiers that include it**: click **Add** once per tier that gets the benefit, pick the **Tier** (listed by page address, e.g. `cornerstone-partner`) and, if the tiers get different things, type **What this tier gets (optional)** in a word or two: "Largest logo", "Named", "Group", "4". Leave it blank for a plain "included" dot. A tier that is not listed shows a dash.
+   - **Still to be confirmed**: tick it while TED (or the venue) has not said yes yet; the table then shows a small "to be confirmed" note next to the benefit. Untick it once the Director of Compliance confirms.
+   Click **Done**, then **Save**. On computers the rows are a table (one column per tier); on phones each benefit is listed with the tiers that include it. While the list is empty the page says the benefits for each tier are being finalized. Only benefits TEDx allows (no stage time, no say over the programme).
+3. **Partners > Partner benefits > Small print under the tiers**: short sentences shown as lettered terms under the tiers, e.g. "Amounts are per academic year." or the commitment deadline. **Add** one line per sentence, **Save**. Update the dates each year.
+4. **Partners > Partners (logos)** > **Add**: **Organization name** (leave the **File name (slug)** under it as generated), **Tier** (again listed by page address, e.g. `cornerstone-partner`), **Logo**, **Website** (full address starting with `https://`). The logo is shown at most 24px tall and 72px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED's prohibited sponsors. Sponsors can never be speakers.
+5. Tick **Published** only once the partnership is signed and the logo approved, then **Save**. Partners appear on `/partners` only, never on the home page.
 
-### Show team names
+### Show team names and details
 
-1. **People > Team**: one entry per board role (**Role**; leave the **File name (slug)** under it as generated).
-2. Fill in **Name (optional)** and optionally **Photo (optional)**.
-3. Tick **Show name publicly** (ask the person first) and **Save**.
+1. **People > Team**: one entry per board role (**Role**, e.g. "President"; leave the **File name (slug)** under it as generated). **Order** sets the order on the site (1 first).
+2. Fill in **Name (optional)**, then the optional details: **Major (optional)** (e.g. "Mechanical Engineering"; minors can be left out), **Class year (optional)** (four digits, e.g. 2029, shown as "Class of 2029") and **LinkedIn profile (optional)** (the full address starting with `https://`, e.g. `https://www.linkedin.com/in/their-name`). Never add a personal email address or phone number anywhere on the site.
+3. **Photo (optional)**: upload a square headshot (see image sizes below). Until there is one, the site shows the person's initials in a small circle, in the same place.
+4. Tick **Show name publicly** (ask the person first) and **Save**.
 
-The Team section stays hidden until at least one person has a public name; then it lists the named people only (with their role), and **Team** appears in the menu. The whole section can also be switched off in **Contact & site > Show / hide sections > Show the Team section on the home page (it appears once at least one name is public)**.
+The home page shows a compact roster (initials or photo, name, role) and a link, "The team", to **/team**, which adds the major, class year and a LinkedIn link (it opens in a new tab and is announced to screen readers as "<name> on LinkedIn (opens in a new tab)"). The Team section stays hidden until at least one person has a public name; then it lists the named people only, and **Team** appears in the menu. The whole section can also be switched off in **Contact & site > Show / hide sections > Show the Team section on the home page (it appears once at least one name is public)**.
+
+**Adding photos without the admin.** A photo can also be put straight into the repository, at `public/images/team/<file name>/photo.jpg` (or `photo.png`, `photo.webp`), where `<file name>` is the entry's **File name (slug)**: `president`, `vp-of-production`, `vp-of-finance`, `director-of-compliance`, `director-of-marketing`, `director-of-creative`, `director-of-speakers`, `director-of-partnerships`, `director-of-community`. The file name must be lowercase `photo` and the folder must match the slug exactly. The site picks it up on the next build when the **Photo** field is empty; it is the same place the admin's upload writes to.
 
 ### The "All year, not one night" card (Partners page)
 
-**Contact & site > Show / hide sections > Show the “All year, not one night” card on the Partners page** is off by default. Only turn it on if TED has confirmed the club's year-round events may use the TEDx name: the licence covers the mainstage event, and general-meeting events are not automatically TEDx events.
+**Contact & site > Show / hide sections > Show the “All year, not one night” card on the Partners page** is on for 2027, because the partner tiers include year-round items (the speaker workshop series, a named general-meeting event). The card speaks of "the student club behind it", not of TEDx events: the licence covers the April event, and general-meeting events are not automatically TEDx events. The Director of Compliance should confirm with TED how those year-round events may be described and named; untick the box to hide the card.
 
 ### Edit the FAQ
 
 1. **The event > FAQ > Questions**: click a question to open it in a box with **Question** and **Answer** (plain text, line breaks are kept), or **Add** for a new one. Close the box with **Done** (or **Add**), then **Save**.
-2. Instead of typing details that change, write a placeholder and the site fills it in from **Event basics** and **Venue & directions**: `{date}` (e.g. Friday, April 23, 2027), `{venue}` (the building), `{campus}` (e.g. Santa Clara University), `{capacity}` (the seat count) and `{eventName}` (TEDxSantaClaraUniversity). The "When and where" answer already uses them, so it follows the Event date and venue automatically.
+2. Instead of typing details that change, write a placeholder and the site fills it in from **Event basics** and **Venue & directions**: `{date}` (e.g. Friday, April 23, 2027), `{venue}` (the building), `{campus}` (e.g. Santa Clara University), `{capacity}` (the seat count), `{eventName}` (TEDxSantaClaraUniversity) and `{interestUrl}` (the Interest form link under **Tickets & applications**). The "When and where" answer already uses them, so it follows the Event date and venue automatically.
 3. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Numbering is automatic.
 4. To delete a question, click the bin icon next to it. There is no confirmation, but nothing is gone until you **Save**: reload the page to get it back.
 5. The home page shows the first five questions, then a link to **/faq** with all of them. Put the most asked ones first.
@@ -149,7 +168,7 @@ The Team section stays hidden until at least one person has a public name; then 
 - **Newsletter sign-up link (SendFox)**: while blank, the site shows "list opening soon".
 - **Contact email**: shown in the footer and FAQ.
 - **Partnerships email**: used by every "Become a partner" button (falls back to tedxscu.com while blank).
-- **Social links**: **Instagram**, **LinkedIn**, **YouTube**, **TikTok** (full links starting with `https://`, e.g. `https://www.instagram.com/scutedx`, not `@scutedx`; blank ones are hidden). **YouTube**: club channel only. Full TEDx talks may only be published through TED's uploader, never on this channel.
+- **Social links**: **Instagram**, **LinkedIn**, **YouTube**, **TikTok** (full links starting with `https://`, e.g. `https://www.instagram.com/scutedx` or the club page `https://www.linkedin.com/company/scutedx`, not `@scutedx`; blank ones are hidden). Filled-in links appear in the footer and are given to search engines as the club's profiles. **YouTube**: club channel only. Full TEDx talks may only be published through TED's uploader, never on this channel.
 - **Livestream link (optional)**: see "Add the livestream link" below.
 
 ### Add the livestream link
@@ -192,7 +211,7 @@ Only the Director of Compliance (or the licence holder) should change these. The
 | Image | Size | Format |
 | --- | --- | --- |
 | Speaker **Portrait** | 4:5 portrait, about 1200 × 1500 px | JPG or PNG, under 2 MB |
-| Team **Photo (optional)** | square, about 600 × 600 px | JPG or PNG, under 2 MB |
+| Team **Photo (optional)** | square, about 600 × 600 px, face centred (it is cropped to a circle) | JPG or PNG, under 2 MB |
 | Partner **Logo** | white or light version on a transparent background, wide rather than tall; it is shown at most 24px tall and 72px wide; always smaller than the event logo | SVG (best) or PNG at least 216 px wide, under 2 MB |
 
 Keep every photo under 2 MB; JPG or PNG (not HEIC, not PDF). iPhone photos are often HEIC: export or share them as JPG first ("Most Compatible" in the camera settings). A file of the wrong type is left out (the page shows "Portrait to follow") and a file over 2 MB is flagged in the build log. Use plain file names without spaces (e.g. `jane-doe.jpg`). The site resizes and compresses photos for visitors automatically.

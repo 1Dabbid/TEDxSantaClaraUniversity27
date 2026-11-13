@@ -51,14 +51,15 @@ function attendanceJsonLd(s: Settings) {
     : { eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', location: placeJsonLd(s) };
 }
 
-/** The club that organizes the event. */
+/** The club that organizes the event; sameAs: its filled-in social profiles (Contact > Social links). */
 function organizerJsonLd(s: Settings) {
+  const sameAs = [s.socials.instagram, s.socials.linkedin, s.socials.youtube, s.socials.tiktok].filter(Boolean);
   return {
     '@type': 'Organization',
     '@id': ORG_ID,
     name: SITE_NAME,
     url: CLUB_URL,
-    ...(s.socials.instagram ? { sameAs: [s.socials.instagram] } : {}),
+    ...(sameAs.length ? { sameAs } : {}),
   };
 }
 
@@ -81,6 +82,12 @@ function offersJsonLd(s: Settings) {
   };
 }
 
+/** schema.org doorTime with the venue's offset, or nothing when the time cannot be read. */
+function doorTime(dateISO: string, time: string): { doorTime?: string } {
+  const { startDate } = eventDateTimes(dateISO, time, '');
+  return startDate !== dateISO ? { doorTime: startDate } : {};
+}
+
 /** schema.org Event (plus the WebSite it lives on) for the home page. */
 export function eventJsonLd(s: Settings, speakers: Speaker[]) {
   const announced = speakers.filter((sp) => sp.announced);
@@ -92,6 +99,8 @@ export function eventJsonLd(s: Settings, speakers: Speaker[]) {
     ...(description ? { description } : {}),
     // Talks start time (falls back to doors), with the venue's UTC offset; the plain date while no time is set.
     ...eventDateTimes(s.dateISO, s.talksTime || s.doorsTime, s.endTime),
+    // Doors, when they open before the talks start.
+    ...(s.talksTime && s.doorsTime ? doorTime(s.dateISO, s.doorsTime) : {}),
     eventStatus: 'https://schema.org/EventScheduled',
     ...attendanceJsonLd(s),
     maximumAttendeeCapacity: s.capacity,

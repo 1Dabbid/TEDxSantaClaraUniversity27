@@ -17,7 +17,7 @@ import type { NavItem } from './nav-links';
  * 4. Each home section ends with one quiet "more" link to its page (MoreLink,
  *    components/pages/MoreLink.tsx), only where the page offers more than the
  *    section: "All speakers" (once one is announced), "Full schedule" (once
- *    published), "Venue details", "The whole team", "All 9 questions" (when /faq has more than the five at home).
+ *    published), "Venue details", "The team", "All 10 questions" (when /faq has more than the five at home).
  *
  * Header items on the home page follow the home sections' own content state, so
  * the header there never points at a placeholder:

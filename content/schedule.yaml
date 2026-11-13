@@ -1,22 +1,14 @@
-published: false
+published: true
 items:
-  - time: TBA
-    title: Doors open
-    description: ''
-    kind: doors
-  - time: TBA
-    title: Session one
-    description: ''
-    kind: talk
-  - time: TBA
-    title: Intermission
-    description: ''
-    kind: break
-  - time: TBA
-    title: Session two
+  - time: 5:00 PM
+    title: Doors open and reception
+    description: Outside the venue, with drinks, food and lounge seating. A chance to talk before the event.
+    kind: reception
+  - time: 6:00 PM
+    title: Talks begin
     description: ''
     kind: talk
-  - time: TBA
-    title: Closing
+  - time: 9:00 PM
+    title: Close
     description: ''
     kind: other

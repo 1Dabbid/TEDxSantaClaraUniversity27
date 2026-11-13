@@ -4,13 +4,13 @@ items:
       {eventName} is an independently organized TEDx event, operated under license from TED. TED's description of the TEDx program and of TED is printed under “About TEDx” and “About TED” at the bottom of every page.
   - question: Who organizes it?
     answer: |-
-      A team of Santa Clara University students. It is the first {eventName} mainstage event.
+      A board of Santa Clara University students. {eventName} ran in earlier years; the last event was in 2020, after which the club went dormant. The current board has brought it back, so this is the first {eventName} since 2020.
   - question: When and where is {eventName}?
     answer: |-
-      {date}, at the {venue} on the {campus} campus. Doors and running times will be announced with the schedule.
+      {date}, at the {venue} on the {campus} campus. Doors open at about 5:00 PM with a reception outside the venue (drinks, food and lounge seating), talks begin at about 6:00 PM, and the evening ends around 9:00 PM. Times are approximate and may shift slightly. The full running order follows once speakers are confirmed.
   - question: Are tickets on sale?
     answer: |-
-      Not yet. Tickets will cost no more than $100. Join the mailing list to hear the moment they go on sale.
+      Not yet. Tickets are expected to go on sale in February 2027. Tickets will cost no more than $100. Join the mailing list to hear the moment they go on sale.
   - question: How many people can attend?
     answer: |-
       Attendance is limited to {capacity} people.
@@ -19,7 +19,10 @@ items:
       The talks are recorded and submitted for publication on the TEDx Talks YouTube channel.
   - question: How can I apply to speak?
     answer: |-
-      Speaker applications are not open yet. When they open, the link will appear on this site and go out to the mailing list.
+      Formal speaker applications are not open yet. To hear first when they open, and to get an early look at pitching a talk, register your interest on the club’s interest form: {interestUrl}
+  - question: How can I get involved?
+    answer: |-
+      Fill in the club’s interest form: {interestUrl}. It is one form for three things: helping to organize {eventName}, joining the club’s contact list, and registering your interest in speaking.
   - question: How can my organization become a partner?
     answer: |-
       We are inviting a small number of partners to support the event. The Partners page explains what partnership means under TEDx rules and how to get in touch.

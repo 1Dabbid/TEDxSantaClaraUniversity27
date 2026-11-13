@@ -1,1 +1,129 @@
-items: []
+items:
+  - benefit: Listed on the Partners page
+    group: web
+    included:
+      - tier: cornerstone-partner
+        detail: Largest logo
+      - tier: headline-partner
+        detail: Large logo
+      - tier: bold-print-partner
+        detail: Logo
+      - tier: fine-print-supporter
+        detail: Name
+    toBeConfirmed: false
+  - benefit: Logo on the sponsor slide of the April 23 talk videos
+    group: web
+    included:
+      - tier: cornerstone-partner
+        detail: ''
+      - tier: headline-partner
+        detail: ''
+    toBeConfirmed: true
+  - benefit: On the sponsor thank-you slide shown on screen
+    group: event
+    included:
+      - tier: cornerstone-partner
+        detail: Logo
+      - tier: headline-partner
+        detail: Logo
+      - tier: bold-print-partner
+        detail: Logo
+      - tier: fine-print-supporter
+        detail: Name
+    toBeConfirmed: false
+  - benefit: Thank-you from the host
+    group: event
+    included:
+      - tier: cornerstone-partner
+        detail: Named
+      - tier: headline-partner
+        detail: Named
+      - tier: bold-print-partner
+        detail: Group
+      - tier: fine-print-supporter
+        detail: Group
+    toBeConfirmed: false
+  - benefit: Lobby booth or table
+    group: event
+    included:
+      - tier: cornerstone-partner
+        detail: Premium booth
+      - tier: headline-partner
+        detail: Table
+    toBeConfirmed: false
+  - benefit: Reserved seats
+    group: event
+    included:
+      - tier: cornerstone-partner
+        detail: '4'
+      - tier: headline-partner
+        detail: '2'
+      - tier: bold-print-partner
+        detail: '1'
+    toBeConfirmed: false
+  - benefit: Invitation to the pre-event sponsor reception
+    group: event
+    included:
+      - tier: cornerstone-partner
+        detail: ''
+      - tier: headline-partner
+        detail: ''
+      - tier: bold-print-partner
+        detail: ''
+      - tier: fine-print-supporter
+        detail: ''
+    toBeConfirmed: false
+  - benefit: Logo on event merchandise
+    group: event
+    included:
+      - tier: cornerstone-partner
+        detail: ''
+    toBeConfirmed: true
+  - benefit: Presenting partner of the 2026–27 speaker workshop series
+    group: year
+    included:
+      - tier: cornerstone-partner
+        detail: ''
+    toBeConfirmed: false
+  - benefit: Named sponsor of one general-meeting event
+    group: year
+    included:
+      - tier: headline-partner
+        detail: ''
+    toBeConfirmed: false
+  - benefit: Social media thank-you post
+    group: year
+    included:
+      - tier: cornerstone-partner
+        detail: Dedicated
+      - tier: headline-partner
+        detail: Dedicated
+      - tier: bold-print-partner
+        detail: Group
+      - tier: fine-print-supporter
+        detail: Group
+    toBeConfirmed: false
+  - benefit: Recognition on the Partners page in future years
+    group: year
+    included:
+      - tier: cornerstone-partner
+        detail: ''
+    toBeConfirmed: false
+  - benefit: Impact report after the event (attendance, reach, photos)
+    group: year
+    included:
+      - tier: cornerstone-partner
+        detail: ''
+      - tier: headline-partner
+        detail: ''
+      - tier: bold-print-partner
+        detail: ''
+      - tier: fine-print-supporter
+        detail: ''
+    toBeConfirmed: false
+notes:
+  - Amounts are per academic year.
+  - Every tier can be adjusted.
+  - Custom and in-kind partnerships are welcome, for example catering, printing, AV equipment, photography or videography, and gifts for speakers and volunteers.
+  - Commit by March 1, 2027 to appear on the talk videos, signage and printed materials.
+  - Partners receive an impact report by May 8, 2027.

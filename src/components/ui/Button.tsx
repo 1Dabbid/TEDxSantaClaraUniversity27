@@ -44,6 +44,15 @@ type ButtonAsLink = CommonProps & { href: string; external?: boolean } & Omit<
 const PROTOCOL_RELATIVE = /^[/\\]{2}/;
 
 /**
+ * Which style where:
+ * - primary (solid red): only each screen's single primary action: the hero's
+ *   Tickets, the closing "Join the mailing list", "Get tickets" once on sale,
+ *   "Become a partner", and the closing band of a topic page.
+ * - ghost (outlined pill): every other real action in a section (the mailing
+ *   list in Speakers and Tickets, Open in Maps, Register your interest).
+ * - Navigation ("Venue details", "Full schedule", "The team", "All questions",
+ *   "All speakers", the partner band's "Partnership details") is never a button: it is MoreLink's underlined text and arrow.
+ *
  * Primary (red) or ghost button. Renders a Next <Link> for internal hrefs and
  * a plain <a> for external ones (http(s), mailto, tel and protocol-relative `//host`
  * links; web links open in a new tab). `data-magnetic` opts it into the magnetic hover

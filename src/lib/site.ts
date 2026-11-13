@@ -42,7 +42,32 @@ export const TED_URL = 'https://www.ted.com';
 export const TEDX_MAX_CAPACITY = 100;
 
 /** Schedule item kinds: the admin's options and the labels on the site are the same words. */
-export const SCHEDULE_KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', other: 'Program' } as const;
+export const SCHEDULE_KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', reception: 'Reception', other: 'Program' } as const;
+
+/**
+ * Headings of the partner benefits table (/partners), in this order. The admin's
+ * "Heading" options use the same words; the site writes the event one with the
+ * date ("At the April 23 event").
+ */
+export const BENEFIT_GROUP_LABEL = {
+  web: 'On the website and in video',
+  event: 'At the event',
+  year: 'During the year',
+} as const;
+export type BenefitGroup = keyof typeof BENEFIT_GROUP_LABEL;
+
+/** Accepted range of a team member's class year (People > Team > Class year). */
+export const CLASS_YEAR_MIN = 1950;
+export const CLASS_YEAR_MAX = 2100;
+
+/** "DS" for "David Simmons": first letters of the first and last words. Shown when a team member has no photo. */
+export function initials(name: string): string {
+  const words = name.trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return '';
+  const first = Array.from(words[0])[0] ?? '';
+  const last = words.length > 1 ? (Array.from(words[words.length - 1])[0] ?? '') : '';
+  return `${first}${last}`.toLocaleUpperCase('en-US');
+}
 
 /**
  * TED's required "About TEDx" / "About TED" texts, as pasted from the TEDx

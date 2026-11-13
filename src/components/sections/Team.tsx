@@ -1,6 +1,6 @@
-import Image from 'next/image';
 import type { Settings, TeamMember } from '@/lib/content';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { TeamMark } from '@/components/ui/TeamMark';
 import { TeamMotion } from '@/motion/sections/TeamMotion';
 import { MoreLink } from '@/components/pages/MoreLink';
 import { SectionShell, SectionTitle } from './SectionShell';
@@ -10,23 +10,17 @@ export function teamVisible(settings: Settings, team: TeamMember[]): boolean {
   return settings.sections.showTeam && team.some((m) => m.name);
 }
 
-/** One signatory: the name over a hairline, the role typed beneath it. */
+/** One signatory: their mark (photo or initials) and name over a hairline, the role typed beneath it. */
 function Signature({ member }: { member: TeamMember }) {
   return (
-    <li data-sign>
-      <div data-sign-mark className="flex min-h-14 items-end gap-4 pb-3 sm:min-h-16">
-        {member.photo ? (
-          <Image
-            src={member.photo}
-            alt=""
-            width={64}
-            height={64}
-            className="size-11 shrink-0 rounded-full object-cover grayscale sm:size-12"
-          />
-        ) : null}
-        <p className="min-w-0 text-2xl leading-tight font-light tracking-tight text-balance text-white wrap-anywhere">{member.name}</p>
+    <li data-sign className="min-w-0">
+      <div data-sign-mark className="flex items-center gap-4 pb-3">
+        <TeamMark member={member} size="sm" />
+        <p className="min-w-0 text-xl leading-tight font-light tracking-tight text-balance text-white wrap-anywhere sm:text-2xl">
+          {member.name}
+        </p>
       </div>
-      <div data-sign-line aria-hidden="true" className="h-px bg-white/50" />
+      <div data-sign-line aria-hidden="true" className="h-px bg-white/40" />
       <p data-sign-text className="mt-3 text-base leading-snug text-balance text-mute wrap-anywhere">
         {member.role}
       </p>
@@ -35,9 +29,10 @@ function Signature({ member }: { member: TeamMember }) {
 }
 
 /**
- * The organizing team. Hidden until at least one board member has agreed to be
- * named (People > Team > Show name publicly), so the home page never shows a
- * list of empty signature lines. Only named members are listed.
+ * The organizing team: a compact roster of the board members who agreed to be
+ * named (People > Team > Show name publicly), signed in order. Majors, class
+ * years and LinkedIn links are on /team. Hidden until at least one name is
+ * public, so the home page never shows empty signature lines.
  */
 export function Team({ team, settings }: { team: TeamMember[]; settings: Settings }) {
   if (!teamVisible(settings, team)) return null;
@@ -61,19 +56,21 @@ export function Team({ team, settings }: { team: TeamMember[]; settings: Setting
           </div>
           <p data-reveal="fade" className="max-w-md text-lg text-mute md:col-span-5">
             {settings.eventName} is planned and run by a student board at {settings.venueCampus || 'Santa Clara University'}.
+            The club went dormant after its 2020 event; this board brought it back.
             {more ? ' More of the board will be introduced here.' : null}
           </p>
         </div>
 
         <ul
           data-sign-list
-          className="mt-14 grid gap-y-9 border-t border-white/15 pt-10 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-12 lg:grid-cols-3 lg:gap-x-16"
+          aria-label="The board"
+          className="mt-14 grid gap-y-9 border-t border-white/15 pt-10 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-10 lg:grid-cols-3 lg:gap-x-14"
         >
           {named.map((m) => (
             <Signature key={m.slug} member={m} />
           ))}
         </ul>
-        <MoreLink href="/team" label="The whole team" />
+        <MoreLink href="/team" label="The team" />
       </div>
     </SectionShell>
   );

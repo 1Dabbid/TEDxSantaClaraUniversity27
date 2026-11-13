@@ -3,7 +3,7 @@ import { Arrow } from '@/components/print/Print';
 
 /**
  * The one quiet link at the end of a home section to its own page ("Venue
- * details", "Full schedule", "The whole team", "All questions", "All speakers").
+ * details", "Full schedule", "The team", "All questions", "All speakers").
  * Same place in every section (last, aligned with the section's content column),
  * same look: a fine-print label, a hairline underline on hover, the arrow.
  * See the navigation rule at the top of components/nav.ts.

@@ -1,6 +1,15 @@
 import { collection, config, fields, singleton } from '@keystatic/core';
 import { HTTPS_URL_MESSAGE, HTTPS_URL_PATTERN, SLUG_MESSAGE, SLUG_PATTERN, TIME_PATTERN } from './src/lib/content-checks';
-import { EMAIL_PATTERN, SCHEDULE_KIND_LABEL, SITE_NAME, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './src/lib/site';
+import {
+  BENEFIT_GROUP_LABEL,
+  CLASS_YEAR_MAX,
+  CLASS_YEAR_MIN,
+  EMAIL_PATTERN,
+  SCHEDULE_KIND_LABEL,
+  SITE_NAME,
+  TED_TEXT_MIN_LENGTH,
+  TEDX_MAX_CAPACITY,
+} from './src/lib/site';
 import { THEME_COPY_DEFAULTS as COPY } from './src/lib/theme-copy';
 
 /**
@@ -123,6 +132,13 @@ export default config({
         doorsTime: timeField('Doors open at'),
         talksTime: timeField('Talks start at'),
         endTime: timeField('Event ends at'),
+        timesNote: fields.text({
+          label: 'Note about the times (optional)',
+          description:
+            'One short sentence shown wherever the times appear (Schedule, Venue), e.g. “Times are approximate and may shift slightly.” Leave blank once the times are final.',
+          multiline: true,
+          validation: { length: { max: 240 } },
+        }),
         capacity: fields.integer({
           label: 'Seat capacity (a whole number from 1 to 100)',
           description:
@@ -157,8 +173,8 @@ export default config({
         partnersHeading: copyField('partnersHeading', 'Partners page: heading', BLANK_RESTORES),
         partnersIntro: copyField('partnersIntro', 'Partners page: introduction', `Follows “Become a partner of ${SITE_NAME}.” ${PLACEHOLDERS} ${BLANK_RESTORES}`, { multiline: true }),
         partnersDescription: copyField('partnersDescription', 'Partners page: search and link-preview description', `About 160 characters. ${PLACEHOLDERS} ${BLANK_RESTORES}`, { multiline: true }),
-        partnersEditionFigure: copyField('partnersEditionFigure', 'Partners page: first card, big figure', 'e.g. 1st, 2nd. Only shown with a card title.'),
-        partnersEditionTitle: copyField('partnersEditionTitle', 'Partners page: first card, title', `The first card under “What your support makes possible”, e.g. “The first mainstage.” ${BLANK_HIDES}`),
+        partnersEditionFigure: copyField('partnersEditionFigure', 'Partners page: first card, big figure', 'A year or a short number, e.g. 2020. Keep it to four or five characters. Only shown with a card title.'),
+        partnersEditionTitle: copyField('partnersEditionTitle', 'Partners page: first card, title', `The first card under “What your support makes possible”, e.g. “The first since 2020.” ${BLANK_HIDES}`),
         partnersEditionBody: copyField('partnersEditionBody', 'Partners page: first card, text', PLACEHOLDERS, { multiline: true }),
         notFoundHeading: copyField('notFoundHeading', 'Page not found (404): heading', BLANK_RESTORES),
         notFoundBody: copyField('notFoundBody', 'Page not found (404): text', BLANK_RESTORES),
@@ -256,6 +272,12 @@ export default config({
             'Just the number, e.g. 25 (or 0 for free). TEDx rules cap tickets at $100, so it cannot be more than 100. Used by search engines once tickets are on sale; the visible wording is the Price note above. Leave blank until the price is set.',
           validation: { min: 0, max: 100 },
         }),
+        ticketSaleExpected: fields.text({
+          label: 'Expected on-sale month (optional)',
+          description:
+            'While tickets are Coming soon and there is no exact date yet, e.g. February 2027. The site then says “Tickets are expected to go on sale in February 2027.” Leave blank to say nothing. Search engines never see it.',
+          validation: { length: { max: 40 } },
+        }),
         ticketSaleStart: fields.date({
           label: 'Tickets on sale from (optional)',
           description: 'The first day of ticket sales. Used by search engines once tickets are on sale. Leave blank if unsure.',
@@ -277,6 +299,10 @@ export default config({
           label: 'Application deadline (optional)',
           description: `Written as you want it shown, e.g. January 15, 2027. ${LEAVE_BLANK}`,
         }),
+        interestUrl: urlField(
+          'Interest form link (speak or get involved)',
+          'The club’s interest form: register interest in speaking, join the contact list, help organize. While speaker applications are not open, the Speakers section and /speakers show “Want to speak? Register your interest” with this link, and /team shows “Get involved”. It opens in a new tab. If you change it, also update the FAQ answers that mention it.',
+        ),
       },
     }),
 
@@ -331,7 +357,7 @@ export default config({
         showYearRound: fields.checkbox({
           label: 'Show the “All year, not one night” card on the Partners page',
           description:
-            'Only turn on if TED has confirmed the club’s year-round events may use the TEDx name. The licence covers the mainstage event; general-meeting events are not automatically TEDx events.',
+            'Says the student club runs a speaker workshop series and general-meeting events through the year (it never calls them TEDx events). Keep it on while the partner tiers include year-round benefits. The licence covers the April event; general-meeting events are not automatically TEDx events, so check with the Director of Compliance before changing that wording.',
           defaultValue: false,
         }),
       },
@@ -374,11 +400,12 @@ export default config({
             description: fields.text({ label: 'Description (optional)', multiline: true }),
             kind: fields.select({
               label: 'Kind',
-              description: 'The small label shown next to the item on the site. Use Program for anything else (welcome, reception, closing).',
+              description: 'The small label shown next to the item on the site. Use Reception for doors with drinks or food, and Program for anything else (welcome, closing).',
               options: [
                 { label: SCHEDULE_KIND_LABEL.talk, value: 'talk' },
                 { label: SCHEDULE_KIND_LABEL.break, value: 'break' },
                 { label: SCHEDULE_KIND_LABEL.doors, value: 'doors' },
+                { label: SCHEDULE_KIND_LABEL.reception, value: 'reception' },
                 { label: SCHEDULE_KIND_LABEL.other, value: 'other' },
               ],
               defaultValue: 'talk',
@@ -399,7 +426,7 @@ export default config({
             answer: fields.text({
               label: 'Answer',
               description:
-                'Plain text. Line breaks are kept. Instead of typing details that may change, write a placeholder and the site fills it in: {date} (the event date, e.g. Friday, April 23, 2027), {venue} (the building), {campus} (e.g. Santa Clara University), {capacity} (the seat count) and {eventName} (TEDxSantaClaraUniversity). They also work in the question.',
+                'Plain text. Line breaks are kept. Instead of typing details that may change, write a placeholder and the site fills it in: {date} (the event date, e.g. Friday, April 23, 2027), {venue} (the building), {campus} (e.g. Santa Clara University), {capacity} (the seat count), {eventName} (TEDxSantaClaraUniversity) and {interestUrl} (the Interest form link under Tickets & applications; it becomes a link). They also work in the question.',
               multiline: true,
               validation: { isRequired: true },
             }),
@@ -407,7 +434,7 @@ export default config({
           {
             label: 'Questions',
             description:
-              'To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Each one is numbered as a clause (§ 7.01, § 7.02 …). Answers can use placeholders such as {date}, {venue}, {campus}, {capacity} and {eventName}, filled in from Event basics and Venue; open a question to see what each one means.',
+              'To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Each one is numbered as a clause (§ 7.01, § 7.02 …). Answers can use placeholders such as {date}, {venue}, {campus}, {capacity}, {eventName} and {interestUrl}, filled in from Event basics, Venue and Tickets & applications; open a question to see what each one means.',
             itemLabel: (props) => props.fields.question.value || 'Question',
           },
         ),
@@ -423,13 +450,46 @@ export default config({
             benefit: fields.text({
               label: 'Benefit',
               description:
-                'One line, e.g. “Logo on the thank-you slide”. Only list benefits allowed by TEDx rules (no stage time, no say over the programme).',
+                'One line, e.g. “Reserved seats” or “Logo on the thank-you slide”. Only list benefits allowed by TEDx rules (no stage time, no say over the programme).',
               validation: { isRequired: true },
             }),
-            tiers: fields.multiRelationship({
-              label: 'Included in these tiers',
-              description: 'Click the box and pick each tier; tiers are listed by their slug, e.g. founding-partner.',
-              collection: 'tiers',
+            group: fields.select({
+              label: 'Heading',
+              description: 'Which heading of the comparison table this benefit sits under. Benefits keep the order of this list within each heading.',
+              options: [
+                { label: BENEFIT_GROUP_LABEL.web, value: 'web' },
+                { label: `${BENEFIT_GROUP_LABEL.event} (the site adds the date, e.g. “At the April 23 event”)`, value: 'event' },
+                { label: BENEFIT_GROUP_LABEL.year, value: 'year' },
+              ],
+              defaultValue: 'event',
+            }),
+            included: fields.array(
+              fields.object({
+                tier: fields.relationship({
+                  label: 'Tier',
+                  description: 'Click the box and pick the tier; tiers are listed by their slug, e.g. cornerstone-partner.',
+                  collection: 'tiers',
+                }),
+                detail: fields.text({
+                  label: 'What this tier gets (optional)',
+                  description:
+                    'A word or two shown in the table for this tier, e.g. “Largest logo”, “Named”, “4”. Leave blank for a plain “included” dot.',
+                  validation: { length: { max: 40 } },
+                }),
+              }),
+              {
+                label: 'Tiers that include it',
+                description:
+                  'Click Add once for each tier that gets this benefit. A tier that is not listed shows a dash (not included).',
+                itemLabel: (props) =>
+                  [props.fields.tier.value ?? 'Tier', props.fields.detail.value].filter(Boolean).join(': '),
+              },
+            ),
+            toBeConfirmed: fields.checkbox({
+              label: 'Still to be confirmed',
+              description:
+                'Tick while the benefit still needs a yes from TED or the venue (ask the Director of Compliance). The table then shows a small “to be confirmed” note next to it.',
+              defaultValue: false,
             }),
           }),
           {
@@ -437,6 +497,20 @@ export default config({
             description:
               'Rows of the comparison table on /partners. While this list is empty, the page says the schedule of benefits is being finalized.',
             itemLabel: (props) => props.fields.benefit.value || 'Benefit',
+          },
+        ),
+        notes: fields.array(
+          fields.text({
+            label: 'Line',
+            description: 'One short sentence, e.g. “Amounts are per academic year.”',
+            multiline: true,
+            validation: { length: { max: 300 } },
+          }),
+          {
+            label: 'Small print under the tiers',
+            description:
+              'Short sentences shown as numbered terms under the partnership tiers on /partners: what the amounts cover, deadlines, in-kind support. Leave the list empty to show none.',
+            itemLabel: (props) => props.value || 'Line',
           },
         ),
       },
@@ -515,12 +589,28 @@ export default config({
         name: fields.text({ label: 'Name (optional)', description: 'Only shown when “Show name publicly” is ticked.' }),
         showName: fields.checkbox({
           label: 'Show name publicly',
-          description: 'Ask the person first. Unticked = only the role is shown.',
+          description:
+            'Ask the person first. Unticked = only the role is shown, on /team only. Ticked: the name and the details below appear on the home page and /team.',
           defaultValue: false,
         }),
+        major: fields.text({
+          label: 'Major (optional)',
+          description: 'As it should appear, e.g. Mechanical Engineering. Minors can be left out to keep it short.',
+          validation: { length: { max: 80 } },
+        }),
+        classYear: fields.integer({
+          label: 'Class year (optional)',
+          description: 'The graduation year as four digits, e.g. 2029. Shown as “Class of 2029”. Leave blank to hide.',
+          validation: { min: CLASS_YEAR_MIN, max: CLASS_YEAR_MAX },
+        }),
+        linkedin: urlField(
+          'LinkedIn profile (optional)',
+          'The person’s own LinkedIn page, e.g. https://www.linkedin.com/in/their-name. Opens in a new tab. Never add a personal email address or phone number anywhere on the site.',
+        ),
         photo: fields.image({
           label: 'Photo (optional)',
-          description: 'Square headshot: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG). Only shown together with the name.',
+          description:
+            'Square headshot: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG), about 600×600 px. Shown in black and white, only together with the name. Without a photo the site shows the person’s initials.',
           directory: 'public/images/team',
           publicPath: '/images/team/',
         }),
@@ -535,10 +625,10 @@ export default config({
       columns: ['name', 'order'],
       schema: {
         name: fields.slug({
-          name: { label: 'Tier name', description: 'e.g. Founding Partner' },
+          name: { label: 'Tier name', description: 'e.g. Cornerstone Partner' },
           slug: slugPart(
             'Slug',
-            'Made from the tier name. Leave it as generated: partner benefits and logos refer to the tier by it (e.g. founding-partner).',
+            'Made from the tier name. Leave it as generated: partner benefits and logos refer to the tier by it (e.g. cornerstone-partner).',
           ),
         }),
         description: fields.text({ label: 'Description', description: 'One or two sentences.', multiline: true }),
@@ -548,7 +638,8 @@ export default config({
         }),
         slots: fields.integer({
           label: 'Number of slots (optional)',
-          description: 'How many partners this tier can have. Leave blank to hide.',
+          description:
+            'How many partners this tier can have, shown as “1 available”. Leave blank for no limit: once a Contribution is filled in, the site then shows “Open”.',
           validation: { min: 1 },
         }),
         order: fields.integer({ label: 'Order', description: 'Lower numbers come first.', defaultValue: 0 }),
@@ -567,7 +658,7 @@ export default config({
         }),
         tier: fields.relationship({
           label: 'Tier',
-          description: 'Tiers are listed by their slug, e.g. founding-partner for Founding Partner.',
+          description: 'Tiers are listed by their slug, e.g. cornerstone-partner for Cornerstone Partner.',
           collection: 'tiers',
         }),
         logo: fields.image({

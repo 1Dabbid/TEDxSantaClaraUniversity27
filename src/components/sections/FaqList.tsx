@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { FaqItem } from '@/lib/content';
 
 /**
@@ -12,8 +13,38 @@ import type { FaqItem } from '@/lib/content';
  * the motion engine's pushState navigation never updates.
  */
 const answer = (text: string) => (
-  <p className="min-w-0 max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{text}</p>
+  <p className="min-w-0 max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{linkify(text)}</p>
 );
+
+/** A full https:// address in an answer, minus trailing punctuation that ends the sentence. */
+const URL_IN_TEXT = /(https:\/\/[^\s<>"]+[^\s<>".,;:!?)\]])/;
+
+/**
+ * Answers are plain text; a full https:// address typed in one becomes a link
+ * (new tab, announced), shown without the https:// prefix. Nothing else is
+ * interpreted, and only https links are ever made.
+ */
+export function linkify(text: string): ReactNode {
+  const parts = text.split(URL_IN_TEXT);
+  if (parts.length === 1) return text;
+  return parts.map((part, i) =>
+    i % 2 === 1 ? (
+      <a
+        key={i}
+        href={part}
+        target="_blank"
+        rel="noopener noreferrer"
+        data-faq-link
+        className="text-white underline decoration-white/40 underline-offset-[0.2em] hover:decoration-white focus-visible:decoration-white"
+      >
+        {part.replace(/^https:\/\//, '').replace(/\/$/, '')}
+        <span className="sr-only"> (opens in a new tab)</span>
+      </a>
+    ) : (
+      part
+    ),
+  );
+}
 
 export function FaqList({ items, ids, className = '' }: { items: FaqItem[]; ids?: string[]; className?: string }) {
   return (

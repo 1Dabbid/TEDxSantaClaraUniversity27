@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import type { ReactNode } from 'react';
+import { Children, type ReactNode } from 'react';
 import type { Settings } from '@/lib/content';
 import { EventName } from '@/components/ui/KeepCase';
 import { Tba } from '@/components/print/Print';
@@ -80,6 +80,7 @@ export function PageHeader({
   title,
   intro,
   facts = [],
+  factsNote,
   children,
 }: {
   settings: Settings;
@@ -89,6 +90,8 @@ export function PageHeader({
   title: ReactNode;
   intro: ReactNode;
   facts?: Fact[];
+  /** One small line under the facts, e.g. that the times are approximate. */
+  factsNote?: ReactNode;
   /** Actions under the introduction. */
   children?: ReactNode;
 }) {
@@ -114,7 +117,8 @@ export function PageHeader({
       <p data-reveal="fade" className="mt-8 max-w-2xl text-lg text-pretty text-mute sm:mt-10 sm:text-xl">
         {intro}
       </p>
-      {children ? <div className="mt-10 flex flex-wrap gap-3">{children}</div> : null}
+      {/* Children.toArray drops null/false, so a page passing only conditional actions gets no empty row. */}
+      {Children.toArray(children).length ? <div className="mt-10 flex flex-wrap gap-3">{children}</div> : null}
       {facts.length ? (
         <dl
           data-reveal="stagger"
@@ -130,6 +134,16 @@ export function PageHeader({
           ))}
         </dl>
       ) : null}
+      {factsNote ? (
+        <p data-reveal="fade" data-times-note className="mt-6 max-w-2xl text-sm text-mute">
+          {factsNote}
+        </p>
+      ) : null}
     </div>
   );
+}
+
+/** The times note (Event basics), only while at least one time is shown. */
+export function timesNoteOf(s: Settings): string {
+  return s.timesNote && (s.doorsTime || s.talksTime || s.endTime) ? s.timesNote : '';
 }

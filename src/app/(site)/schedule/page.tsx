@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { ClauseNo, JsonLd } from '@/components/print/Print';
 import { ScheduleTimeline } from '@/components/sections/ScheduleTimeline';
 import { TicketsClosingBand } from '@/components/pages/ClosingBand';
-import { PageHeader, TopicPage, timeFacts } from '@/components/pages/PageHeader';
+import { PageHeader, TopicPage, timeFacts, timesNoteOf } from '@/components/pages/PageHeader';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [s, schedule] = await Promise.all([getSettings(), getSchedule()]);
@@ -52,7 +52,7 @@ export default async function SchedulePage() {
             <>
               Live talks at the {settings.venueName} on <time dateTime={settings.dateISO}>{settings.dateLong}</time>
               {published
-                ? ': doors, talks and breaks, in order.'
+                ? ', from doors to close.'
                 : '. The running order is published here once the speakers are confirmed.'}
             </>
           }
@@ -60,6 +60,7 @@ export default async function SchedulePage() {
             { k: 'Date', v: <time dateTime={settings.dateISO}>{settings.dateLong}</time> },
             ...timeFacts(settings),
           ]}
+          factsNote={timesNoteOf(settings)}
         />
       </section>
 
@@ -71,7 +72,10 @@ export default async function SchedulePage() {
               Running order
             </h2>
             {published ? (
-              <p className="mt-4 max-w-xs text-mute">Every moment of the evening, in order.</p>
+              <p className="mt-4 max-w-xs text-mute">
+                {/* While the times carry the approximate note, only the outline is published. */}
+                {timesNoteOf(settings) ? 'The evening at a glance.' : 'Every moment of the evening, in order.'}
+              </p>
             ) : null}
           </div>
           <div className="md:col-span-8">
@@ -84,7 +88,7 @@ export default async function SchedulePage() {
                 <div className="mt-10">
                   <p className="fine-print text-mute">Hear it first</p>
                   <div className="mt-4">
-                    <Button href={listHref} size="lg">
+                    <Button href={listHref} variant="ghost" size="lg">
                       Join the mailing list
                     </Button>
                   </div>

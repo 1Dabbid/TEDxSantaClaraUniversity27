@@ -65,7 +65,7 @@ test.describe('links', () => {
 });
 
 test('slugs: lowercase letters, numbers and dashes only', () => {
-  for (const ok of ['jane-doe', 'speaker-01', 'founding-partner', 'a']) expect(isValidSlug(ok), ok).toBe(true);
+  for (const ok of ['jane-doe', 'speaker-01', 'cornerstone-partner', 'a']) expect(isValidSlug(ok), ok).toBe(true);
   for (const bad of ['Jane Doe!', 'Jane-Doe', 'jane_doe', '-jane', 'jane-', 'jane--doe', '', 'jané']) expect(isValidSlug(bad), bad).toBe(false);
 });
 
@@ -98,6 +98,9 @@ test('FAQ placeholders are filled in; unknown ones are reported', () => {
   const r = fillPlaceholders('{eventName}: {date}, at the {venue} on the {campus} campus, {capacity} seats. {price}', values);
   expect(r.text).toBe('TEDxSantaClaraUniversity: Friday, April 23, 2027, at the Locatelli Student Activity Center on the Santa Clara University campus, 100 seats. {price}');
   expect(r.unknown).toEqual(['{price}']);
+  // {interestUrl} is known only where a value is passed (FAQ answers), not in theme copy.
+  expect(fillPlaceholders('Form: {interestUrl}.', values).unknown).toEqual(['{interestUrl}']);
+  expect(fillPlaceholders('Form: {interestUrl}.', { ...values, interestUrl: 'https://example.com' }).text).toBe('Form: https://example.com.');
 });
 
 test('Theme copy: blanks fall back to the defaults, optional lines can be hidden, placeholders are filled', () => {
@@ -113,7 +116,7 @@ test('Theme copy: blanks fall back to the defaults, optional lines can be hidden
   expect(c.heroFootnote).toBe('');
   expect(c.partnersEditionTitle).toBe('');
   expect(c.partnersIntro).toBe('Up to 80 guests at the Example Hall. {typo}');
-  expect(c.partnerBandBody).toContain('TEDxSantaClaraUniversity is student-run');
+  expect(c.partnerBandBody).toContain('TEDxSantaClaraUniversity returns, student-run');
   expect(c.partnerBandBody).toContain('80 seats');
   expect(contentWarnings().some((w) => w.file === 'content/theme-copy.yaml' && w.message.includes('{typo}'))).toBe(true);
 });

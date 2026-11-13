@@ -11,7 +11,7 @@ import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, CropMarks, JsonLd, Tba } from '@/components/print/Print';
 import { Reticle } from '@/components/sections/Venue';
 import { TicketsClosingBand } from '@/components/pages/ClosingBand';
-import { PageHeader, TopicPage, timeFacts } from '@/components/pages/PageHeader';
+import { PageHeader, TopicPage, timeFacts, timesNoteOf } from '@/components/pages/PageHeader';
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -182,10 +182,11 @@ export default async function VenuePage() {
             { k: 'Date', v: <time dateTime={settings.dateISO}>{settings.dateLong}</time> },
             ...timeFacts(settings),
           ]}
+          factsNote={timesNoteOf(settings)}
         >
           {/* The address (in the intro) and the map come first: they are why most visitors open this page. */}
           {settings.mapUrl ? (
-            <Button href={settings.mapUrl} size="lg" className="w-full sm:w-auto sm:min-w-72">
+            <Button href={settings.mapUrl} variant="ghost" size="lg" className="w-full sm:w-auto sm:min-w-72">
               Open in Maps
               <span className="sr-only">: {venueLine(settings)}</span>
               <Arrow

@@ -13,9 +13,20 @@ import {
   SLUG_MESSAGE,
   TIME_PATTERN,
 } from './content-checks';
-import { checkImage } from './content-images';
+import { checkImage, findTeamPhoto } from './content-images';
 import { formatCalendarDate } from './dates';
-import { EMAIL_PATTERN, SITE_NAME, TED_LANGUAGE_DEFAULTS, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './site';
+import {
+  BENEFIT_GROUP_LABEL,
+  CLASS_YEAR_MAX,
+  CLASS_YEAR_MIN,
+  type SCHEDULE_KIND_LABEL,
+  type BenefitGroup,
+  EMAIL_PATTERN,
+  SITE_NAME,
+  TED_LANGUAGE_DEFAULTS,
+  TED_TEXT_MIN_LENGTH,
+  TEDX_MAX_CAPACITY,
+} from './site';
 import type { ThemeCopy } from './theme-copy';
 
 /**
@@ -40,9 +51,9 @@ import type { ThemeCopy } from './theme-copy';
  * the event date, TED's texts, emails), so the lenient reader stays quiet about them.
  */
 const LOADER_CHECKED = new Set([
-  'mapUrl', 'ticketUrl', 'ticketEmbedUrl', 'speakerApplicationsUrl', 'newsletterUrl', 'livestreamUrl',
+  'mapUrl', 'ticketUrl', 'ticketEmbedUrl', 'speakerApplicationsUrl', 'interestUrl', 'newsletterUrl', 'livestreamUrl',
   'instagram', 'linkedin', 'youtube', 'tiktok', 'link', 'url',
-  'doorsTime', 'talksTime', 'endTime', 'dateISO', 'aboutTedx', 'aboutTed', 'contactEmail', 'partnershipsEmail',
+  'doorsTime', 'talksTime', 'endTime', 'dateISO', 'aboutTedx', 'aboutTed', 'contactEmail', 'partnershipsEmail', 'classYear',
 ]);
 
 type FieldNode = {
@@ -286,6 +297,8 @@ export type Settings = {
   /** When the talks begin ("6:00 PM"), '' while unknown. Structured data falls back to doorsTime. */
   talksTime: string;
   endTime: string;
+  /** One sentence shown wherever the times appear ("Times are approximate…"), or ''. */
+  timesNote: string;
   /** Seat capacity, 1..100 (TEDx licence cap). The single source for every seat count on the site. */
   capacity: number;
   venueName: string;
@@ -309,9 +322,13 @@ export type Settings = {
   ticketPrice: number | null;
   /** First day of ticket sales, "YYYY-MM-DD", or '' while not set. */
   ticketSaleStart: string;
+  /** When sales are expected to open, as written ("February 2027"), '' while unknown. Shown while coming soon. */
+  ticketSaleExpected: string;
   speakerApplicationsState: ApplicationsState;
   speakerApplicationsUrl: string;
   speakerApplicationsDeadline: string;
+  /** The club's interest form (speak, contact list, organize), '' when not set. */
+  interestUrl: string;
   newsletterUrl: string;
   contactEmail: string;
   partnershipsEmail: string;
@@ -343,7 +360,7 @@ export type ScheduleItem = {
   time: string;
   title: string;
   description: string;
-  kind: 'talk' | 'break' | 'doors' | 'other';
+  kind: keyof typeof SCHEDULE_KIND_LABEL;
 };
 
 export type Schedule = { published: boolean; items: ScheduleItem[] };
@@ -353,7 +370,14 @@ export type FaqItem = { question: string; answer: string };
 export type TeamMember = {
   slug: string;
   role: string;
+  /** null while the person has not agreed to be named; the fields below are then empty too. */
   name: string | null;
+  /** "Mechanical Engineering", '' when not given. */
+  major: string;
+  /** 2029 (shown as "Class of 2029"), or null. */
+  classYear: number | null;
+  /** Their LinkedIn profile (https), '' when not given. */
+  linkedin: string;
   photo: string | null;
   order: number;
 };
@@ -378,8 +402,18 @@ export type Sponsor = {
 /** TED's required "About TEDx" / "About TED" texts, pasted verbatim by Compliance. */
 export type TedLanguage = { aboutTedx: string; aboutTed: string };
 
-/** A row of the partner benefits comparison: which tier slugs include it. */
-export type PartnerBenefit = { benefit: string; tiers: string[] };
+/**
+ * A row of the partner benefits comparison. `tiers`: the slugs of the tiers that
+ * include it; `details`: what each of those tiers gets, by slug ('' = a plain
+ * "included"). `group` is the heading it sits under (BENEFIT_GROUP_LABEL).
+ */
+export type PartnerBenefit = {
+  benefit: string;
+  group: BenefitGroup;
+  tiers: string[];
+  details: Record<string, string>;
+  toBeConfirmed: boolean;
+};
 
 export const PLACEHOLDER_SPEAKER_NAME = 'Speaker to be announced';
 
@@ -467,6 +501,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
     doorsTime: time(s.doorsTime, 'Doors open at'),
     talksTime: time(s.talksTime, 'Talks start at'),
     endTime: time(s.endTime, 'Event ends at'),
+    timesNote: str(s.timesNote),
     capacity: capacityOf(s.capacity),
     accentColor: /^#[0-9a-f]{6}$/i.test(s.accentColor) ? s.accentColor : ACCENT_FALLBACK,
 
@@ -494,9 +529,11 @@ export const getSettings = cache(async (): Promise<Settings> => {
     ticketPriceNote: str(tickets?.ticketPriceNote),
     ticketPrice: priceOf(tickets?.ticketPrice),
     ticketSaleStart: str(tickets?.ticketSaleStart),
+    ticketSaleExpected: str(tickets?.ticketSaleExpected),
     speakerApplicationsState: tickets?.speakerApplicationsState ?? 'coming-soon',
     speakerApplicationsUrl: link(tickets?.speakerApplicationsUrl, T, 'Speaker application link'),
     speakerApplicationsDeadline: str(tickets?.speakerApplicationsDeadline),
+    interestUrl: link(tickets?.interestUrl, T, 'Interest form link'),
 
     newsletterUrl: link(contact?.newsletterUrl, C, 'Newsletter sign-up link'),
     contactEmail: email(contact?.contactEmail, 'contactEmail'),
@@ -549,9 +586,9 @@ export const getSchedule = cache(async (): Promise<Schedule> => {
 });
 
 /**
- * FAQ questions and answers may write {capacity}, {date}, {venue}, {campus} and
- * {eventName}; they are filled in from Event basics and Venue, so answers never go
- * stale when those change. An unknown {placeholder} is left as typed, with a warning.
+ * FAQ questions and answers may write {capacity}, {date}, {venue}, {campus},
+ * {eventName} and {interestUrl}; they are filled in from Event basics, Venue and
+ * Tickets & applications, so answers never go stale when those change. An unknown {placeholder} is left as typed, with a warning.
  */
 export const getFaq = cache(async (): Promise<FaqItem[]> => {
   const [f, s] = await Promise.all([readSingleton('faq'), getSettings()]);
@@ -561,14 +598,22 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
     venue: s.venueName,
     campus: s.venueCampus || s.venueName,
     eventName: s.eventName,
+    interestUrl: s.interestUrl,
   };
   const fill = (text: string, n: number) => {
+    if (!s.interestUrl && text.includes('{interestUrl}')) {
+      contentWarning(
+        'content/faq.yaml',
+        `Questions › item ${n}`,
+        '{interestUrl} is used but Tickets & applications › Interest form link is empty, so the answer has a gap where the link was. Reword the answer or add the link.',
+      );
+    }
     const r = fillPlaceholders(text, values);
     for (const u of r.unknown) {
       contentWarning(
         'content/faq.yaml',
         `Questions › item ${n}`,
-        `${u} is not a known placeholder (use {capacity}, {date}, {venue}, {campus} or {eventName}); it is shown as typed.`,
+        `${u} is not a known placeholder (use {capacity}, {date}, {venue}, {campus}, {eventName} or {interestUrl}); it is shown as typed.`,
       );
     }
     return r.text;
@@ -578,16 +623,38 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
     .map((i, n) => ({ question: fill(i.question, n + 1), answer: fill(i.answer, n + 1) }));
 });
 
+/** A class year such as 2029, or null (hidden) with a warning when it is not a plausible year. */
+function classYearOf(v: number | null | undefined, file: string): number | null {
+  if (v === null || v === undefined) return null;
+  if (Number.isInteger(v) && v >= CLASS_YEAR_MIN && v <= CLASS_YEAR_MAX) return v;
+  contentWarning(file, 'Class year', `"${v}" is not a four-digit year like 2029, so the class year is hidden.`);
+  return null;
+}
+
+/**
+ * The board. Name, details and photo only for people who agreed to be named
+ * (Show name publicly + a name); everyone else is just their role. No email
+ * address or phone number is ever part of a team member.
+ *
+ * Photo: the uploaded Photo field, or, when it is empty, a file dropped in at
+ * the path the admin itself would use: public/images/team/<slug>/photo.jpg (or
+ * .jpeg, .png, .webp). Either way it goes through the same image checks.
+ */
 export const getTeam = cache(async (): Promise<TeamMember[]> => {
   const entries = await readCollection('team');
   return entries
     .map(({ slug, entry }) => {
       const visible = entry.showName && Boolean(str(entry.name));
+      const file = entryFile('team', slug);
+      const photo = str(entry.photo) || findTeamPhoto(slug);
       return {
         slug,
         role: entry.role,
         name: visible ? str(entry.name) : null,
-        photo: visible ? checkImage(entry.photo, { file: entryFile('team', slug), field: 'Photo' }) : null,
+        major: visible ? str(entry.major) : '',
+        classYear: visible ? classYearOf(entry.classYear, file) : null,
+        linkedin: visible ? link(entry.linkedin, file, 'LinkedIn profile') : '',
+        photo: visible ? checkImage(photo, { file, field: 'Photo' }) : null,
         order: entry.order ?? 0,
       };
     })
@@ -622,11 +689,39 @@ export const getSponsors = cache(async (): Promise<Sponsor[]> => {
     .sort((a, b) => a.name.localeCompare(b.name));
 });
 
+const BENEFIT_GROUPS = Object.keys(BENEFIT_GROUP_LABEL) as BenefitGroup[];
+
+/**
+ * Partner benefits, grouped by heading (web, event, year) and in list order within
+ * each. A tier picked twice for the same benefit keeps its first detail, with a warning.
+ */
 export const getPartnerBenefits = cache(async (): Promise<PartnerBenefit[]> => {
   const b = await readSingleton('benefits');
-  return (b?.items ?? [])
-    .map((i) => ({ benefit: str(i.benefit), tiers: i.tiers.filter(isValidSlug) }))
-    .filter((i) => i.benefit);
+  const rows = (b?.items ?? []).map((i, n) => {
+    const details: Record<string, string> = {};
+    for (const inc of i.included ?? []) {
+      const tier = inc.tier ?? '';
+      if (!isValidSlug(tier)) continue;
+      if (tier in details) {
+        contentWarning(
+          'content/benefits.yaml',
+          `Benefits comparison › item ${n + 1} › Tiers that include it`,
+          `${tier} is listed twice; the site uses the first one.`,
+        );
+        continue;
+      }
+      details[tier] = str(inc.detail);
+    }
+    const group: BenefitGroup = BENEFIT_GROUPS.includes(i.group as BenefitGroup) ? (i.group as BenefitGroup) : 'event';
+    return { benefit: str(i.benefit), group, tiers: Object.keys(details), details, toBeConfirmed: Boolean(i.toBeConfirmed) };
+  });
+  return BENEFIT_GROUPS.flatMap((g) => rows.filter((r) => r.benefit && r.group === g));
+});
+
+/** The small print under the tiers on /partners (Partner benefits > Small print under the tiers). */
+export const getPartnerNotes = cache(async (): Promise<string[]> => {
+  const b = await readSingleton('benefits');
+  return (b?.notes ?? []).map((t) => str(t)).filter(Boolean);
 });
 
 export const getTedLanguage = cache(async (): Promise<TedLanguage> => {
