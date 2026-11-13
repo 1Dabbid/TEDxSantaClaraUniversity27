@@ -11,7 +11,7 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
-import { MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE, STAND_TOP_Y } from './layout';
+import { MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE } from './layout';
 import { EMPTY_MASK } from './textures';
 
 /** Tangent of the overhead spot's nominal half-angle (the beam just covers the rug). */
@@ -176,6 +176,12 @@ function patch(material: MeshStandardMaterial, key: string, p: Patch) {
       .replace('#include <alphatest_fragment>', `{\n${p.alphaBody ?? ''}\n}\n#include <alphatest_fragment>`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\nfloat ccMul = 1.0;\nfloat sheenMul = 1.0;\n{\n${p.fragmentBody}\n}`)
       .replace('material.clearcoat = clearcoat;', 'material.clearcoat = clearcoat * ccMul;')
+      // In the floor reflection (mirrored camera below the deck) every surface fades with its height
+      // above the floor, like a reflection in a satin finish: contact is sharp and full, a metre up is gone.
+      .replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>\nif (cameraPosition.y < 0.0) gl_FragColor.rgb *= exp(-max(vWorld.y, 0.0) / ${REFL_FADE.toFixed(2)});`,
+      )
       .replace('material.sheenColor = sheenColor;', 'material.sheenColor = sheenColor * sheenMul;');
     if (p.noEnv) shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_maps>', '');
   };
@@ -183,7 +189,9 @@ function patch(material: MeshStandardMaterial, key: string, p: Patch) {
   material.userData.patchUniforms = p.uniforms;
 }
 
-const lin = (hex: string) => new Color(hex); // Color() converts sRGB hex to linear working space
+const lin = (hex: string) => new Color(hex);
+/** Height (m) over which a surface's floor reflection fades out (1/e). */
+const REFL_FADE = 0.3; // Color() converts sRGB hex to linear working space
 
 /* ------------------------------------------------------------------------- */
 /* Microphone                                                                */
@@ -540,25 +548,29 @@ export function createFloorMaterial(cheap: boolean) {
     noEnv: true,
     uniforms: {
       uRugR: { value: RUG_RADIUS },
-      uStand: { value: [STAND_BASE.x, STAND_BASE.z] },
-      uH: { value: SPOT_HEIGHT },
-      uTanA: { value: SPOT_TAN },
-      uStandTop: { value: STAND_TOP_Y + 0.12 },
     },
-    fragmentHead: `uniform float uRugR; uniform vec2 uStand; uniform float uH; uniform float uTanA; uniform float uStandTop; uniform sampler2D uRefl; uniform mat4 uReflMat; uniform float uReflOn;
+    fragmentHead: `uniform float uRugR; uniform sampler2D uRefl; uniform mat4 uReflMat; uniform float uReflOn;
       float sdBox(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }`,
     fragmentBody: `
       vec2 p = vWorld.xz;
       float rr = length(p);
-      // Contact shadows: tight under the rug lip, broad around it, stand base.
+      // Contact shadows: tight under the rug lip, broad around it (the stand stands on the rug).
       float ao = 1.0 - 0.8 * (1.0 - smoothstep(uRugR, uRugR + 0.05, rr)) - 0.15 * (1.0 - smoothstep(uRugR, uRugR + 0.4, rr));
-      ao *= 1.0 - 0.75 * (1.0 - smoothstep(0.13, 0.32, length(p - uStand)));
       ao = max(ao, 0.0);
       diffuseColor.rgb *= ao;
       float broad = vnoise(p * 0.35) * 0.6 + vnoise(p * 1.3 + 4.0) * 0.4;
       float scuff = vnoise(p * vec2(9.0, 2.0) + 2.0) * vnoise(p * 24.0);
       roughnessFactor = clamp(0.5 + 0.14 * broad + 0.08 * scuff, 0.05, 1.0) + (1.0 - ao) * 0.3;
       diffuseColor.rgb *= 0.85 + 0.3 * broad;
+      // Boards running up and down stage: a fine, slightly rougher seam every 14 cm (box-filtered,
+      // gone once it is under a pixel wide), and a faint tone change from board to board.
+      float bx = p.x / 0.142;
+      float fwb = fwidth(bx) + 1e-5;
+      float dSeam = abs(fract(bx + 0.5) - 0.5);
+      float seam = (1.0 - smoothstep(0.012, 0.012 + fwb, dSeam)) * (1.0 - smoothstep(0.08, 0.3, fwb));
+      float board = hash11(floor(bx) + 3.0);
+      diffuseColor.rgb *= (0.94 + 0.12 * board) * (1.0 - 0.35 * seam);
+      roughnessFactor = clamp(roughnessFactor + 0.04 * (board - 0.5) + 0.15 * seam, 0.05, 1.0);
       // Spike tape: a T downstage centre, two corner marks.
       vec2 q = p - vec2(0.0, uRugR + 0.32);
       float d = min(sdBox(q, vec2(0.12, 0.024)), sdBox(q - vec2(0.0, 0.085), vec2(0.024, 0.07)));
@@ -571,19 +583,6 @@ export function createFloorMaterial(cheap: boolean) {
       float wear = 0.8 + 0.3 * vnoise(p * 300.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.09, 0.09, 0.085) * wear, tape);
       roughnessFactor = mix(roughnessFactor, 0.75, tape);
-      // Shadow of the stand cast by the overhead spot: a soft radial streak from the base outwards
-      // (penumbra widening with height, from the lens size), ending in the mic's blob.
-      vec2 sd = normalize(uStand);
-      float sr = length(uStand);
-      float along = dot(p, sd);
-      float across = abs(dot(p, vec2(-sd.y, sd.x)));
-      float hgt = clamp(uH * (1.0 - sr / max(along, 1e-3)), 0.0, uH);
-      float sEnd = sr * uH / (uH - uStandTop);
-      float pen = 0.012 + 0.11 * hgt / max(uH - hgt, 0.1);
-      float streak = (1.0 - smoothstep(pen * 0.35, pen + 0.012, across)) * smoothstep(sr - 0.02, sr + 0.04, along) * (1.0 - smoothstep(sEnd - 0.02, sEnd + 0.03, along));
-      float blob = 1.0 - smoothstep(0.03, 0.1, length(p - sd * (sEnd + 0.06)));
-      float sh = clamp(max(streak * 0.85, blob * 0.6), 0.0, 1.0);
-      diffuseColor.rgb *= 1.0 - sh;
       // Warm spill from the spot's soft outer field: a bright ring hugging the rug that dies into
       // the dark within a couple of metres (the room around the pool reads as black).
       float outside = smoothstep(uRugR - 0.02, uRugR + 0.02, rr);
@@ -591,11 +590,12 @@ export function createFloorMaterial(cheap: boolean) {
       float spill = exp(-dr / 0.75) * 0.8 + exp(-dr / 0.22) * 0.9;
       totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.93, 0.85) * spill * outside * uSpot * 3.2;
       // Red bounce spilling off the rug onto the polished deck.
-      totalEmissiveRadiance += vec3(0.8, 0.0, 0.021) * (exp(-dr / 0.3) * 0.075 + exp(-dr / 0.9) * 0.02) * outside * (1.0 - sh * 0.7) * uSpot;
-      // Scuffs: faint arcs and drag marks that break the reflection up.
+      totalEmissiveRadiance += vec3(0.8, 0.0, 0.021) * (exp(-dr / 0.3) * 0.075 + exp(-dr / 0.9) * 0.02) * outside * uSpot;
+      // Scuffs: faint, continuous drag marks that break the reflection up (no thresholds, so no
+      // islands or speckles for the bloom to find).
       float sc1 = vnoise(vec2(dot(p, vec2(0.8, 0.6)) * 3.0, dot(p, vec2(-0.6, 0.8)) * 40.0));
       float sc2 = vnoise(vec2(length(p - vec2(0.6, 1.9)) * 55.0, atan(p.y - 1.9, p.x - 0.6) * 2.0));
-      float scuff2 = smoothstep(0.8, 0.98, sc1) * 0.35 + smoothstep(0.85, 0.99, sc2) * 0.25 * exp(-rr * 0.4);
+      float scuff2 = sc1 * sc1 * 0.14 + sc2 * 0.06 * exp(-rr * 0.4);
       roughnessFactor = clamp(roughnessFactor + scuff2 * 0.25, 0.05, 1.0);
       vec3 Vd = normalize(vWorld - cameraPosition);
       float fres = 0.04 + 0.96 * pow(1.0 - clamp(-Vd.y, 0.0, 1.0), 5.0);
@@ -645,8 +645,8 @@ export function createRugMaterial(cheap: boolean) {
   m.alphaToCoverage = true;
   patch(m, `rug-${cheap ? 1 : 0}`, {
     noEnv: true,
-    uniforms: { uR: { value: RUG_RADIUS }, uRed: { value: TEDX_RED } },
-    fragmentHead: 'uniform float uR; uniform vec3 uRed;',
+    uniforms: { uR: { value: RUG_RADIUS }, uRed: { value: TEDX_RED }, uFoot: { value: [STAND_BASE.x, STAND_BASE.z] } },
+    fragmentHead: 'uniform float uR; uniform vec3 uRed; uniform vec2 uFoot;',
     alphaBody: `
       vec2 pa = vWorld.xz;
       float ang = atan(pa.y, pa.x);
@@ -683,6 +683,10 @@ export function createRugMaterial(cheap: boolean) {
       // on top), so the circle reads as lit from above rather than as a flat red disc.
       float hot = 0.14 + 1.2 * exp(-rr * rr / 0.85);
       diffuseColor.rgb *= (0.64 + 0.58 * fib) * (0.94 + 0.12 * nap) * (1.0 - 0.35 * edge) * hot * mix(1.0, 0.6, wallF);
+      // The stand's foot stands in the middle of the pool: a tight contact shadow where the cast base
+      // presses into the pile, and the soft penumbra of the base and the mic under the overhead spot.
+      float dFoot = length(p - uFoot);
+      diffuseColor.rgb *= (1.0 - 0.7 * (1.0 - smoothstep(0.148, 0.2, dFoot))) * (1.0 - 0.3 * (1.0 - smoothstep(0.15, 0.42, dFoot)));
       roughnessFactor = 1.0;
       // The rug is only lit by the overhead spot: keep it dark when the spot is down.
       float lit = clamp(uSpot * 4.0, 0.0, 1.0);

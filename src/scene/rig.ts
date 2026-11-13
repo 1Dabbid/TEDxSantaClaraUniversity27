@@ -47,6 +47,9 @@ export function createRig() {
     roll: new Damped(0),
     keyDir: new DampedVec3(),
     keyCam: new Damped(0),
+    /** Screen anchor of the target (lens shift), fractions from the left / top. */
+    shiftX: new Damped(0.5),
+    shiftY: new Damped(0.5),
     px: new Damped(0),
     py: new Damped(0),
     J: new Damped(0),
@@ -83,6 +86,9 @@ export function createRigOut() {
     envRot: 0,
     /** Smoothed journey coordinate actually sampled. */
     Js: 0,
+    /** Where the target sits on screen (lens shift), fractions from the left / top. */
+    shiftX: 0.5,
+    shiftY: 0.5,
   };
 }
 export type RigOut = ReturnType<typeof createRigOut>;
@@ -158,6 +164,8 @@ export function stepRig(
     rig.keyDir.snap(s.keyDir);
     rig.keyCam.snap(s.keyCam);
     rig.shade.snap(s.shade);
+    rig.shiftX.snap(s.shiftX);
+    rig.shiftY.snap(s.shiftY);
     if (snap) rig.exposure.snap(s.exposure);
     else if (first) rig.exposure.snap(0);
   }
@@ -194,6 +202,8 @@ export function stepRig(
   out.keyCam = rig.keyCam.step(s.keyCam, 0.6, dt);
   out.env = Math.max(0, rig.env.step(s.env, 0.6, dt));
   out.envRot = rig.envRot.step(s.envRot, 0.8, dt);
+  out.shiftX = rig.shiftX.step(s.shiftX, RIG.anchorFollow, dt);
+  out.shiftY = rig.shiftY.step(s.shiftY, RIG.anchorFollow, dt);
 
   // Camera basis, idle drift (slow breathing), pointer parallax with weight, bank into lateral moves.
   out.fwd.copy(view);
@@ -222,9 +232,12 @@ export function stepRig(
   out.up.copy(out.camUp).multiplyScalar(cr).addScaledVector(out.right, sr);
   out.dist = dist;
   out.roll = roll;
-  // Never let the near plane cut into a surface the camera grazes on a fast move.
+  // Never let the near plane cut into a surface the camera grazes on a fast move. The lens shift
+  // moves the frustum off centre: its far corner is further out on the shifted side.
   const ty = Math.tan((look.fov * Math.PI) / 360);
-  const corner = Math.sqrt(1 + ty * ty * (1 + (input.aspect ?? 1.6) ** 2));
+  const kx = 1 + 2 * Math.abs(out.shiftX - 0.5);
+  const ky = 1 + 2 * Math.abs(out.shiftY - 0.5);
+  const corner = Math.sqrt(1 + ty * ty * (ky * ky + (kx * (input.aspect ?? 1.6)) ** 2));
   out.gap = clearance(out.position)[0];
   out.near = Math.max(0.0015, Math.min(nearFor(dist), (out.gap * 0.7) / corner));
   copyInto(out.s, s);
@@ -246,4 +259,6 @@ function copyInto(dst: ResolvedShot, src: ResolvedShot) {
   dst.keyCam = src.keyCam;
   dst.cone = src.cone;
   dst.spot = src.spot;
+  dst.shiftX = src.shiftX;
+  dst.shiftY = src.shiftY;
 }

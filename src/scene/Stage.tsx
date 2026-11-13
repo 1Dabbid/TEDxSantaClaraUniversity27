@@ -141,7 +141,8 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
         color="#fff2e4"
       />
       <mesh ref={cone} geometry={geo.cone} material={mats.cone} renderOrder={5} frustumCulled={false} onUpdate={reflected} />
-      <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} onUpdate={reflected} />
+      {/* Dust lives only in the air inside the beam: never in the floor reflection (it read as speckles on the deck). */}
+      <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} />
     </group>
   );
 }

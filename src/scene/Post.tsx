@@ -105,6 +105,9 @@ const COMPOSITE_FRAG = /* glsl */ `
     float lum = dot(g0, vec3(0.333));
     float g = hash(gl_FragCoord.xy + fract(uTime * 7.13) * 917.0) - 0.5;
     gl_FragColor.rgb += g * uGrain * (0.35 + 0.65 * smoothstep(0.0, 0.25, lum));
+    // Triangular dither of one 8-bit step: no banding in the long dark gradients (beam, haze, pool falloff).
+    vec2 dq = gl_FragCoord.xy + fract(uTime * 3.7) * 131.0;
+    gl_FragColor.rgb += (hash(dq) + hash(dq + 57.31) - 1.0) / 255.0;
   }`;
 
 /** Low tier: no offscreen pass, just a blended vignette + scrim + grain veil over the frame. */

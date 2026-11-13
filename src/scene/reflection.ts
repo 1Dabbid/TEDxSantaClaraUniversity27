@@ -65,11 +65,11 @@ export function createReflection(gl: WebGLRenderer) {
       const w = Math.max(16, Math.round(width * SCALE));
       const h = Math.max(16, Math.round(height * SCALE));
       if (rt.width !== w || rt.height !== h) rt.setSize(w, h);
-      cam.fov = camera.fov;
-      cam.aspect = camera.aspect;
-      cam.near = Math.max(0.05, camera.near);
-      cam.far = camera.far;
-      cam.updateProjectionMatrix();
+      // The main camera's lens-shifted projection. The mirrored camera's right axis points the other
+      // way (a mirror flips handedness), so its horizontal shift is flipped to cover the same floor.
+      cam.projectionMatrix.copy(camera.projectionMatrix);
+      cam.projectionMatrix.elements[8] *= -1;
+      cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
       camera.getWorldDirection(fwd);
       cam.position.set(camera.position.x, -camera.position.y, camera.position.z);
       tgt.copy(camera.position).add(fwd);
