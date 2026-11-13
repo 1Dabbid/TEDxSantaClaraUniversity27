@@ -107,12 +107,15 @@ function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
   // from a visually hidden copy while the split copy is aria-hidden.
   const targets = kind === 'lines' ? lineTargets(el) : [el];
   let target: HTMLElement | HTMLElement[] = targets;
-  let aria: 'auto' | 'none' = 'none';
+  let aria: 'auto' | 'hidden' | 'none' = 'none';
   let unwrap: (() => void) | null = null;
   if (heading && !interactive) {
     aria = 'auto';
     if (targets[0] !== el) {
-      // The split runs on blocks inside the heading: the heading itself carries the label.
+      // The split runs on blocks inside the heading: the heading itself carries the label,
+      // and the split blocks are only hidden ('auto' would put aria-label on plain spans,
+      // which is not allowed on a generic role).
+      aria = 'hidden';
       const label = el.getAttribute('aria-label');
       el.setAttribute('aria-label', (el.textContent ?? '').trim());
       unwrap = () => (label === null ? el.removeAttribute('aria-label') : el.setAttribute('aria-label', label));
@@ -275,12 +278,20 @@ function revealStagger(el: HTMLElement, onScreen: ((c: Element) => boolean) | nu
   };
 }
 
+/*
+ * Never split an element that holds something focusable (a footnote link in a
+ * heading, say): a split is undone by replacing the element's markup, so keyboard
+ * focus on that link would drop to <body> when the reveal finishes (or when Tab
+ * lands there and finishes it early). Such elements get the fade instead.
+ */
+const holdsFocusable = (el: HTMLElement) => el.querySelector(INTERACTIVE) !== null;
+
 function create(el: HTMLElement, onScreen: ((c: Element) => boolean) | null): Rec {
   switch (el.dataset.reveal) {
     case 'lines':
-      return revealSplit(el, 'lines');
+      return holdsFocusable(el) ? revealFade(el) : revealSplit(el, 'lines');
     case 'chars':
-      return revealSplit(el, 'chars');
+      return holdsFocusable(el) ? revealFade(el) : revealSplit(el, 'chars');
     case 'stagger':
       return revealStagger(el, onScreen);
     case 'rule':
