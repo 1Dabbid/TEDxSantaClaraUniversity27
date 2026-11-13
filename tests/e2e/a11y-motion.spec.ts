@@ -14,8 +14,9 @@ const TEXT_SPACING =
 test('keyboard focus survives tabbing into a heading that is still revealing (newsletter note link)', async ({ page }) => {
   await page.goto('/');
   await settle(page, 600);
-  // The last FAQ question: the next Tab stop is the note link inside the newsletter heading, whose reveal has not run yet.
-  await page.locator('[data-section="faq"] summary').last().focus();
+  // The FAQ section's last stop ("All questions", after the last question): the next Tab stop is the note link
+  // inside the newsletter heading, whose reveal has not run yet.
+  await page.locator('[data-section="faq"] [data-more-link] a').focus();
   await page.keyboard.press('Tab');
   await expect(page.locator('a[href="#newsletter-note"]')).toBeFocused();
   // Still focused once the reveal has finished.
