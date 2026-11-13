@@ -54,7 +54,8 @@ export default async function SpeakersPage() {
           </ol>
         </nav>
         <p className="fine-print mt-16 text-mute sm:mt-24">
-          {SITE_NAME} · {settings.themeName} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
+          {/* The event name is never uppercased. */}
+          <span className="tracking-normal normal-case text-white">{SITE_NAME}</span> · {settings.themeName} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
         </p>
         <h1
           id="speakers-index-title"

@@ -19,7 +19,7 @@ export default async function OpenGraphImage() {
   const [s, fonts] = await Promise.all([getSettings(), ogFonts()]);
   const grey = '#a6a6a6';
   const where = s.venueCampus || s.venueName;
-  const themeSize = s.themeName.length > 12 ? 112 : 150;
+  const themeSize = s.themeName.length > 12 ? 100 : 140;
 
   return new ImageResponse(
     (
@@ -35,10 +35,10 @@ export default async function OpenGraphImage() {
           background: '#000',
           color: '#fff',
           fontFamily: 'Inter',
-          padding: '64px 0 44px',
+          padding: '52px 0 40px',
         }}
       >
-        <div style={{ display: 'flex', fontFamily: 'Inter Display', fontWeight: 600, fontSize: 56, letterSpacing: -2 }}>
+        <div style={{ display: 'flex', fontFamily: 'Inter Display', fontWeight: 600, fontSize: 56, letterSpacing: -3 }}>
           {SITE_NAME}
         </div>
 
@@ -70,10 +70,14 @@ export default async function OpenGraphImage() {
               1
             </div>
           </div>
-          <div style={{ display: 'flex', fontSize: 34, marginTop: 36 }}>{`${s.dateMedium} · ${where}`}</div>
+          {/* Two lines, so both stay inside the square centre crop. */}
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: 34, lineHeight: 1.25, marginTop: 36 }}>
+            <div style={{ display: 'flex' }}>{s.dateMedium}</div>
+            <div style={{ display: 'flex', color: grey }}>{where}</div>
+          </div>
         </div>
 
-        <div style={{ display: 'flex', fontSize: 18, color: grey }}>
+        <div style={{ display: 'flex', fontSize: 17, color: grey }}>
           Independently organized TEDx event, operated under license from TED
         </div>
       </div>
