@@ -71,7 +71,7 @@ export default async function SpeakersPage() {
         {anyAnnounced ? (
           <ul aria-label="Speakers" className="mt-14 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
             {announced.map(({ speaker, index }) => (
-              <SpeakerCard key={speaker.slug} speaker={speaker} index={index} />
+              <SpeakerCard key={speaker.slug} speaker={speaker} index={index} level={2} />
             ))}
             <SpeakersToCome count={speakers.length - announced.length} />
           </ul>

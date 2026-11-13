@@ -13,8 +13,13 @@ import { SectionShell, SectionTitle } from './SectionShell';
 const glass = 'border border-white/[0.09] bg-gradient-to-b from-black/[0.66] to-black/[0.54]';
 const cardBase = `speaker-card group relative flex min-w-0 flex-col ${glass}`;
 
-/** An announced speaker: portrait, name, role, talk title; the whole card links to the speaker page. */
-export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
+/**
+ * An announced speaker: portrait, name, role, talk title; the whole card links to the speaker page.
+ * `level`: the name's heading level (3 under the home page's section heading, 2 on /speakers,
+ * where the list sits directly under the page's h1).
+ */
+export function SpeakerCard({ speaker, index, level = 3 }: { speaker: Speaker; index: number; level?: 2 | 3 }) {
+  const Heading = level === 2 ? 'h2' : 'h3';
   const clause = `§ 2.${index + 1}`;
   return (
     // Phones: portrait beside the text (a column of full-width portraits is six screens long).
@@ -34,11 +39,11 @@ export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: numbe
         </span>
       </div>
       <div className="speaker-text min-w-0 p-6 max-sm:self-center max-sm:p-4">
-        <h3 className="text-xl font-semibold tracking-tight wrap-anywhere">
+        <Heading className="text-xl font-semibold tracking-tight wrap-anywhere">
           <Link href={`/speakers/${speaker.slug}`} className="after:absolute after:inset-0 after:content-['']">
             {speaker.name}
           </Link>
-        </h3>
+        </Heading>
         {speaker.role ? <p className="mt-1 text-sm text-[#d0d0d0] wrap-anywhere">{speaker.role}</p> : null}
         {speaker.talkTitle ? <p className="mt-4 text-white wrap-anywhere">“{speaker.talkTitle}”</p> : null}
       </div>
