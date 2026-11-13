@@ -52,12 +52,12 @@ const REDACTIONS: Row[][] = [
 const ROW_H = { lg: 'h-5', md: 'h-3', sm: 'h-2' } as const;
 const ROW_GAP = { lg: 'mt-2.5', md: 'mt-2', sm: 'mt-1.5' } as const;
 
-const STATUS = ['Clause pending', 'Under review', 'Withheld', 'Pending signature', 'Redacted', 'Subject to change'];
+const STATUS = ['Clause pending', 'Under review', 'Withheld', 'Pending signature', 'Redacted', 'Sealed'];
 
 const FOOTNOTES = [
   'Name, affiliation and talk title withheld pending announcement. The speaker is under no obligation to be what you expect.',
   'Identity on file. Disclosure deferred until the parties agree. No inference should be drawn from the length of the bars.',
-  'Talk title redacted at the request of no one in particular. Announcement subject to change without notice.',
+  'Talk title redacted at the request of no one in particular.',
   'This clause becomes binding on announcement. Until then it is merely very likely.',
   'Details withheld for the reader’s own suspense. See the mailing list for the unredacted copy.',
   'Reserved. The red circle has been booked; the name is still in the envelope.',
