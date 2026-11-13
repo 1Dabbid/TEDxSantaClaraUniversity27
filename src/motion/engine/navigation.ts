@@ -44,7 +44,13 @@ function focusTarget(el: HTMLElement) {
 }
 
 function findHashTarget(hash: string): HTMLElement | null {
-  const id = decodeURIComponent(hash.replace(/^#/, ''));
+  const raw = hash.replace(/^#/, '');
+  let id = raw;
+  try {
+    id = decodeURIComponent(raw);
+  } catch {
+    // Malformed escape (e.g. #%E0%A4%A): look the hash up as written instead of throwing.
+  }
   if (!id) return null;
   return document.getElementById(id);
 }
