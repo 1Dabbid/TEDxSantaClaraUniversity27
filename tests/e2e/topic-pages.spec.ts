@@ -40,6 +40,15 @@ test.describe('navigation rule', () => {
     });
   }
 
+  test('a speaker page marks Speakers; a 404 under /speakers marks nothing', async ({ page }) => {
+    await page.goto('/speakers/speaker-01');
+    const header = page.getByRole('navigation', { name: 'Primary' });
+    await expect(header.getByRole('link', { name: 'Speakers' })).toHaveAttribute('aria-current', 'true');
+    const missing = await page.goto('/speakers/no-such-speaker');
+    expect(missing?.status()).toBe(404);
+    await expect(header.locator('[aria-current]')).toHaveCount(0);
+  });
+
   test('mobile menu follows the same rule', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/venue');

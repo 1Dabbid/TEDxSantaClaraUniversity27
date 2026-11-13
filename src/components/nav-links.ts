@@ -15,6 +15,8 @@ export type NavItem = {
   readonly home?: string;
   /** Left out of the header on the home page (its home section is a placeholder or hidden); shown on every other page. */
   readonly homeHidden?: boolean;
+  /** The pages that exist inside this topic (/speakers/jane-doe). Any other path under it is a 404 and marks nothing. */
+  readonly pages?: readonly string[];
 };
 
 const clean = (path: string | null | undefined) => {
@@ -37,13 +39,14 @@ export function navHref(item: NavItem, pathname: string | null | undefined): str
 
 /**
  * aria-current for a header link: "page" on the topic page itself, "true" on a
- * page inside it (/speakers/jane-doe under Speakers), nothing on the home page
- * (the header links there are in-page anchors, not the current page).
+ * page inside it that exists (/speakers/jane-doe under Speakers, listed in
+ * `pages`), nothing on a 404 under it or on the home page (the header links
+ * there are in-page anchors, not the current page).
  */
 export function navCurrent(item: NavItem, pathname: string | null | undefined): 'page' | 'true' | undefined {
   const p = clean(pathname);
   if (p === '/') return undefined;
   if (p === item.href) return 'page';
-  if (p.startsWith(`${item.href}/`)) return 'true';
+  if (item.pages?.includes(p)) return 'true';
   return undefined;
 }

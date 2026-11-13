@@ -1,5 +1,5 @@
 import 'server-only';
-import { getFaq, getSchedule, getSettings, getTeam } from '@/lib/content';
+import { getFaq, getSchedule, getSettings, getSpeakers, getTeam } from '@/lib/content';
 import type { NavItem } from './nav-links';
 
 /**
@@ -45,12 +45,14 @@ export type NavVisibility = {
   faq: boolean;
   /** settings.sections.showTeam && at least one entry: /team exists (it lists every board role, named or not). */
   teamPage: boolean;
+  /** The speaker pages that exist (/speakers/<slug>), so only those mark Speakers as current. */
+  speakerPages: readonly string[];
 };
 
 /** Header and mobile menu: each item knows its page and its home section. */
 export function navItems(visible: NavVisibility): NavItem[] {
   const items: (NavItem | false)[] = [
-    { label: 'Speakers', href: '/speakers', home: '/#speakers' },
+    { label: 'Speakers', href: '/speakers', home: '/#speakers', pages: visible.speakerPages },
     { label: 'Schedule', href: '/schedule', home: '/#schedule', homeHidden: !visible.schedule },
     { label: 'Venue', href: '/venue', home: '/#venue' },
     { label: 'Partners', href: '/partners' },
@@ -75,11 +77,12 @@ export function footerNavItems(visible: NavVisibility): NavItem[] {
 
 /** Visibility from content, shared by the header, the footer and the topic pages. */
 export async function navVisibility(): Promise<NavVisibility> {
-  const [settings, schedule, team, faq] = await Promise.all([getSettings(), getSchedule(), getTeam(), getFaq()]);
+  const [settings, schedule, team, faq, speakers] = await Promise.all([getSettings(), getSchedule(), getTeam(), getFaq(), getSpeakers()]);
   return {
     schedule: schedule.published && schedule.items.length > 0,
     team: settings.sections.showTeam && team.some((m) => m.name),
     faq: settings.sections.showFaq && faq.length > 0,
     teamPage: settings.sections.showTeam && team.length > 0,
+    speakerPages: speakers.map((s) => `/speakers/${s.slug}`),
   };
 }
