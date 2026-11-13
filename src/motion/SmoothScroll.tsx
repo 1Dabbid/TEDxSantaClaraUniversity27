@@ -24,6 +24,11 @@ type Measured = { id: SectionId; top: number; height: number };
 let measured: Measured[] = [];
 let maxScroll = 0;
 
+// `?perf` on the first URL of a visit exposes the live instances for performance and leak audits
+// (refresh counts, ScrollTrigger.getAll().length). Read once; costs nothing otherwise.
+const PERF_DEBUG = typeof window !== 'undefined' && /[?&]perf\b/.test(window.location.search);
+type PerfHook = { gsap: unknown; ScrollTrigger: unknown; lenis: unknown; refreshes: number };
+
 const clamp01 = (v: number) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 function measure() {
@@ -134,7 +139,9 @@ export default function SmoothScroll({ children }: { children?: ReactNode }) {
       gsap.ticker.add(tick);
       gsap.ticker.lagSmoothing(0);
       // Pins, splits and layout changes all end in a ScrollTrigger refresh: re-measure sections then.
+      const perf = PERF_DEBUG ? ((window as unknown as { __fpPerf: PerfHook }).__fpPerf = { gsap, ScrollTrigger, lenis, refreshes: 0 }) : null;
       const onRefresh = () => {
+        if (perf) perf.refreshes++;
         measure();
         write(lenis.scroll, lenis.velocity);
       };
