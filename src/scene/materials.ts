@@ -961,24 +961,30 @@ export function createDustMaterial() {
         vec3 wp = (modelMatrix * vec4(p, 1.0)).xyz;
         float cph = dot(normalize(wp - vec3(0.0, uHeight, 0.0)), normalize(cameraPosition - wp));
         inside *= 0.5 + 1.5 * pow(max(cph, 0.0), 3.0);
-        // Motes turn their flat sides to the light now and then: sharp sparkles.
+        // Motes turn a little brighter now and then: a gentle shimmer, never a star-like spike
+        // (bloom turned the old 6x sparkle into hard white points).
         float ph = sin(uTime * (0.5 + seed.z * 1.4) + seed.x * 40.0) * 0.5 + 0.5;
-        float twinkle = 0.25 + 0.5 * ph + 6.0 * pow(ph, 16.0);
+        float twinkle = 0.35 + 0.45 * ph + 0.9 * pow(ph, 12.0);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
-        float size = (0.5 + seed.z * 1.1) * 0.0095;
-        gl_PointSize = max(1.0, size * uScale / -mv.z);
+        // Soft specks of a few pixels, not single bright pixels: the same light over a bigger disc.
+        float size = (0.8 + seed.z * 1.2) * 0.013;
+        float px = size * uScale / -mv.z;
+        gl_PointSize = clamp(px, 2.5, 24.0);
         float fadeNear = smoothstep(0.3, 1.5, -mv.z);
-        vA = inside * twinkle * fadeNear * smoothstep(0.0, 0.6, p.y) * min(1.0, gl_PointSize / 2.0);
+        // Only in the upper air of the beam: dust low in the shaft sits in front of the rug on screen
+        // and read as specks on it.
+        float high = smoothstep(1.0, 2.2, p.y);
+        vA = inside * twinkle * fadeNear * high * min(1.0, px / 2.5) / max(1.0, gl_PointSize * gl_PointSize / 9.0);
       }`,
     fragmentShader: /* glsl */ `
       uniform float uIntensity;
       varying float vA;
       void main() {
         vec2 c = gl_PointCoord - 0.5;
-        float d = 1.0 - smoothstep(0.05, 0.5, length(c));
-        // Capped: a sparkle reads as a bright point, never as a blown-out disc (or a hot pixel behind type).
-        gl_FragColor = vec4(min(vec3(1.0, 0.96, 0.9) * d * d * vA * 2.0 * uIntensity, vec3(0.9)), 1.0);
+        // A soft gaussian speck with a low, capped peak (nothing for bloom to turn into a point).
+        float d = exp(-dot(c, c) * 18.0);
+        gl_FragColor = vec4(min(vec3(1.0, 0.96, 0.9) * d * vA * 1.6 * uIntensity, vec3(0.45)), 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
@@ -1050,7 +1056,8 @@ export function createMotesMaterial() {
         // Circle of confusion grows away from the focus plane (z = -1).
         float coc = abs(1.0 / -z - 1.0);
         float px = (0.004 + coc * 0.03) * uScale / -z;
-        gl_PointSize = clamp(px, 1.0, 90.0);
+        // Never a single hard pixel: the smallest motes are still soft discs.
+        gl_PointSize = clamp(px, 2.5, 90.0);
         vBokeh = clamp(coc * 1.5, 0.0, 1.0);
         float beam = smoothstep(-0.3, 0.9, xy.x) * (0.6 + 0.4 * sin(xy.y * 2.0 + 1.0));
         float tw = 0.6 + 0.4 * sin(uTime * (0.4 + seed.w) + seed.x * 30.0);

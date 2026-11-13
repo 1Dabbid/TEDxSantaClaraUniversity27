@@ -276,9 +276,9 @@ const STAGE_LOOK = { fov: 32, exposure: 1, dof: 0.1, drift: 0.006, parallax: 0.0
 /** The barrel standing back from upright, the engraving still lit by the raking key. */
 const PULL_BARREL = { fov: 29, exposure: 1.06, dof: 0.5, drift: 0.003, parallax: 0.006, cone: 0, spot: 0, key: 0.8, keyCam: 0.75, keyDir: [1.8, 1.7, 0.35] as V3, rim: 0.7, rimAng: 0.6, haze: 0.15, motes: 0.5, vignette: 0.8, envRot: -0.5, env: 0.45, scrim: 0.45, scrimEdge: 0.75, bloom: 1.2 };
 /** Barrel and grille. */
-const PULL_MIC = { fov: 29.5, exposure: 1.03, dof: 0.4, drift: 0.004, parallax: 0.008, cone: 0.02, spot: 0.02, key: 0.85, keyCam: 0.5, keyDir: [1.5, 1.6, 0.3] as V3, rim: 1.0, rimAng: 0.1, haze: 0.3, motes: 0.3, vignette: 0.75, envRot: -0.2, env: 0.55, scrim: 0.4, scrimEdge: 0.6, bloom: 1.1 };
+const PULL_MIC = { fov: 29.5, exposure: 1.03, dof: 0.4, drift: 0.004, parallax: 0.008, cone: 0.02, spot: 0.02, key: 0.85, keyCam: 0.5, keyDir: [1.5, 1.6, 0.3] as V3, rim: 1.0, rimAng: 0.1, haze: 0.3, motes: 0.2, vignette: 0.75, envRot: -0.2, env: 0.55, scrim: 0.4, scrimEdge: 0.6, bloom: 1.1 };
 /** The whole microphone on a dark stage. */
-const PULL_DARK = { fov: 30, exposure: 1, dof: 0.3, drift: 0.004, parallax: 0.012, cone: 0.04, spot: 0.04, key: 0.85, keyCam: 0.3, keyDir: [1.4, 1.6, 0.3] as V3, rim: 1.2, rimAng: -0.3, haze: 0.25, motes: 0.05, vignette: 0.72, envRot: 0, env: 0.6, scrim: 0.35, scrimEdge: 0.5, bloom: 1.1 };
+const PULL_DARK = { fov: 30, exposure: 1, dof: 0.3, drift: 0.004, parallax: 0.012, cone: 0.04, spot: 0.04, key: 0.85, keyCam: 0.3, keyDir: [1.4, 1.6, 0.3] as V3, rim: 1.2, rimAng: -0.3, haze: 0.25, motes: 0, vignette: 0.72, envRot: 0, env: 0.6, scrim: 0.35, scrimEdge: 0.5, bloom: 1.1 };
 /** Microphone and upper stand, the spot just beginning to warm. */
 const PULL_STAND = { fov: 31, exposure: 1, dof: 0.22, drift: 0.005, parallax: 0.016, cone: 0.03, spot: 0.15, key: 0.8, keyCam: 0.1, rim: 1.15, rimAng: -0.45, haze: 0.08, motes: 0, vignette: 0.68, env: 0.75, scrim: 0.2, scrimEdge: 0.3, bloom: 1.1 };
 
