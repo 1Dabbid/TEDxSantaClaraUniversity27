@@ -157,9 +157,14 @@ test.describe('FAQ deep links', () => {
     // Marked as the linked one (and only it): data-linked, which follows pushState unlike :target.
     await expect(page.locator('[data-linked]')).toHaveCount(1);
     await expect(target).toHaveAttribute('data-linked', '');
-    const header = await page.locator('header').first().boundingBox();
-    const box = await target.boundingBox();
-    expect(box!.y, 'question below the header').toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
+    // Polled: with motion on, the engine scrolls there smoothly (up to ~1.6 s).
+    await expect
+      .poll(async () => {
+        const header = await page.locator('header').first().boundingBox();
+        const box = await target.boundingBox();
+        return box!.y - ((header?.y ?? 0) + (header?.height ?? 0));
+      }, { message: 'question below the header' })
+      .toBeGreaterThanOrEqual(-1);
   };
 
   test('a shared link (cold load of /faq#id) opens the question below the header', async ({ page, request }) => {
@@ -175,9 +180,18 @@ test.describe('FAQ deep links', () => {
     const ids = await questionIds(request);
     const [a, b] = [ids.at(-1)!, ids[0]];
     await page.goto(`/faq#${a}`);
-    await settle(page, 600);
-    await page.locator(`[id="${b}"] summary`).click();
-    await page.locator(`[id="${b}"] [data-faq-permalink]`).click();
+    // Past the cold-load settling, which re-lands on (and re-focuses) the first target a few times.
+    await settle(page, 1500);
+    // Open b, then follow its permalink by keyboard (focus without scrolling, then Enter): a pointer
+    // click would first make the test runner scroll natively under the smooth scroller, a jump no
+    // visitor makes. Retried: the engine loads lazily and its cold-load settling may still re-focus a.
+    await page.locator(`[id="${b}"] details`).evaluate((d: HTMLDetailsElement) => (d.open = true));
+    const permalink = page.locator(`[id="${b}"] [data-faq-permalink]`);
+    await expect(async () => {
+      await permalink.evaluate((node: HTMLElement) => node.focus({ preventScroll: true }));
+      await page.keyboard.press('Enter');
+      await expect(page).toHaveURL(new RegExp(`#${b}$`), { timeout: 1000 });
+    }).toPass();
     await expect(page).toHaveURL(new RegExp(`#${b}$`));
     await settle(page, 600);
     await expectLanded(page, b);
