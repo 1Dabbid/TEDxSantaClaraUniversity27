@@ -18,6 +18,7 @@
  *   STILLS_PORT        port for the server this script starts (default 3121)
  *   STILLS_ONLY        comma-separated shot names or orientations, e.g. "hero,portrait"
  *   STILLS_RAW         directory for the lossless PNG captures (default: OS temp dir)
+ *   STILLS_RESUME=1    keep PNGs already in STILLS_RAW, capture only the missing ones
  *   STILLS_ENCODE_ONLY=1  re-encode the PNGs in STILLS_RAW without capturing again
  *
  * Headless Chromium renders WebGL on SwiftShader (the CPU): one frame of the
@@ -81,6 +82,8 @@ const onlyShots = ONLY.filter((o) => SHOTS.some((s) => s.name === o));
 const onlyOrients = ONLY.filter((o) => o in ORIENTATIONS);
 const wanted = (shot, orient) =>
   (onlyShots.length === 0 || onlyShots.includes(shot)) && (onlyOrients.length === 0 || onlyOrients.includes(orient));
+
+const exists = (f) => stat(f).then(() => true, () => false);
 
 async function loadSharp() {
   try {
@@ -209,13 +212,14 @@ async function captureOrientation(browser, sharp, base, orient, shots) {
 
   for (const shot of shots) {
     const { J } = shot[orient];
+    const t0 = Date.now();
     const { clamped } = await scrollToJourney(page, J);
     let png;
     for (let attempt = 0; attempt < 4; attempt++) {
-      const s = await settle(page, J, { frames: 36 + attempt * 24, clamped });
+      const s = await settle(page, J, { frames: 24 + attempt * 24, clamped });
       png = await page.screenshot({ type: 'png' });
       const b = await brightness(sharp, png);
-      log(`${orient} ${shot.name}: J=${s.J.toFixed(3)} step=${s.step} post=${s.post} mean=${b.mean.toFixed(1)} peak=${b.peak}`);
+      log(`${orient} ${shot.name}: J=${s.J.toFixed(3)} step=${s.step} post=${s.post} mean=${b.mean.toFixed(1)} peak=${b.peak} (${((Date.now() - t0) / 1000).toFixed(0)} s)`);
       if (s.step !== 0) log(`  warning: the scene stepped its quality down (step ${s.step}); is ?perf=off honoured?`);
       if (b.mean > 2 && b.peak > 80) break;
       log('  frame looks black, waiting longer');
@@ -286,7 +290,12 @@ async function main() {
     });
     try {
       for (const orient of Object.keys(ORIENTATIONS)) {
-        const list = shots.filter((s) => wanted(s.name, orient));
+        const list = [];
+        for (const s of shots.filter((s) => wanted(s.name, orient))) {
+          if (process.env.STILLS_RESUME && (await exists(path.join(RAW, `${s.name}-${orient}.png`)))) {
+            log(`${orient} ${s.name}: keeping the existing capture (STILLS_RESUME)`);
+          } else list.push(s);
+        }
         if (list.length) await captureOrientation(browser, sharp, server.url, orient, list);
       }
     } finally {
