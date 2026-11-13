@@ -45,7 +45,7 @@ export default config({
       'The event': ['settings', 'venue', 'tickets', 'schedule', 'faq'],
       People: ['speakers', 'team'],
       Partners: ['tiers', 'benefits', 'sponsors'],
-      'Contact & site': ['contact', 'sections'],
+      'Contact & site': ['contact', 'sections', 'tedLanguage'],
     },
   },
   singletons: {
@@ -246,6 +246,27 @@ export default config({
         showSpeakerApplications: fields.checkbox({
           label: 'Show the speaker applications band (under Tickets)',
           defaultValue: true,
+        }),
+      },
+    }),
+
+    tedLanguage: singleton({
+      label: 'Required TED language',
+      path: 'content/ted-language',
+      schema: {
+        aboutTedx: fields.text({
+          label: 'About TEDx',
+          description:
+            'Shown in the footer of every page under “About TEDx”. Paste the current official text from TED’s TEDx organizer guide exactly. Do not edit the wording.',
+          multiline: true,
+          validation: { isRequired: true },
+        }),
+        aboutTed: fields.text({
+          label: 'About TED',
+          description:
+            'Shown in the footer of every page under “About TED”. Paste the current official text from TED’s TEDx organizer guide exactly. Do not edit the wording.',
+          multiline: true,
+          validation: { isRequired: true },
         }),
       },
     }),

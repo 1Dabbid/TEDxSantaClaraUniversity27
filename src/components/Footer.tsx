@@ -1,14 +1,12 @@
 import Link from 'next/link';
 import type { Settings } from '@/lib/content';
-import { getFaq, getTeam } from '@/lib/content';
+import { getFaq, getTeam, getTedLanguage, paragraphs } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
-import { CLUB_URL, TEDX_PROGRAM_URL } from '@/lib/site';
+import { CLUB_URL, TED_URL, TEDX_PROGRAM_URL } from '@/lib/site';
 import { FooterMotion } from '@/motion/sections/FooterMotion';
 import { Logo } from './Logo';
+import { EventName, Tedx } from './ui/KeepCase';
 import { navItems } from './nav';
-
-const WHAT_IS_TEDX =
-  'In the spirit of discovering and sharing ideas, TED has created a program called TEDx. TEDx is a program of local, self-organized events that bring people together to share a TED-like experience. Our event is called TEDxSantaClaraUniversity, where x = independently organized TED event. At our TEDxSantaClaraUniversity event, TED Talks video and live speakers will combine to spark deep discussion and connection in a small group. The TED Conference provides general guidance for the TEDx program, but individual TEDx events, including ours, are self-organized.';
 
 const SOCIAL_LABELS: Record<keyof Settings['socials'], string> = {
   instagram: 'Instagram',
@@ -34,7 +32,7 @@ function dateParts(iso: string) {
  */
 export async function Footer({ settings }: { settings: Settings }) {
   // Same visibility rule as the header: never link to a section that is not rendered.
-  const [team, faq] = await Promise.all([getTeam(), getFaq()]);
+  const [team, faq, ted] = await Promise.all([getTeam(), getFaq(), getTedLanguage()]);
   const nav = navItems({
     team: settings.sections.showTeam && team.length > 0,
     faq: settings.sections.showFaq && faq.length > 0,
@@ -95,20 +93,41 @@ export async function Footer({ settings }: { settings: Settings }) {
         </p>
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-12 py-14 lg:grid-cols-12 lg:gap-10">
-          <section aria-labelledby="footer-tedx" className="col-span-2 lg:col-span-5">
-            <h2 id="footer-tedx" className="fine-print text-white">
-              <span aria-hidden="true">§ A · </span>What is TEDx?
-            </h2>
-            <p data-cursor="loupe" className="mt-4 max-w-xl text-sm leading-relaxed text-mute">
-              {WHAT_IS_TEDX}
-            </p>
-            <p className="mt-3 text-sm">
-              <a href={TEDX_PROGRAM_URL} className={linkCls} {...ext}>
-                Learn about the TEDx program
-                <NewTab />
-              </a>
-            </p>
-          </section>
+          {/* TED's required language, verbatim from content/ted-language.yaml (Contact & site > Required TED language). */}
+          <div className="col-span-2 space-y-10 lg:col-span-5">
+            <section aria-labelledby="footer-tedx">
+              <h2 id="footer-tedx" className="fine-print text-white">
+                <span aria-hidden="true">§ A · </span>About <Tedx />
+              </h2>
+              {paragraphs(ted.aboutTedx).map((p, i) => (
+                <p key={i} data-cursor="loupe" className="mt-4 max-w-xl text-sm leading-relaxed text-mute">
+                  {p}
+                </p>
+              ))}
+              <p className="mt-3 text-sm">
+                <a href={TEDX_PROGRAM_URL} className={linkCls} {...ext}>
+                  Learn about the TEDx program
+                  <NewTab />
+                </a>
+              </p>
+            </section>
+            <section aria-labelledby="footer-ted">
+              <h2 id="footer-ted" className="fine-print text-white">
+                About TED
+              </h2>
+              {paragraphs(ted.aboutTed).map((p, i) => (
+                <p key={i} className="mt-4 max-w-xl text-sm leading-relaxed text-mute">
+                  {p}
+                </p>
+              ))}
+              <p className="mt-3 text-sm">
+                <a href={TED_URL} className={linkCls} {...ext}>
+                  Visit TED.com
+                  <NewTab />
+                </a>
+              </p>
+            </section>
+          </div>
 
           <nav aria-labelledby="footer-site" className="lg:col-span-2 lg:col-start-7">
             <h2 id="footer-site" className="fine-print text-white">
@@ -194,7 +213,7 @@ export async function Footer({ settings }: { settings: Settings }) {
         <div className="shell flex flex-col gap-3 py-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-white">This independent TEDx event is operated under license from TED.</p>
           <p className="fine-print text-mute">
-            © {new Date().getFullYear()}&nbsp;<span className="tracking-normal normal-case">TEDxSantaClaraUniversity</span>
+            © {new Date().getFullYear()}&nbsp;<EventName />
           </p>
         </div>
       </div>

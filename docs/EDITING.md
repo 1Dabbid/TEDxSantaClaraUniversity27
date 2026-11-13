@@ -4,6 +4,8 @@ Everything visitors read on the site (dates, speakers, tickets, FAQ, sponsors, l
 
 Names in **bold** below are exactly what you will see in the admin.
 
+> **Before launch: Compliance must replace both texts with the current official wording from TED's organizer guide.** The **About TEDx** and **About TED** texts in **Contact & site > Required TED language** were filled in from TED's long-standing standard wording, but nobody has checked them against TED's current organizer guide yet. See "Required TED language" below.
+
 ## 1. Sign in
 
 1. Go to **https://fineprint.tedxscu.com/keystatic**.
@@ -100,6 +102,16 @@ Only if the event is streamed.
 1. **Contact & site > Contact, newsletter & socials > Livestream link (optional)**: paste the full link to the stream page (e.g. the YouTube live page; it must start with `https://`).
 2. **Save**. A small **Watch live** link (with a red dot) appears in two places: next to the buttons at the top of the home page, and next to the main button in the Tickets section. It opens the stream in a new tab.
 3. After the event, empty the field and **Save**: the link disappears. While the field is blank, nothing is shown.
+
+### Required TED language (About TEDx / About TED)
+
+TED requires every TEDx site to show its standard "About TEDx" text (it explains that x = independently organized event) and its "About TED" text. Both are shown in the footer of every page, exactly as typed here.
+
+1. **Contact & site > Required TED language**.
+2. **About TEDx** and **About TED**: paste the current official text from TED's TEDx organizer guide **exactly**. Do not shorten, reword or "improve" it. Separate paragraphs with an empty line.
+3. **Save**.
+
+Only the Director of Compliance (or the licence holder) should change these. The FAQ answer "What is TEDx?" points visitors to these footer texts instead of repeating them; keep it that way.
 
 ### Change the number of seats
 

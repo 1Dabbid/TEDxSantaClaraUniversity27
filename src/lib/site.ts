@@ -6,6 +6,8 @@ export const SITE_NAME = 'TEDxSantaClaraUniversity';
 export const CLUB_URL = 'https://tedxscu.com';
 /** TED's page about the TEDx program (linked from the footer). */
 export const TEDX_PROGRAM_URL = 'https://www.ted.com/about/programs-initiatives/tedx-program';
+/** TED's home page (linked from the footer's "About TED" block). */
+export const TED_URL = 'https://www.ted.com';
 /**
  * TEDx rules cap a standard licence at 100 attendees. Upper bound and default of
  * the "Seat capacity" field (Event basics); the site always reads the field
