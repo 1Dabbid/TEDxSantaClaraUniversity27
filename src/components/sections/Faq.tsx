@@ -16,13 +16,14 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
     <SectionShell id="faq" scrim="solid" className="py-24 sm:py-32">
       <FaqMotion />
       <JsonLd json={jsonLdString(faqJsonLd(items))} />
-      <div className="shell grid grid-cols-1 gap-14 md:grid-cols-12">
-        <div className="min-w-0 md:col-span-4">
-          <div className="md:sticky md:top-[calc(var(--header-h)+3rem)]">
+      {/* Two columns from lg only: at tablet width a third of the measure broke "Questions," mid-word. */}
+      <div className="shell grid grid-cols-1 gap-14 lg:grid-cols-12">
+        <div className="min-w-0 lg:col-span-4">
+          <div className="lg:sticky lg:top-[calc(var(--header-h)+3rem)]">
             <div data-reveal="fade">
               <SectionLabel>FAQ</SectionLabel>
             </div>
-            <SectionTitle id="faq" className="text-[clamp(2.75rem,5.4vw,5.25rem)]!">
+            <SectionTitle id="faq" className="text-[clamp(2.75rem,4.6vw,5.25rem)]!">
               <span data-reveal="lines" className="block">
                 Questions, answered.
               </span>
@@ -40,7 +41,7 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
           </div>
         </div>
 
-        <ol data-reveal="stagger" className="min-w-0 border-t border-white/15 md:col-span-8">
+        <ol data-reveal="stagger" className="min-w-0 border-t border-white/15 lg:col-span-8">
           {items.map((item, i) => (
             <li key={i} className="min-w-0 border-b border-white/15">
               <details className="faq-clause group">
