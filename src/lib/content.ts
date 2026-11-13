@@ -6,6 +6,11 @@ import keystaticConfig from '../../keystatic.config';
 /**
  * Typed content loader. Components never import Keystatic directly; they get
  * plain objects from here. Everything is read from /content at build time.
+ *
+ * In the admin, "settings" is split into several smaller singletons (Event
+ * basics, Venue, Tickets, Contact, Sections) so editors are not faced with one
+ * giant form. `getSettings()` merges them back into the single `Settings`
+ * object that every component receives.
  */
 
 const reader = createReader(process.cwd(), keystaticConfig);
@@ -18,6 +23,25 @@ export type Socials = {
   linkedin: string;
   youtube: string;
   tiktok: string;
+};
+
+/** A "Getting there" clause in the Venue section. `body` is '' while unknown. */
+export type VenueNote = { title: string; body: string };
+
+export type VenuePostalAddress = {
+  street: string;
+  city: string;
+  region: string;
+  postalCode: string;
+  /** ISO country code, always 'US'. */
+  country: string;
+};
+
+/** Which optional home-page sections are switched on. */
+export type SectionVisibility = {
+  showTeam: boolean;
+  showFaq: boolean;
+  showSpeakerApplications: boolean;
 };
 
 export type Settings = {
@@ -33,8 +57,19 @@ export type Settings = {
   doorsTime: string;
   endTime: string;
   venueName: string;
+  /** "Santa Clara University" */
+  venueCampus: string;
+  /** Multi-line: campus, street, "City, ST 00000". Derived from the structured fields. */
   venueAddress: string;
+  /** Structured postal address, the single source for the page and JSON-LD. */
+  venuePostalAddress: VenuePostalAddress;
+  /** What the address is, e.g. "University main address". */
+  venueAddressLabel: string;
+  /** Decimal degrees, or null when not set. */
+  venueCoordinates: { lat: number; lng: number; note: string } | null;
   mapUrl: string;
+  venueNotes: VenueNote[];
+  /** Legacy single string: the filled-in venue notes joined. '' when none. */
   directionsNotes: string;
   ticketState: TicketState;
   ticketUrl: string;
@@ -42,12 +77,14 @@ export type Settings = {
   ticketPriceNote: string;
   speakerApplicationsState: ApplicationsState;
   speakerApplicationsUrl: string;
+  speakerApplicationsDeadline: string;
   newsletterUrl: string;
   contactEmail: string;
   partnershipsEmail: string;
   livestreamUrl: string;
   socials: Socials;
   accentColor: string;
+  sections: SectionVisibility;
 };
 
 export type Speaker = {
@@ -59,6 +96,9 @@ export type Speaker = {
   shortBio: string;
   bio: string;
   photo: string | null;
+  /** Optional personal link ('' when none) and its label. */
+  link: string;
+  linkLabel: string;
   order: number;
 };
 
@@ -98,6 +138,9 @@ export type Sponsor = {
   url: string;
 };
 
+/** A row of the partner benefits comparison: which tier slugs include it. */
+export type PartnerBenefit = { benefit: string; tiers: string[] };
+
 export const PLACEHOLDER_SPEAKER_NAME = 'Speaker to be announced';
 
 const ACCENT_FALLBACK = '#EB0028';
@@ -114,16 +157,90 @@ function formatDate(iso: string, style: 'long' | 'short'): string {
 }
 
 const byOrder = <T extends { order: number }>(a: T, b: T) => a.order - b.order;
+const str = (v: string | null | undefined) => (v ?? '').trim();
+
+function coordinates(lat: string, lng: string, note: string) {
+  const la = Number.parseFloat(lat);
+  const lo = Number.parseFloat(lng);
+  if (!lat || !lng || Number.isNaN(la) || Number.isNaN(lo)) return null;
+  return { lat: la, lng: lo, note: str(note) };
+}
 
 export const getSettings = cache(async (): Promise<Settings> => {
-  const s = await reader.singletons.settings.readOrThrow();
+  const [s, venue, tickets, contact, sections] = await Promise.all([
+    reader.singletons.settings.readOrThrow(),
+    reader.singletons.venue.read(),
+    reader.singletons.tickets.read(),
+    reader.singletons.contact.read(),
+    reader.singletons.sections.read(),
+  ]);
   const dateISO = s.dateISO || '2027-04-23';
+
+  const venueName = str(venue?.venueName) || 'Locatelli Student Activity Center';
+  const venueCampus = str(venue?.campus);
+  const postal: VenuePostalAddress = {
+    street: str(venue?.street),
+    city: str(venue?.city),
+    region: str(venue?.region),
+    postalCode: str(venue?.postalCode),
+    country: 'US',
+  };
+  const cityLine = [postal.city, [postal.region, postal.postalCode].filter(Boolean).join(' ')]
+    .filter(Boolean)
+    .join(', ');
+  const venueNotes = (venue?.notes ?? [])
+    .map((n) => ({ title: str(n.title), body: str(n.body) }))
+    .filter((n) => n.title || n.body);
+
   return {
-    ...s,
+    eventName: s.eventName || 'TEDxSantaClaraUniversity',
+    themeName: s.themeName,
+    themeTagline: s.themeTagline,
+    themeStory: s.themeStory,
     dateISO,
     dateLong: formatDate(dateISO, 'long'),
     dateShort: formatDate(dateISO, 'short'),
+    doorsTime: str(s.doorsTime),
+    endTime: str(s.endTime),
     accentColor: /^#[0-9a-f]{6}$/i.test(s.accentColor) ? s.accentColor : ACCENT_FALLBACK,
+
+    venueName,
+    venueCampus,
+    venueAddress: [venueCampus, postal.street, cityLine].filter(Boolean).join('\n'),
+    venuePostalAddress: postal,
+    venueAddressLabel: str(venue?.addressLabel),
+    venueCoordinates: coordinates(str(venue?.latitude), str(venue?.longitude), str(venue?.coordinatesNote)),
+    mapUrl: str(venue?.mapUrl),
+    venueNotes,
+    directionsNotes: venueNotes
+      .filter((n) => n.body)
+      .map((n) => `${n.title}: ${n.body}`)
+      .join('\n'),
+
+    ticketState: tickets?.ticketState ?? 'coming-soon',
+    ticketUrl: str(tickets?.ticketUrl),
+    ticketEmbedUrl: str(tickets?.ticketEmbedUrl),
+    ticketPriceNote: str(tickets?.ticketPriceNote),
+    speakerApplicationsState: tickets?.speakerApplicationsState ?? 'coming-soon',
+    speakerApplicationsUrl: str(tickets?.speakerApplicationsUrl),
+    speakerApplicationsDeadline: str(tickets?.speakerApplicationsDeadline),
+
+    newsletterUrl: str(contact?.newsletterUrl),
+    contactEmail: str(contact?.contactEmail),
+    partnershipsEmail: str(contact?.partnershipsEmail),
+    livestreamUrl: str(contact?.livestreamUrl),
+    socials: {
+      instagram: str(contact?.socials.instagram),
+      linkedin: str(contact?.socials.linkedin),
+      youtube: str(contact?.socials.youtube),
+      tiktok: str(contact?.socials.tiktok),
+    },
+
+    sections: {
+      showTeam: sections?.showTeam ?? true,
+      showFaq: sections?.showFaq ?? true,
+      showSpeakerApplications: sections?.showSpeakerApplications ?? true,
+    },
   };
 });
 
@@ -140,6 +257,8 @@ export const getSpeakers = cache(async (): Promise<Speaker[]> => {
       shortBio: entry.announced ? entry.shortBio : '',
       bio: entry.announced ? entry.bio : '',
       photo: entry.announced ? entry.photo : null,
+      link: entry.announced ? str(entry.link) : '',
+      linkLabel: entry.announced ? str(entry.linkLabel) || 'Website' : '',
       order: entry.order ?? 0,
     }))
     .sort(byOrder);
@@ -157,19 +276,22 @@ export const getSchedule = cache(async (): Promise<Schedule> => {
 
 export const getFaq = cache(async (): Promise<FaqItem[]> => {
   const f = await reader.singletons.faq.read();
-  return [...(f?.items ?? [])];
+  return (f?.items ?? []).filter((i) => i.question && i.answer);
 });
 
 export const getTeam = cache(async (): Promise<TeamMember[]> => {
   const entries = await reader.collections.team.all();
   return entries
-    .map(({ slug, entry }) => ({
-      slug,
-      role: entry.role,
-      name: entry.showName && entry.name ? entry.name : null,
-      photo: entry.showName ? entry.photo : null,
-      order: entry.order ?? 0,
-    }))
+    .map(({ slug, entry }) => {
+      const visible = entry.showName && Boolean(str(entry.name));
+      return {
+        slug,
+        role: entry.role,
+        name: visible ? str(entry.name) : null,
+        photo: visible ? entry.photo : null,
+        order: entry.order ?? 0,
+      };
+    })
     .sort(byOrder);
 });
 
@@ -180,7 +302,7 @@ export const getTiers = cache(async (): Promise<Tier[]> => {
       slug,
       name: entry.name,
       description: entry.description,
-      amount: entry.amount,
+      amount: str(entry.amount),
       slots: entry.slots,
       order: entry.order ?? 0,
     }))
@@ -196,8 +318,16 @@ export const getSponsors = cache(async (): Promise<Sponsor[]> => {
       name: entry.name,
       tier: entry.tier,
       logo: entry.logo,
-      url: entry.url,
-    }));
+      url: str(entry.url),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+});
+
+export const getPartnerBenefits = cache(async (): Promise<PartnerBenefit[]> => {
+  const b = await reader.singletons.benefits.read();
+  return (b?.items ?? [])
+    .map((i) => ({ benefit: str(i.benefit), tiers: [...i.tiers] }))
+    .filter((i) => i.benefit);
 });
 
 /** Splits multi-paragraph plain text (blank-line separated) into paragraphs. */
