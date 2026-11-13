@@ -8,8 +8,8 @@
   --color-ink: #000000;
   --color-paper: #ffffff;
   --color-accent: var(--accent, #eb0028);
-  --color-mute: #a6a6a6; /* ~8.6:1 on black */
-  --color-subtle: #8c8c8c; /* ~6.2:1 on black, fine print */
+  --color-mute: #b8b8b8; /* ~10.4:1 on black */
+  --color-subtle: #a0a0a0; /* ~7.9:1 on black, fine print */
   --color-line: #262626; /* hairlines, decorative */
   --color-panel: #0a0a0a;
 
@@ -32,7 +32,9 @@
 }
 
 :root {
-  --header-h: 5rem;
+  /* Safe-area aware (viewport-fit=cover): 0 everywhere except notched devices. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --header-h: calc(5rem + var(--safe-top));
   --z-canvas: 0;
   --z-content: 10;
   --z-header: 50;
@@ -52,11 +54,9 @@
     scroll-padding-top: var(--header-h);
   }
 
-  @media (prefers-reduced-motion: no-preference) {
-    html:not([data-smooth-scroll]) {
-      scroll-behavior: smooth;
-    }
-  }
+  /* No `scroll-behavior: smooth` anywhere: focus() scrolls with behavior "auto",
+     which honours it, so Tab would glide (and fight Lenis). Anchor glides are
+     done by the motion engine; focus-driven scrolling is always instant. */
 
   body {
     background: #000;
@@ -64,6 +64,9 @@
     font-family: var(--font-sans);
     font-feature-settings: 'ss01', 'cv11';
     min-height: 100svh;
+    /* Safety net: never a sideways page scroll (clip, unlike hidden, keeps sticky working). */
+    overflow-x: clip;
+    -webkit-tap-highlight-color: transparent;
   }
 
   ::selection {
@@ -118,13 +121,20 @@ html.lenis body {
 
   /* Readability scrims over the canvas. Never rely on the 3D for contrast. */
   .scrim-y {
-    background: linear-gradient(to bottom, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.55) 30%, rgb(0 0 0 / 0.55) 70%, rgb(0 0 0 / 0.85));
+    background: linear-gradient(to bottom, rgb(0 0 0 / 0.88), rgb(0 0 0 / 0.76) 30%, rgb(0 0 0 / 0.76) 70%, rgb(0 0 0 / 0.88));
   }
   .scrim-left {
-    background: linear-gradient(to right, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.6) 55%, rgb(0 0 0 / 0.15));
+    /* Dark where the text column is, opening up toward the right edge. */
+    background: linear-gradient(to right, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.78) 50%, rgb(0 0 0 / 0.45) 75%, rgb(0 0 0 / 0.15));
   }
   .scrim-solid {
-    background: rgb(0 0 0 / 0.78);
+    background: rgb(0 0 0 / 0.84);
+  }
+  /* Phones: text runs the full width, so the left scrim must too. */
+  @media (max-width: 767.98px) {
+    .scrim-left {
+      background: linear-gradient(to bottom, rgb(0 0 0 / 0.82), rgb(0 0 0 / 0.78) 50%, rgb(0 0 0 / 0.88));
+    }
   }
 
   .shell {
@@ -132,6 +142,8 @@ html.lenis body {
     width: 100%;
     max-width: 88rem;
     padding-inline: clamp(1.25rem, 4vw, 3.5rem);
+    padding-left: max(clamp(1.25rem, 4vw, 3.5rem), env(safe-area-inset-left, 0px));
+    padding-right: max(clamp(1.25rem, 4vw, 3.5rem), env(safe-area-inset-right, 0px));
   }
 
   /* Underline that draws from the left on hover/focus. Paint-only, works across wrapped lines. */
@@ -206,7 +218,9 @@ html.lenis body {
 /* Pre-reveal state. The engine marks elements [data-reveal-armed] in the same
    frame it sets their GSAP start state, so there is never a visible jump. The
    failsafe animation shows everything if the motion bundle never arrives. */
-html.motion [data-reveal]:not([data-reveal-armed]) {
+/* Only the outermost reveal hides: nested ones are animated by it (and a split
+   re-creates them, so they could never be armed reliably). */
+html.motion [data-reveal]:not([data-reveal-armed]):not([data-reveal] [data-reveal]) {
   opacity: 0;
   animation: reveal-failsafe 0.01s linear 3s forwards;
 }
@@ -234,6 +248,10 @@ html.motion [data-reveal]:not([data-reveal-armed]) {
 [data-site-header][data-hidden] {
   transform: translate3d(0, -100%, 0);
 }
+/* Notch / status bar in standalone mode: the bar grows, its content stays put. */
+.site-header {
+  padding-top: var(--safe-top);
+}
 .reading-progress {
   transform: scaleX(0);
   transform-origin: 0 50%;
@@ -242,19 +260,35 @@ html:not(.motion) .reading-progress {
   display: none;
 }
 
-/* Hero intro: pure CSS, starts on first paint, finishes in ~1.5s. */
+/* Hero intro: pure CSS, starts on the first paint (no delay on the headline),
+   done in ~1.2s. Each word is one text run (kerning intact) inside a mask. */
 .hero-word {
   display: inline-block;
   white-space: nowrap;
-}
-.hero-char {
-  display: inline-block;
   overflow: clip;
   padding-block: 0.06em 0.16em;
   margin-block: -0.06em -0.16em;
+  /* room for the shear at the right edge without clipping glyph overhangs */
+  padding-inline: 0.02em;
+  margin-inline: -0.02em;
 }
-.hero-char > span {
+.hero-word > span {
   display: inline-block;
+  transform-origin: 0% 100%;
+}
+/* Phones: one word per line, sized server-side to fill the column (--hero-em is
+   the widest word in em, see Hero.tsx). Bold, and capped so a one-word theme
+   never towers over the fold. */
+@media (max-width: 639.98px) {
+  .hero-title {
+    font-size: min(
+      calc(
+        (100vw - 2 * max(1.25rem, 4vw) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) /
+          var(--hero-em, 4) * 0.985
+      ),
+      30svh
+    );
+  }
 }
 .hero-type {
   display: inline-block;
@@ -279,21 +313,21 @@ html:not(.motion) .reading-progress {
   html.motion .hero-type {
     animation: type-on 0.55s steps(var(--steps, 24), end) 0.05s both;
   }
-  html.motion .hero-char > span {
-    animation: rise 1.05s var(--ease-cinema) both;
-    animation-delay: calc(0.2s + var(--i) * 0.042s);
+  html.motion .hero-word > span {
+    animation: hero-rise 1.15s var(--ease-cinema) both;
+    animation-delay: calc(var(--w, 0) * 0.09s);
   }
   html.motion .hero-mark {
     display: inline-block;
     animation: mark-pop 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both;
-    animation-delay: calc(0.62s + var(--n, 10) * 0.042s);
+    animation-delay: calc(0.35s + var(--n, 2) * 0.09s);
   }
   html.motion [data-hero-seq] {
-    animation: settle 1s var(--ease-cinema) both;
-    animation-delay: calc(0.45s + var(--seq) * 0.08s);
+    animation: settle 0.9s var(--ease-cinema) both;
+    animation-delay: calc(0.25s + var(--seq) * 0.07s);
   }
   html.motion .hero-rule {
-    animation: draw-x 1.2s var(--ease-weight) 0.5s both;
+    animation: draw-x 1.2s var(--ease-weight) 0.3s both;
   }
   html.motion .scroll-cue {
     animation: fade-in 0.8s ease 1.3s both;
@@ -315,9 +349,10 @@ html:not(.motion) .reading-progress {
     clip-path: inset(0 0 0 0);
   }
 }
-@keyframes rise {
+/* The shear makes the left letters lead: a letter stagger without splitting. */
+@keyframes hero-rise {
   from {
-    transform: translate3d(0, 112%, 0);
+    transform: translate3d(0, 104%, 0) skewY(7deg);
   }
   to {
     transform: none;
@@ -385,16 +420,30 @@ html:not(.motion) .reading-progress {
 .theme-fine li {
   break-inside: avoid;
 }
+/* The defined term: the phrase the big statement grows out of. Set in the sans,
+   tracking 0, like a bolded term in a contract. The take-off copy in ThemeMotion
+   uses exactly these properties (.theme-line-ghost). */
 .theme-phrase {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0;
   color: #fff;
   white-space: nowrap;
   hyphens: none;
+}
+/* Justified lines would stretch the spaces inside the phrases. */
+.theme-def {
+  text-align: left;
+}
+.theme-line-ghost {
+  display: none;
 }
 .theme-line {
   display: block;
   white-space: nowrap;
 }
 .theme-line-inner {
+  position: relative;
   display: inline-block;
   transform-origin: 0 0;
 }
@@ -408,11 +457,14 @@ html:not(.motion) .reading-progress {
   display: none;
 }
 
-/* Mobile with motion: masked line reveals at natural height. */
 @media (max-width: 767.98px) {
   .theme-stack {
     font-size: 11.5vw;
   }
+}
+/* Not pinned (phones, and viewports too short for the stage, e.g. 200% zoom):
+   natural height, masked line reveals. Keep in sync with PINNED in ThemeMotion. */
+@media (max-width: 767.98px), (max-height: 43.99rem) {
   .theme-line {
     white-space: normal;
   }
@@ -423,20 +475,26 @@ html:not(.motion) .reading-progress {
   }
 }
 
-/* Desktop with motion: 250vh runway, a sticky stage, 9px contract text. */
-@media (min-width: 768px) {
+/* Pinned (motion, md+ and tall enough): a tall runway, a sticky stage, 9px contract text. */
+@media (min-width: 768px) and (min-height: 44rem) {
   html.motion .theme-runway {
     height: 250vh;
+  }
+  /* Touch tablets: a shorter runway (no long pins under a thumb). */
+  @media (pointer: coarse) {
+    html.motion .theme-runway {
+      height: 190vh;
+    }
   }
   html.motion .theme-stage {
     position: sticky;
     top: 0;
-    height: 100svh;
+    min-height: 100svh;
     overflow: hidden;
   }
   html.motion .theme-stage-inner {
     position: relative;
-    height: 100%;
+    min-height: 100svh;
     padding-top: calc(var(--header-h) + 2.5rem);
     padding-bottom: 2.5rem;
     display: flex;
@@ -463,6 +521,15 @@ html:not(.motion) .reading-progress {
     transform: translateY(-50%);
     margin: 0;
     pointer-events: none;
+  }
+  html.motion .theme-line-ghost {
+    display: block;
+    position: absolute;
+    left: 0;
+    top: 0;
+    white-space: nowrap;
+    font-weight: 500;
+    letter-spacing: 0;
   }
   html.motion .theme-counter {
     display: flex;
@@ -675,6 +742,42 @@ html.has-cursor textarea,
 html.has-cursor select,
 html.has-cursor [contenteditable] {
   cursor: auto;
+}
+
+/* --- Scene gate: kept alive but hidden (and paused) off the home page ----- */
+.scene-gate[data-hidden] {
+  visibility: hidden;
+}
+
+/* --- Touch ---------------------------------------------------------------- *
+ * No hover on touch screens: pressed states instead (transform/opacity only,
+ * quick in, eased out), and nothing that waits for a hover to be readable.   */
+@media (hover: none) {
+  .btn,
+  .tap,
+  .menu-link {
+    transition:
+      transform 0.45s var(--ease-cinema),
+      opacity 0.3s ease,
+      background-color 0.3s ease,
+      color 0.3s ease,
+      border-color 0.3s ease;
+  }
+  .btn:active,
+  .tap:active {
+    transform: scale(0.96);
+    transition-duration: 0.08s;
+  }
+  .menu-link:active,
+  main :where(a, summary):not(.btn, .tap):active {
+    opacity: 0.6;
+    transition-duration: 0.05s;
+  }
+  .speaker-card:has(a:active) {
+    transform: scale(0.985);
+    border-color: rgb(255 255 255 / 0.28);
+    transition-duration: 0.1s;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

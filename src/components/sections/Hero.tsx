@@ -7,19 +7,43 @@ import { SectionShell } from './SectionShell';
 
 const seq = (n: number) => ({ '--seq': n }) as CSSProperties;
 
+/*
+ * Phone headline fitting. Advance widths of Inter Bold (per 1000 em) for the
+ * characters below, measured from the self-hosted font. The server works out
+ * the widest word in em, so on phones each word sits on its own line at the
+ * size that fills the column exactly, with no client-side measuring (and no
+ * layout shift). Unknown characters fall back to a generous average.
+ */
+const ADV_CHARS = '!"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~’‘“”–—…';
+const ADV = [338,552,649,655,1016,672,339,377,377,559,679,334,468,334,388,674,431,630,646,676,622,649,599,651,649,334,343,679,679,679,560,1016,760,662,740,722,607,587,750,747,281,584,719,565,932,762,771,648,777,657,655,667,732,760,1057,738,731,664,377,344,377,487,476,365,581,630,588,630,596,360,632,623,271,271,580,271,913,623,613,630,630,414,560,357,623,600,850,580,602,573,469,372,469,679,311,311,540,532,500,1000,1002];
+const TRACKING = -0.06; // em, matches the headline's tracking
+const MARK = 0.36; // em taken by the footnote marker after the last word
+
+function wordEm(word: string): number {
+  let w = 0;
+  for (const ch of word) {
+    const i = ADV_CHARS.indexOf(ch);
+    w += (i >= 0 ? ADV[i] : 640) / 1000 + TRACKING;
+  }
+  return w;
+}
+
 /**
  * Hero. The intro is pure CSS gated on `html.motion` (globals.css), so it starts
- * with the first paint and never waits for JS: the caption types on, the theme
- * name rises by character behind a mask, the footnote marker pops last, and the
- * facts and buttons settle (they are readable from the first frame). HeroMotion
- * adds the scroll-out (scale, tracking, fade) as the 3D microphone takes over.
+ * with the first paint and never waits for JS or fonts: the caption types on,
+ * each word of the theme name rises from a mask with a shear that settles (left
+ * letters lead, so it reads as a letter stagger while every word stays one text
+ * run and keeps its kerning), the footnote marker pops last, and the facts and
+ * buttons settle (readable from the first frame). HeroMotion adds the scroll-out.
+ *
+ * Phones: one word per line, sized to fill the column (see wordEm), bold.
  */
 export function Hero({ settings }: { settings: Settings }) {
   const cta = ticketCta(settings);
   const caption = `${settings.dateISO.slice(0, 4)} theme`;
   const words = settings.themeName.split(/\s+/).filter(Boolean);
-  let charIndex = 0;
-  const totalChars = words.join('').length;
+  const fitEm = Math.max(1, ...words.map((w, i) => wordEm(w) + (i === words.length - 1 ? MARK : 0)));
+  const center = (words.length - 1) / 2;
 
   return (
     <SectionShell id="hero" scrim="left" className="flex min-h-[calc(100svh-var(--header-h))] flex-col">
@@ -27,7 +51,7 @@ export function Hero({ settings }: { settings: Settings }) {
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-black via-black/70 to-transparent"
       />
-      <div data-hero className="shell flex flex-1 flex-col justify-end pb-12 pt-16 sm:pb-16">
+      <div data-hero className="shell flex flex-1 flex-col justify-end pb-10 pt-10 sm:pb-16 sm:pt-16">
         <p className="fine-print">
           <span className="hero-type" style={{ '--steps': settings.eventName.length + caption.length + 3 } as CSSProperties}>
             <span className="tracking-normal normal-case text-white">{settings.eventName}</span>
@@ -40,7 +64,8 @@ export function Hero({ settings }: { settings: Settings }) {
         <h1
           id="hero-title"
           data-hero-title
-          className="mt-6 origin-[0%_100%] text-[clamp(3.5rem,19vw,12.5rem)] leading-[0.88] font-semibold sm:text-display tracking-[-0.06em] [font-variation-settings:'opsz'_32]"
+          className="hero-title mt-5 origin-[0%_100%] font-bold leading-[0.86] tracking-[-0.06em] sm:mt-6 sm:text-display sm:leading-[0.88] sm:font-semibold"
+          style={{ '--hero-em': fitEm.toFixed(3) } as CSSProperties}
         >
           <span className="sr-only">
             {settings.eventName}: {settings.themeName}
@@ -49,23 +74,16 @@ export function Hero({ settings }: { settings: Settings }) {
             {words.map((word, w) => (
               <span key={w}>
                 {w > 0 ? ' ' : null}
-                <span className="hero-word">
-                  {Array.from(word).map((ch) => {
-                    const i = charIndex++;
-                    return (
-                      <span key={i} className="hero-char" data-hero-char={i - (totalChars - 1) / 2}>
-                        <span style={{ '--i': i } as CSSProperties}>{ch}</span>
-                      </span>
-                    );
-                  })}
+                <span className="hero-word" data-hero-word={w - center}>
+                  <span style={{ '--w': w } as CSSProperties}>{word}</span>
                 </span>
               </span>
             ))}
           </span>
           <a
             href="#hero-note"
-            className="hero-mark ml-[0.08em] align-super font-mono text-[0.3em] font-normal tracking-normal text-accent no-underline transition-colors hover:text-white"
-            style={{ '--n': totalChars } as CSSProperties}
+            className="hero-mark tap relative ml-[0.06em] after:absolute after:-inset-3 after:content-[''] align-super font-mono text-[0.3em] font-normal tracking-normal text-accent no-underline transition-colors hover:text-white"
+            style={{ '--n': words.length } as CSSProperties}
           >
             <span aria-hidden="true">1</span>
             <span className="sr-only"> (see note 1)</span>
@@ -81,16 +99,16 @@ export function Hero({ settings }: { settings: Settings }) {
             {settings.themeTagline}
           </p>
 
-          <div className="relative mt-12 max-w-4xl">
+          <div className="relative mt-8 max-w-4xl sm:mt-12">
             <span aria-hidden="true" className="hero-rule absolute inset-x-0 top-0 h-px origin-left bg-white/15" />
-            <dl data-hero-seq style={seq(1)} className="grid gap-6 pt-6 sm:grid-cols-3">
+            <dl data-hero-seq style={seq(1)} className="grid grid-cols-2 gap-x-6 gap-y-5 pt-5 sm:grid-cols-3 sm:gap-6 sm:pt-6">
               <div>
                 <dt className="fine-print">Date</dt>
                 <dd className="mt-1.5 text-white">
                   <time dateTime={settings.dateISO}>{settings.dateLong}</time>
                 </dd>
               </div>
-              <div>
+              <div className="order-last col-span-2 sm:order-none sm:col-span-1">
                 <dt className="fine-print">Venue</dt>
                 <dd className="mt-1.5 text-white">
                   {settings.venueName}
@@ -107,7 +125,7 @@ export function Hero({ settings }: { settings: Settings }) {
             </dl>
           </div>
 
-          <div data-hero-seq style={seq(2)} className="mt-10 flex flex-wrap items-center gap-3">
+          <div data-hero-seq style={seq(2)} className="mt-8 flex flex-wrap items-center gap-3 sm:mt-10">
             <Button href={cta.href} size="lg" aria-label={cta.ariaLabel}>
               Tickets
             </Button>
@@ -116,7 +134,7 @@ export function Hero({ settings }: { settings: Settings }) {
             </Button>
           </div>
 
-          <div className="mt-12 flex items-end justify-between gap-8">
+          <div className="mt-8 flex items-end justify-between gap-8 sm:mt-12">
             <p id="hero-note" data-hero-seq style={seq(3)} className="fine-print max-w-md">
               <span className="text-accent">1.</span> Terms and conditions apply. They are the whole point.
             </p>

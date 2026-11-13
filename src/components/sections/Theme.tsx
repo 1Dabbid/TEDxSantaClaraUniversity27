@@ -30,11 +30,12 @@ const SUB = ['a', 'b', 'c'];
  * three-line statement is a decorative (aria-hidden) echo of that clause.
  *
  * - Static / no JS: natural height, readable clauses, the statement set large.
- * - Motion, md+: a 250vh runway with a sticky stage. The clauses shrink to a 9px
- *   contract footer and, as you scroll, each phrase of the definition grows out
- *   of its exact spot in the small type until it fills the screen, then settles
- *   (ThemeMotion). A clause counter ticks in the corner. The loupe cursor reads
- *   the small type.
+ * - Motion, md+: a tall runway with a sticky stage. The clauses shrink to a 9px
+ *   contract footer and, as you scroll, each phrase of the definition (set as a
+ *   defined term, in the sans) lifts off its exact spot in the small type and
+ *   grows until it fills the screen, then settles into display weight and
+ *   tracking (ThemeMotion). A clause counter ticks in the corner. The loupe
+ *   cursor reads the small type.
  * - Motion, mobile: natural height, masked line reveals.
  */
 export function Theme({ settings }: { settings: Settings }) {
@@ -74,7 +75,12 @@ export function Theme({ settings }: { settings: Settings }) {
             {phrases.map((p, i) => (
               <span key={i} className="theme-line" data-theme-line>
                 <span className="theme-line-inner" data-theme-line-inner>
-                  {p}
+                  <span data-theme-text>{p}</span>
+                  {/* Take-off copy: set exactly like the small phrase (same family, weight,
+                      tracking, text), so the hand-off from the paragraph is seamless. */}
+                  <span className="theme-line-ghost" data-theme-ghost>
+                    {i === 0 ? lowerFirst(p) : p}
+                  </span>
                 </span>
               </span>
             ))}
@@ -95,7 +101,7 @@ export function Theme({ settings }: { settings: Settings }) {
                   {p}
                 </li>
               ))}
-              <li className="mb-3">
+              <li className="theme-def mb-3">
                 <span aria-hidden="true" className="mr-2 text-white">
                   §&nbsp;1.{defIndex}
                 </span>

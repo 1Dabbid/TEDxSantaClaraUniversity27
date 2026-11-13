@@ -5,8 +5,9 @@ type Variant = 'primary' | 'ghost';
 type Size = 'sm' | 'md' | 'lg';
 
 const base =
-  'group relative inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-tight whitespace-nowrap ' +
-  // No CSS transition on transform: the magnetic hover drives it from JS.
+  'btn group relative inline-flex items-center justify-center gap-2 rounded-full text-center font-medium leading-tight tracking-tight text-balance ' +
+  // No CSS transition on transform: the magnetic hover drives it from JS (fine
+  // pointers). Touch gets a pressed state instead (.btn in globals.css).
   'transition-[background-color,color,border-color] duration-300 ease-[var(--ease-cinema)] ' +
   'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white';
 
@@ -16,9 +17,10 @@ const variants: Record<Variant, string> = {
 };
 
 const sizes: Record<Size, string> = {
-  sm: 'h-9 px-4 text-sm',
-  md: 'h-11 px-6 text-[0.9375rem]',
-  lg: 'h-14 px-8 text-base',
+  // 44px tall on touch screens, compact for mouse and trackpad.
+  sm: 'min-h-11 px-5 py-2 text-sm pointer-fine:min-h-9 pointer-fine:px-4 pointer-fine:py-1.5',
+  md: 'min-h-11 px-6 py-2.5 text-[0.9375rem]',
+  lg: 'min-h-14 px-8 py-3 text-base',
 };
 
 type CommonProps = {
