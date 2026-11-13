@@ -8,8 +8,20 @@
  */
 const FILLER = new Set(['a', 'an', 'the', 'is', 'are', 'am', 'be', 'i', 'my', 'it', 'can', 'do', 'does', 'will', 'of']);
 
-/** Ids the page itself already uses: a question never takes one of them. */
-const RESERVED = new Set(['main', 'faq', 'faq-title', 'site-footer', 'questions']);
+/**
+ * Ids /faq itself renders (skip-link target, headings, footer): a question never
+ * takes one of them. Checked against the rendered page in tests/e2e/topic-pages.spec.ts.
+ */
+export const RESERVED_IDS: ReadonlySet<string> = new Set([
+  'main',
+  'site-footer',
+  'faq-page-title',
+  'questions-title',
+  'next-title',
+  'footer-tedx',
+  'footer-ted',
+  'footer-site',
+]);
 
 export function faqSlug(question: string): string {
   const words = question
@@ -24,7 +36,7 @@ export function faqSlug(question: string): string {
   if (!slug) return 'question';
   // An id must not start with a digit to be usable as a CSS selector without escaping.
   const safe = /^\d/.test(slug) ? `q-${slug}` : slug;
-  return RESERVED.has(safe) ? `${safe}-question` : safe;
+  return RESERVED_IDS.has(safe) ? `${safe}-question` : safe;
 }
 
 export function faqIds(questions: string[]): string[] {

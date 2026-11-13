@@ -1,6 +1,6 @@
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { SITE_URL, settle, topicRoutes } from './helpers';
-import { faqIds } from '../../src/lib/faq-ids';
+import { faqIds, RESERVED_IDS } from '../../src/lib/faq-ids';
 
 /**
  * The topic pages (/speakers, /schedule, /venue, /partners, /team, /faq) and the
@@ -127,6 +127,9 @@ test.describe('FAQ deep links', () => {
     expect(new Set(ids).size).toBe(ids.length);
     const questions = await page.locator('main ol > li summary').evaluateAll((s) => s.map((x) => x.textContent!.replace(/^\d+/, '').trim()));
     expect(ids).toEqual(faqIds(questions));
+    // Every other id on the page a slug could equal is reserved, so no question can take it.
+    const others = await page.locator('[id]').evaluateAll((els, q) => els.map((e) => e.id).filter((i) => !q.includes(i)), ids);
+    for (const other of others.filter((i) => /^[a-z0-9-]+$/.test(i))) expect([...RESERVED_IDS], `id "${other}" on /faq`).toContain(other);
   });
 
   /** The question ids /faq renders, read from the server HTML (no browser visit, so the next goto is a cold load). */
