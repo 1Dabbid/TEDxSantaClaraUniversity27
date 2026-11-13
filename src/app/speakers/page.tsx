@@ -2,8 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { getSettings, getSpeakers } from '@/lib/content';
 import { isIndexable, SITE_NAME } from '@/lib/site';
-import { SpeakerCard } from '@/components/sections/Speakers';
-import { ComingSoonBadge } from '@/components/ui/ComingSoon';
+import { SpeakerCard, SpeakersToCome } from '@/components/sections/Speakers';
+import { Button } from '@/components/ui/Button';
 
 export async function generateMetadata(): Promise<Metadata> {
   const [s, speakers] = await Promise.all([getSettings(), getSpeakers()]);
@@ -29,12 +29,16 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
-/** Every speaker on one page: announced speakers first, each card numbered as on the home page. */
+/**
+ * Every announced speaker on one page, numbered as on the home page, then one
+ * card for the slots still to come. Until the first announcement it is a short
+ * "to be announced" page with the one useful action.
+ */
 export default async function SpeakersPage() {
   const [settings, speakers] = await Promise.all([getSettings(), getSpeakers()]);
   const numbered = speakers.map((speaker, index) => ({ speaker, index }));
-  const ordered = [...numbered.filter((x) => x.speaker.announced), ...numbered.filter((x) => !x.speaker.announced)];
-  const anyAnnounced = ordered.some((x) => x.speaker.announced);
+  const announced = numbered.filter((x) => x.speaker.announced);
+  const anyAnnounced = announced.length > 0;
 
   return (
     <section aria-labelledby="speakers-index-title" className="relative isolate">
@@ -62,18 +66,30 @@ export default async function SpeakersPage() {
           data-reveal="lines"
           className="mt-6 text-[clamp(3.25rem,9.6vw,8.75rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance"
         >
-          Speakers
+          {anyAnnounced ? 'Speakers' : 'Speakers to be announced.'}
         </h1>
-        {!anyAnnounced ? (
-          <div className="mt-8">
-            <ComingSoonBadge>Lineup announced soon</ComingSoonBadge>
+        {anyAnnounced ? (
+          <ul aria-label="Speakers" className="mt-14 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
+            {announced.map(({ speaker, index }) => (
+              <SpeakerCard key={speaker.slug} speaker={speaker} index={index} />
+            ))}
+            <SpeakersToCome count={speakers.length - announced.length} />
+          </ul>
+        ) : (
+          <div className="mt-10 max-w-xl">
+            <p className="text-lg text-mute sm:text-xl">
+              The lineup is announced on this page and to the mailing list first.
+            </p>
+            <div className="mt-10 flex flex-wrap gap-3">
+              <Button href={settings.newsletterUrl || '/#newsletter'} size="lg">
+                Join the mailing list
+              </Button>
+              <Button href="/" variant="ghost" size="lg">
+                Back to the event
+              </Button>
+            </div>
           </div>
-        ) : null}
-        <ul aria-label="Speakers" className="mt-14 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">
-          {ordered.map(({ speaker, index }) => (
-            <SpeakerCard key={speaker.slug} speaker={speaker} index={index} />
-          ))}
-        </ul>
+        )}
       </div>
     </section>
   );

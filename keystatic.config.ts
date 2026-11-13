@@ -255,7 +255,7 @@ export default config({
       path: 'content/sections',
       schema: {
         showTeam: fields.checkbox({
-          label: 'Show the Team section on the home page',
+          label: 'Show the Team section on the home page (it appears once at least one name is public)',
           defaultValue: true,
         }),
         showFaq: fields.checkbox({
@@ -263,7 +263,7 @@ export default config({
           defaultValue: true,
         }),
         showSpeakerApplications: fields.checkbox({
-          label: 'Show the speaker applications band (under Tickets)',
+          label: 'Show speaker applications (in the Speakers section)',
           defaultValue: true,
         }),
         showYearRound: fields.checkbox({

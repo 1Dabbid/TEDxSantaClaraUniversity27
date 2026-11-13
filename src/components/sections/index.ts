@@ -7,3 +7,4 @@ export { Tickets } from './Tickets';
 export { Team } from './Team';
 export { Faq } from './Faq';
 export { Newsletter } from './Newsletter';
+export { PartnerBand } from './PartnerBand';

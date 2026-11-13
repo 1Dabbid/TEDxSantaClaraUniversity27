@@ -1,147 +1,39 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Settings, Speaker } from '@/lib/content';
-import { ComingSoonBadge } from '@/components/ui/ComingSoon';
+import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { EventName, keepTedxCase } from '@/components/ui/KeepCase';
 import { SpeakersMotion } from '@/motion/sections/SpeakersMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
-
-/**
- * Placeholder variety. Six "to be announced" cards should read as six different
- * withheld documents, not one card repeated: each gets its own redaction layout
- * (rows of segments, widths in %), status line and footnote. Deterministic, so
- * server and client agree and the static HTML is the design.
- */
-type Row = { h: 'lg' | 'md' | 'sm'; segs: number[] };
-const REDACTIONS: Row[][] = [
-  [
-    { h: 'lg', segs: [64] },
-    { h: 'lg', segs: [41] },
-    { h: 'sm', segs: [88] },
-    { h: 'sm', segs: [52] },
-  ],
-  [
-    { h: 'lg', segs: [28, 46] },
-    { h: 'sm', segs: [92] },
-    { h: 'sm', segs: [78] },
-    { h: 'sm', segs: [35] },
-  ],
-  [
-    { h: 'lg', segs: [73] },
-    { h: 'md', segs: [22, 18, 30] },
-    { h: 'sm', segs: [61] },
-  ],
-  [
-    { h: 'md', segs: [38] },
-    { h: 'lg', segs: [58] },
-    { h: 'sm', segs: [84] },
-    { h: 'sm', segs: [16, 44] },
-  ],
-  [
-    { h: 'lg', segs: [49, 19] },
-    { h: 'lg', segs: [33] },
-    { h: 'sm', segs: [70] },
-  ],
-  [
-    { h: 'lg', segs: [57] },
-    { h: 'sm', segs: [90] },
-    { h: 'md', segs: [26, 26] },
-    { h: 'sm', segs: [47] },
-  ],
-];
-const ROW_H = { lg: 'h-5', md: 'h-3', sm: 'h-2' } as const;
-const ROW_GAP = { lg: 'mt-2.5', md: 'mt-2', sm: 'mt-1.5' } as const;
-
-const STATUS = ['Clause pending', 'Under review', 'Withheld', 'Pending signature', 'Redacted', 'Sealed'];
-
-const FOOTNOTES = [
-  'Name, affiliation and talk title withheld pending announcement. The speaker is under no obligation to be what you expect.',
-  'Identity on file. Disclosure deferred until the parties agree. No inference should be drawn from the length of the bars.',
-  'Talk title redacted at the request of no one in particular.',
-  'This clause becomes binding on announcement. Until then it is merely very likely.',
-  'Details withheld for the reader’s own suspense. See the mailing list for the unredacted copy.',
-  'Reserved. The red circle has been booked; the name is still in the envelope.',
-];
 
 /* Glass over the scene: plain translucency plus a soft gradient (no backdrop
    blur: it would re-filter the live canvas every frame). At these alphas every
    line of text stays AA even over the saturated rug or the spotlight cone. */
-const cardBase =
-  'speaker-card group relative flex min-w-0 flex-col border border-white/[0.09] bg-gradient-to-b from-black/[0.62] to-black/[0.48]';
+const glass = 'border border-white/[0.09] bg-gradient-to-b from-black/[0.66] to-black/[0.54]';
+const cardBase = `speaker-card group relative flex min-w-0 flex-col ${glass}`;
 
-const COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
-
+/** An announced speaker: portrait, name, role, talk title; the whole card links to the speaker page. */
 export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
-  const clause = `§ 2.${index + 1}`;
-  const num = String(index + 1).padStart(2, '0');
-
-  if (!speaker.announced) {
-    const rows = REDACTIONS[index % REDACTIONS.length];
-    return (
-      <li
-        className={`${cardBase} speaker-card--tba p-6 sm:aspect-[4/5] sm:p-7`}
-        data-cursor="loupe"
-        data-cursor-zoom="2.4"
-      >
-        <div className="flex items-baseline justify-between gap-4">
-          <span className="fine-print text-white">{clause.replace(' ', '\u00a0')}</span>
-          <span className="fine-print text-right text-[#d0d0d0]">{STATUS[index % STATUS.length]}</span>
-        </div>
-
-        <div aria-hidden="true" className="speaker-body mt-6 sm:mt-auto">
-          <span
-            className={`speaker-num block font-mono text-[clamp(3.25rem,9vw,7.5rem)] leading-none font-light tracking-[-0.06em] text-white/[0.08] tabular-nums ${index % 3 === 1 ? 'text-right' : ''}`}
-          >
-            {num}
-          </span>
-          <div className="speaker-bars mt-5 sm:mt-6">
-            {rows.map((row, r) => {
-              const prev = rows[r - 1];
-              const gap = !prev ? '' : prev.h !== row.h && row.h !== 'lg' ? 'mt-4' : ROW_GAP[row.h];
-              return (
-                <div key={r} className={`flex gap-1.5 ${gap}`}>
-                  {row.segs.map((w, k) => (
-                    <span key={k} className={`redacted ${ROW_H[row.h]}`} style={{ width: `${w}%` }} />
-                  ))}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="speaker-foot mt-6 border-t border-white/10 pt-5 sm:mt-8">
-          <h3 className="text-lg font-semibold tracking-tight">
-            <Link
-              href={`/speakers/${speaker.slug}`}
-              className="after:absolute after:inset-0 after:content-['']"
-            >
-              {speaker.name}
-              <span className="sr-only">, speaker {index + 1}</span>
-            </Link>
-          </h3>
-          <p className="mt-2 font-mono text-[0.5625rem] leading-[1.6] tracking-[0.04em] text-[#d0d0d0]">
-            {FOOTNOTES[index % FOOTNOTES.length]}
-          </p>
-        </div>
-      </li>
-    );
-  }
-
+  const clause = `§ 2.${index + 1}`;
   return (
-    <li className={cardBase} data-cursor="loupe" data-cursor-zoom="2.2">
-      <div className="speaker-photo relative aspect-[4/5] overflow-hidden bg-black">
+    // Phones: portrait beside the text (a column of full-width portraits is six screens long).
+    <li className={`${cardBase} max-sm:flex-row`} data-cursor="loupe" data-cursor-zoom="2.2">
+      <div className="speaker-photo relative aspect-[4/5] overflow-hidden bg-black max-sm:w-28 max-sm:shrink-0">
         {speaker.photo ? (
           <Image
             src={speaker.photo}
             alt=""
             fill
-            sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 100vw"
+            sizes="(min-width: 1024px) 30vw, (min-width: 640px) 45vw, 112px"
             className="object-cover grayscale transition-[filter,transform] duration-1000 ease-[var(--ease-cinema)] group-hover:scale-[1.03] group-hover:grayscale-0"
           />
         ) : null}
-        <span className="fine-print absolute left-4 top-4 text-white">{clause.replace(' ', ' ')}</span>
+        <span aria-hidden="true" className="fine-print absolute left-4 top-4 text-white max-sm:left-2 max-sm:top-2">
+          {clause}
+        </span>
       </div>
-      <div className="speaker-text p-6">
+      <div className="speaker-text min-w-0 p-6 max-sm:self-center max-sm:p-4">
         <h3 className="text-xl font-semibold tracking-tight">
           <Link href={`/speakers/${speaker.slug}`} className="after:absolute after:inset-0 after:content-['']">
             {speaker.name}
@@ -149,60 +41,117 @@ export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: numbe
         </h3>
         {speaker.role ? <p className="mt-1 text-sm text-[#d0d0d0]">{speaker.role}</p> : null}
         {speaker.talkTitle ? <p className="mt-4 text-white">“{speaker.talkTitle}”</p> : null}
-        <p className="mt-5 border-t border-white/10 pt-4 font-mono text-[0.5625rem] tracking-[0.04em] text-[#d0d0d0]">
-          {clause}. Read the full clause on the speaker page.
-        </p>
       </div>
     </li>
   );
 }
 
 /**
+ * The slots still to be announced, as one quiet card (never one card per empty
+ * slot, and never a link: a placeholder has nothing to open).
+ */
+export function SpeakersToCome({ count }: { count: number }) {
+  if (count <= 0) return null;
+  return (
+    <li className={`${cardBase} speaker-card--tba justify-end p-6 sm:p-7`}>
+      <p aria-hidden="true" className="fine-print text-mute">
+        More to come
+      </p>
+      <p className="mt-4 text-xl font-semibold tracking-tight text-balance">
+        {count === 1 ? 'One more speaker' : 'More speakers'} to be announced.
+      </p>
+      <p className="mt-2 text-sm text-[#d0d0d0]">Announced here and to the mailing list first.</p>
+    </li>
+  );
+}
+
+/**
+ * Speaker applications, driven by Tickets & speaker applications in the admin.
+ * Returns null when the band is switched off (Show / hide sections).
+ */
+function ApplyToSpeak({ settings }: { settings: Settings }) {
+  if (!settings.sections.showSpeakerApplications) return null;
+  const state = settings.speakerApplicationsState;
+  const open = state === 'open' && Boolean(settings.speakerApplicationsUrl);
+  const copy = open
+    ? 'Applications are open. Tell us the idea you would bring to the stage.'
+    : state === 'closed'
+      ? 'Applications for this event are closed. Thank you to everyone who applied.'
+      : 'Applications are not open yet. When they open, the link appears here and goes to the mailing list.';
+  return (
+    <div role="group" aria-labelledby="apply-title">
+      <h3 id="apply-title" className="text-lg font-semibold tracking-tight">
+        Speak at <EventName />
+      </h3>
+      <p className="mt-2 max-w-md text-[#d0d0d0]">{copy}</p>
+      {open && settings.speakerApplicationsDeadline ? (
+        <p className="fine-print mt-3 text-white">Deadline: {keepTedxCase(settings.speakerApplicationsDeadline)}</p>
+      ) : null}
+      {open ? (
+        <div className="mt-5">
+          <Button href={settings.speakerApplicationsUrl}>Apply to speak</Button>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/**
  * § 02 · Speakers.
  *
- * Opens on a stage moment, then the cards. The markup is one document in every
- * mode (heading, caption, list of cards); globals.css and SpeakersMotion change
- * only how it composes over the scene:
+ * Content-driven: the section shows what is true today.
+ * - No speaker announced: one statement ("Speakers to be announced"), and a
+ *   single glass panel with the one action that helps now (join the mailing
+ *   list) next to how to apply to speak. No placeholder cards.
+ * - Some announced: their cards, then one "more to be announced" card; an
+ *   "Apply to speak" button under the heading while applications are open.
+ * - All announced: the cards.
  *
- * - Static / no JS / reduced motion: normal flow on black, a grid of cards.
- * - Motion, desktop (>= 1024 wide, >= 44rem tall): a tall runway with a sticky,
- *   full-viewport stage. The heading sits top left, small to large, and the lit
- *   red rug holds the frame, unobstructed, while the camera lands on it. Only
- *   then does a strip of glass cards rise into the lower edge and travel sideways
- *   with the scroll, the rug still visible above it. Keyboard focus on a card
- *   scrolls the page to the point where that card is in view.
- * - Motion, phones / tablets / short viewports: the heading block holds (sticky)
- *   over the rug for a short while, then a plain vertical list of cards.
+ * Composition (globals.css, SpeakersMotion): static / reduced motion is normal
+ * flow on black. Motion on desktop (>= 1024 wide, >= 44rem tall) is a runway
+ * with a sticky stage: the heading top left, the lit rug alone mid-frame for a
+ * beat, then the strip (cards, or the panel) rises into the lower edge; cards
+ * travel sideways when they do not fit. Phones: a short sticky hold, then the list.
  */
 export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings: Settings }) {
-  const anyAnnounced = speakers.some((s) => s.announced);
-  // The applications band lives in Tickets (§ 5.5); only point to it when it is rendered.
-  const showApps = settings.sections.showSpeakerApplications;
-  const count = COUNT_WORDS[speakers.length] ?? String(speakers.length);
+  const announced = speakers.filter((s) => s.announced);
+  const toCome = speakers.length - announced.length;
+  const any = announced.length > 0;
+  const listHref = settings.newsletterUrl || '#newsletter';
+  const appsOpen =
+    settings.sections.showSpeakerApplications &&
+    settings.speakerApplicationsState === 'open' &&
+    Boolean(settings.speakerApplicationsUrl);
+
   return (
-    <SectionShell id="speakers" scrim="none" className="speakers-runway py-24 sm:py-36">
+    <SectionShell
+      id="speakers"
+      scrim="none"
+      className={`speakers-runway py-24 sm:py-32 ${any ? '' : 'speakers-runway--tba'}`}
+    >
       <div data-speakers-stage className="speakers-stage">
         <div aria-hidden="true" className="speakers-scrim pointer-events-none absolute inset-0 -z-10" />
         <div data-speakers-head className="speakers-head">
           <div className="speakers-head-inner shell">
             <SectionLabel index={2}>Speakers</SectionLabel>
             <div data-speakers-title className="origin-[0%_100%]">
-              <SectionTitle id="speakers">On the red circle.</SectionTitle>
+              <SectionTitle id="speakers">{any ? 'Meet the speakers.' : 'Speakers to be announced.'}</SectionTitle>
             </div>
             <div data-speakers-meta className="speakers-meta mt-6 flex flex-col items-start gap-y-3 sm:mt-8">
-              {!anyAnnounced ? <ComingSoonBadge>Lineup announced soon</ComingSoonBadge> : null}
-              <p className="fine-print max-w-[34rem] text-mute">
-                <span className="text-white">§&nbsp;2.0</span> {count} talks. One red circle. Names withheld until the
-                ink is dry.
+              <p className="max-w-[34rem] text-lg text-mute">
+                Live talks on <time dateTime={settings.dateISO}>{settings.dateLong}</time>, at the{' '}
+                {settings.venueName}.
               </p>
-              {showApps ? (
-                <p className="fine-print flex flex-wrap items-baseline gap-x-3">
-                  <span>Want to stand on it yourself?</span>
-                  <a href="#apply-title" className="group tap inline-flex min-h-11 items-center text-white">
-                    <span className="link-draw group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]">
-                      Speaker applications, §&nbsp;5.5
+              {any && appsOpen ? (
+                <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <Button href={settings.speakerApplicationsUrl} variant="ghost">
+                    Apply to speak
+                  </Button>
+                  {settings.speakerApplicationsDeadline ? (
+                    <span className="fine-print text-mute">
+                      Deadline: {keepTedxCase(settings.speakerApplicationsDeadline)}
                     </span>
-                  </a>
+                  ) : null}
                 </p>
               ) : null}
             </div>
@@ -210,17 +159,35 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
         </div>
 
         <div data-speakers-strip className="speakers-strip shell">
-          <ul
-            data-speakers-track
-            aria-label="Speakers"
-            className="speakers-track mt-14 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
-            data-reveal="stagger"
-            data-reveal-variant="wipe"
-          >
-            {speakers.map((s, i) => (
-              <SpeakerCard key={s.slug} speaker={s} index={i} />
-            ))}
-          </ul>
+          {any ? (
+            <ul
+              data-speakers-track
+              aria-label="Speakers"
+              className="speakers-track mt-14 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3"
+              data-reveal="stagger"
+              data-reveal-variant="wipe"
+            >
+              {speakers.map((s, i) => (s.announced ? <SpeakerCard key={s.slug} speaker={s} index={i} /> : null))}
+              <SpeakersToCome count={toCome} />
+            </ul>
+          ) : (
+            <div data-speakers-track className="speakers-track mt-14 sm:mt-16">
+              <div
+                className={`speakers-panel grid gap-10 p-6 sm:p-8 md:grid-cols-2 md:gap-12 ${glass}`}
+              >
+                <div>
+                  <h3 className="text-lg font-semibold tracking-tight">Hear it first</h3>
+                  <p className="mt-2 max-w-md text-[#d0d0d0]">
+                    Speaker announcements, the running order and ticket sales go to the mailing list before anywhere else.
+                  </p>
+                  <div className="mt-5">
+                    <Button href={listHref}>Join the mailing list</Button>
+                  </div>
+                </div>
+                <ApplyToSpeak settings={settings} />
+              </div>
+            </div>
+          )}
         </div>
       </div>
       <SpeakersMotion />

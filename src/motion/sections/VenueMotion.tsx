@@ -1,22 +1,15 @@
 'use client';
 
 import { useSectionMotion, type MotionKit } from '../useSectionMotion';
-import { belowFold, COMPACT, FULL, maskText, visualCopy } from './kit';
-
-/** Ten glyphs ending on the target: the wheel rolls forward one full turn and locks. */
-const rollTo = (ch: string) => {
-  const d = Number(ch);
-  return Array.from({ length: 10 }, (_, k) => String((d + k + 1) % 10));
-};
+import { belowFold, COMPACT, FULL } from './kit';
 
 /**
  * § 04 · The coordinate plate, registered like a proof.
  *
  * Once, as the plate enters: the four crop marks draw out from their corners,
- * the plate's contents settle, the reticle turns into register, and the
- * coordinates resolve digit by digit, left to right, each wheel rolling one turn
- * and locking on its figure (an aria-hidden copy; screen readers get the
- * coordinates as text throughout, and the original text is restored after).
+ * the plate's contents settle and the reticle turns into register. The
+ * coordinates are plain text from the first frame (the odometer roll lives in
+ * Tickets only: one counting trick per page).
  * Mouse / trackpad, md+: the reticle's degree bezel then turns a few degrees
  * against the fixed crosshair as the section scrolls past.
  */
@@ -27,30 +20,15 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const parts = Array.from(plate.querySelectorAll<HTMLElement>(':scope > :not([data-crop-marks])'));
   const reticle = plate.querySelector<SVGElement>('[data-reticle]');
   const bezel = plate.querySelector<SVGGElement>('[data-reticle-bezel]');
-  const coords = Array.from(plate.querySelectorAll<HTMLElement>('[data-venue-coord]'));
 
   const mm = gsap.matchMedia();
   mm.add({ full: FULL, compact: COMPACT }, (ctx) => {
     const full = Boolean(ctx.conditions?.full);
-    const undo: (() => void)[] = [];
 
     if (belowFold(plate)) {
-      const strips: HTMLElement[] = [];
-      for (const el of coords) {
-        const copy = visualCopy(el);
-        const m = maskText(copy.visual, { only: /\d/, strip: rollTo });
-        strips.push(...m.pieces.map((p) => p.inner));
-        undo.push(m.revert, copy.revert);
-      }
-      const restore = () => {
-        // Put the plain text back once every wheel has locked.
-        while (undo.length) undo.shift()?.();
-      };
-
       const tl = gsap.timeline({
         paused: true,
         defaults: { ease: 'expo.out' },
-        onComplete: restore,
       });
       corners.forEach((c, i) => {
         tl.fromTo(
@@ -67,14 +45,6 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
           { rotation: -28, scale: 0.9, transformOrigin: '50% 50%' },
           { rotation: 0, scale: 1, duration: 2, ease: 'expo.out' },
           0.45,
-        );
-      }
-      if (strips.length) {
-        tl.fromTo(
-          strips,
-          { yPercent: 0 },
-          { yPercent: -90, duration: 1.5, ease: 'expo.out', stagger: 0.055 },
-          0.7,
         );
       }
       if (!full) tl.timeScale(1.5);
@@ -94,8 +64,6 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
         },
       );
     }
-
-    return () => undo.forEach((u) => u());
   });
   return () => mm.revert();
 }
