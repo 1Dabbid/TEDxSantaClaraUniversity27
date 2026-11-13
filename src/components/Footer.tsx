@@ -149,7 +149,7 @@ export async function Footer({ settings }: { settings: Settings }) {
             </ul>
           </nav>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-2 sm:col-span-1 lg:col-span-2">
             <h2 className="fine-print text-white">
               <span aria-hidden="true">§ C · </span>Elsewhere
             </h2>
