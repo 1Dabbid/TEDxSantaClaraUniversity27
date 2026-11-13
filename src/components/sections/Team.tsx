@@ -2,6 +2,7 @@ import Image from 'next/image';
 import type { Settings, TeamMember } from '@/lib/content';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { TeamMotion } from '@/motion/sections/TeamMotion';
+import { MoreLink } from '@/components/pages/MoreLink';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 /** Same rule as the nav: the section exists only when it is switched on and at least one name is public. */
@@ -72,6 +73,7 @@ export function Team({ team, settings }: { team: TeamMember[]; settings: Setting
             <Signature key={m.slug} member={m} />
           ))}
         </ul>
+        <MoreLink href="/team" label="The whole team" />
       </div>
     </SectionShell>
   );
