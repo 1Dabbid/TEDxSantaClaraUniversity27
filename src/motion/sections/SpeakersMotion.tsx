@@ -47,8 +47,11 @@ function setup({ gsap, root }: MotionKit) {
         scrollTrigger: { trigger: root, start: 'top 90%', end: 'top top', scrub: 0.6 },
       },
     );
+    // Never leave a focused link inside it invisible: Tab can land on the
+    // applications link before (or while) the entrance plays.
+    let showMeta = () => {};
     if (meta) {
-      gsap.from(meta, {
+      const enter = gsap.from(meta, {
         opacity: 0,
         y: 18,
         duration: 1.1,
@@ -56,6 +59,11 @@ function setup({ gsap, root }: MotionKit) {
         ease: 'expo.out',
         scrollTrigger: { trigger: root, start: 'top 45%', once: true },
       });
+      showMeta = () => {
+        enter.scrollTrigger?.kill();
+        enter.progress(1);
+      };
+      meta.addEventListener('focusin', showMeta);
     }
 
     const pad = () => {
@@ -115,6 +123,7 @@ function setup({ gsap, root }: MotionKit) {
     strip.addEventListener('scroll', onScroll);
 
     return () => {
+      meta?.removeEventListener('focusin', showMeta);
       track.removeEventListener('focusin', onFocusIn);
       strip.removeEventListener('scroll', onScroll);
     };

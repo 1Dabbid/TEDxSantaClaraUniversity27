@@ -168,7 +168,7 @@ export async function Footer({ settings }: { settings: Settings }) {
               {settings.contactEmail ? (
                 <li>
                   <span className="fine-print block text-mute">General</span>
-                  <a href={`mailto:${settings.contactEmail}`} className={`${linkCls} break-all`}>
+                  <a href={`mailto:${settings.contactEmail}?subject=${encodeURIComponent(`Question · ${settings.eventName}`)}`} className={`${linkCls} break-all`}>
                     {settings.contactEmail}
                   </a>
                 </li>

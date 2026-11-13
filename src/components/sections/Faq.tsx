@@ -34,7 +34,7 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
                 <>
                   {' '}
                   Anything else:{' '}
-                  <a href={`mailto:${settings.contactEmail}`}>{settings.contactEmail}</a>
+                  <a href={`mailto:${settings.contactEmail}?subject=${encodeURIComponent(`Question · ${settings.eventName}`)}`}>{settings.contactEmail}</a>
                 </>
               ) : null}
             </p>
