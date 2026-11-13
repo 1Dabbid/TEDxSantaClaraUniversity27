@@ -14,7 +14,7 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
         <span className="fine-print">Signatory</span>
       </div>
       {/* Signature space */}
-      <div className="relative mt-6 flex h-24 items-end gap-4 pb-3 sm:h-28">
+      <div className={`relative mt-6 flex items-end gap-4 pb-3 ${member.name ? 'h-24 sm:h-28' : 'h-16 sm:h-20'}`}>
         {member.name ? (
           <>
             {member.photo ? (

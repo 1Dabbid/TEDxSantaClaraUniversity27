@@ -228,11 +228,11 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
 
   if (!groups.length && !untiered.length) {
     return (
-      <div className="mt-12 grid gap-px border border-white/10 bg-white/10 sm:grid-cols-3">
+      <div className="mt-12 grid gap-px border border-white/10 bg-white/10 sm:grid-cols-3 sm:grid-rows-2">
         <a
           href={cta}
           data-cursor="link"
-          className="group flex min-h-56 flex-col justify-between border border-dashed border-white/30 bg-black p-6 transition-colors hover:bg-white/[0.03] sm:col-span-2 sm:min-h-72 sm:p-10"
+          className="group flex min-h-56 flex-col justify-between border border-dashed border-white/30 bg-black p-6 transition-colors hover:bg-white/[0.03] sm:col-span-2 sm:row-span-2 sm:min-h-80 sm:p-10"
         >
           <span className="fine-print">Vacant</span>
           <span className="block text-3xl font-semibold tracking-tight text-balance sm:text-5xl">
@@ -324,8 +324,8 @@ export default async function PartnersPage() {
             ['Date', settings.dateShort],
             ['Venue', settings.venueName],
             ['Capacity', 'Up to 100 guests'],
-          ].map(([k, v]) => (
-            <div key={k}>
+          ].map(([k, v], i) => (
+            <div key={k} className={i === 0 ? 'col-span-2 sm:col-span-1' : undefined}>
               <dt className="fine-print">{k}</dt>
               <dd className="mt-1.5 text-sm text-white break-words sm:text-base">{v}</dd>
             </div>

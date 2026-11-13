@@ -177,7 +177,9 @@ export function Tickets({ settings }: { settings: Settings }) {
             aria-hidden="true"
             className="text-[clamp(3.75rem,17vw,15rem)] leading-[0.82] font-semibold tracking-[-0.06em] tabular-nums"
           >
-            001<span className="px-[0.12em] font-light text-subtle">—</span>100
+            001
+            <span className="mx-[0.14em] inline-block h-[0.035em] w-[0.7em] bg-white/50 align-middle" />
+            100
           </p>
           <div className="mt-6 sm:mt-8">
             <SeatStrip filled={state === 'sold-out'} />

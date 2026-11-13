@@ -64,7 +64,7 @@ function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; ne
   return (
     <nav aria-label="More speakers" className="shell pb-28 sm:pb-36">
       <div className="grid border-t border-white/15 sm:grid-cols-[1fr_auto_1fr]">
-        <div className="border-b border-white/15 sm:border-b-0">
+        <div className={prev ? 'border-b border-white/15 sm:border-b-0' : 'hidden sm:block'}>
           {prev ? (
             <Link href={`/speakers/${prev.s.slug}`} data-cursor="link" className="group block py-8 sm:pr-8">
               <span className="fine-print">← Previous · {num(prev.i)}</span>

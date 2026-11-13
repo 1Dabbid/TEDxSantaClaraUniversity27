@@ -21,7 +21,7 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
             <div data-reveal="fade">
               <SectionLabel index={7}>FAQ</SectionLabel>
             </div>
-            <SectionTitle id="faq">
+            <SectionTitle id="faq" className="text-[clamp(2.75rem,5.4vw,5.25rem)]!">
               <span data-reveal="lines" className="block">
                 Questions, answered.
               </span>

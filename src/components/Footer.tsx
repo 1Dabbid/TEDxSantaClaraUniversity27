@@ -50,7 +50,7 @@ export function Footer({ settings }: { settings: Settings }) {
 
         {/* The date as a sign-off */}
         <p className="mt-16 sm:mt-24" aria-hidden="true">
-          <span className="block text-[clamp(4.5rem,19vw,19rem)] leading-[0.8] font-semibold tracking-[-0.065em] tabular-nums">
+          <span className="block text-[clamp(4.5rem,21vw,21rem)] leading-[0.8] font-semibold tracking-[-0.065em] tabular-nums">
             {parts.map((p, i) => (
               <span key={i}>
                 {i > 0 ? <span className="text-accent">.</span> : null}
@@ -59,15 +59,15 @@ export function Footer({ settings }: { settings: Settings }) {
             ))}
           </span>
         </p>
-        <p className="mt-6 flex flex-wrap gap-x-4 gap-y-1 border-b border-white/15 pb-6 text-sm text-white sm:text-base">
+        <p className="mt-6 flex flex-col gap-x-4 gap-y-1 border-b sm:flex-row sm:flex-wrap border-white/15 pb-6 text-sm text-white sm:text-base">
           <time dateTime={settings.dateISO}>{settings.dateLong}</time>
-          <span aria-hidden="true" className="text-subtle">
+          <span aria-hidden="true" className="hidden text-subtle sm:inline">
             /
           </span>
           <span>{settings.venueName}</span>
           {settings.venueCampus ? (
             <>
-              <span aria-hidden="true" className="text-subtle">
+              <span aria-hidden="true" className="hidden text-subtle sm:inline">
                 /
               </span>
               <span>{settings.venueCampus}</span>
@@ -75,8 +75,8 @@ export function Footer({ settings }: { settings: Settings }) {
           ) : null}
         </p>
 
-        <div className="grid gap-12 py-14 sm:grid-cols-2 lg:grid-cols-12 lg:gap-10">
-          <section aria-labelledby="footer-tedx" className="sm:col-span-2 lg:col-span-5">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-12 py-14 lg:grid-cols-12 lg:gap-10">
+          <section aria-labelledby="footer-tedx" className="col-span-2 lg:col-span-5">
             <h2 id="footer-tedx" className="fine-print text-white">
               <span aria-hidden="true">§ A · </span>What is TEDx?
             </h2>
@@ -141,7 +141,7 @@ export function Footer({ settings }: { settings: Settings }) {
             </ul>
           </div>
 
-          <div className="lg:col-span-2">
+          <div className="col-span-2 sm:col-span-1 lg:col-span-2">
             <h2 className="fine-print text-white">
               <span aria-hidden="true">§ D · </span>Contact
             </h2>
