@@ -203,7 +203,9 @@ export function venuePlaceJsonLd(s: Settings) {
 
 /** schema.org FAQPage for /faq: each question also carries its own address (`/faq#<id>`). */
 export function faqPageJsonLd(items: FaqItem[], ids: string[]) {
-  const base = faqJsonLd(items);
+  // The node sits inside the page's @graph, which carries the @context once.
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { '@context': _context, ...base } = faqJsonLd(items);
   return {
     ...base,
     '@id': `${SITE_URL}/faq#faqpage`,

@@ -103,6 +103,10 @@ test.describe('topic page structure', () => {
     for (const route of ['/', '/faq']) {
       const html = await (await request.get(route)).text();
       expect(html.match(/"@type":"FAQPage"/g)?.length ?? 0, route).toBe(1);
+      // One @context per JSON-LD block: none repeated on a node inside an @graph.
+      for (const m of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+        expect(m[1].match(/"@context"/g)?.length ?? 0, route).toBe(1);
+      }
     }
   });
 
