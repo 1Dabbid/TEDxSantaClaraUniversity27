@@ -113,7 +113,7 @@ test('Theme copy: blanks fall back to the defaults, optional lines can be hidden
   expect(c.heroFootnote).toBe('');
   expect(c.partnersEditionTitle).toBe('');
   expect(c.partnersIntro).toBe('Up to 80 guests at the Example Hall. {typo}');
-  expect(c.partnerBandBody).toContain('TEDxSantaClaraUniversity is student-run');
+  expect(c.partnerBandBody).toContain('TEDxSantaClaraUniversity returns, student-run');
   expect(c.partnerBandBody).toContain('80 seats');
   expect(contentWarnings().some((w) => w.file === 'content/theme-copy.yaml' && w.message.includes('{typo}'))).toBe(true);
 });
