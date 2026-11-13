@@ -1,12 +1,11 @@
 import type { Metadata } from 'next';
 import { getSettings, getSpeakers } from '@/lib/content';
 import { jsonLdString, pageJsonLd } from '@/lib/jsonld';
-import { isIndexable, SITE_NAME, seatsLabel, venueLine } from '@/lib/site';
-import { ticketCta } from '@/lib/tickets';
+import { isIndexable, SITE_NAME, venueLine } from '@/lib/site';
 import { SpeakerCard, SpeakersToCome } from '@/components/sections/Speakers';
 import { Button } from '@/components/ui/Button';
 import { JsonLd } from '@/components/print/Print';
-import { ClosingBand } from '@/components/pages/ClosingBand';
+import { TicketsClosingBand } from '@/components/pages/ClosingBand';
 import { PageHeader, TopicPage } from '@/components/pages/PageHeader';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -43,7 +42,6 @@ export default async function SpeakersPage() {
   const numbered = speakers.map((speaker, index) => ({ speaker, index }));
   const announced = numbered.filter((x) => x.speaker.announced);
   const anyAnnounced = announced.length > 0;
-  const cta = ticketCta(settings);
 
   return (
     <TopicPage>
@@ -91,12 +89,7 @@ export default async function SpeakersPage() {
         ) : null}
       </section>
 
-      <ClosingBand
-        current="/speakers"
-        heading={`One evening, ${seatsLabel(settings.capacity)}.`}
-        body={settings.ticketPriceNote || undefined}
-        action={{ label: 'Tickets', href: cta.href, ariaLabel: cta.ariaLabel }}
-      />
+      <TicketsClosingBand current="/speakers" settings={settings} />
     </TopicPage>
   );
 }

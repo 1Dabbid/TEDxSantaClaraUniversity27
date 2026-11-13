@@ -5,12 +5,11 @@ import { jsonLdString, pageJsonLd, venuePlaceJsonLd } from '@/lib/jsonld';
 import { formatCoordinate } from '@/lib/links';
 import { topicPageMetadata } from '@/lib/page-meta';
 import { SITE_NAME, seatsLabel, venueLine } from '@/lib/site';
-import { ticketCta } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
 import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, CropMarks, JsonLd, Tba } from '@/components/print/Print';
 import { Reticle } from '@/components/sections/Venue';
-import { ClosingBand } from '@/components/pages/ClosingBand';
+import { TicketsClosingBand } from '@/components/pages/ClosingBand';
 import { PageHeader, TopicPage, timeFacts } from '@/components/pages/PageHeader';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -131,8 +130,6 @@ export default async function VenuePage() {
   const addressLine = [a.street, cityLine].filter(Boolean).join(', ');
   const notes = settings.venueNotes.length ? settings.venueNotes : DEFAULT_NOTES;
   const pending = notes.filter((n) => !n.body).map((n) => n.title);
-  const cta = ticketCta(settings);
-  const onSale = settings.ticketState === 'on-sale' && Boolean(settings.ticketUrl);
 
   return (
     <TopicPage>
@@ -246,12 +243,7 @@ export default async function VenuePage() {
         </div>
       </section>
 
-      <ClosingBand
-        current="/venue"
-        heading={onSale ? 'Get your seat.' : `One evening, ${seatsLabel(settings.capacity)}.`}
-        body={settings.ticketPriceNote || undefined}
-        action={{ label: 'Tickets', href: cta.href, ariaLabel: cta.ariaLabel }}
-      />
+      <TicketsClosingBand current="/venue" settings={settings} />
     </TopicPage>
   );
 }

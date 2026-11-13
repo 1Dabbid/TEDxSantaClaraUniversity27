@@ -2,12 +2,11 @@ import type { Metadata } from 'next';
 import { getSchedule, getSettings } from '@/lib/content';
 import { jsonLdString, pageJsonLd } from '@/lib/jsonld';
 import { topicPageMetadata } from '@/lib/page-meta';
-import { SITE_NAME, seatsLabel, venueLine } from '@/lib/site';
-import { ticketCta } from '@/lib/tickets';
+import { SITE_NAME, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { ClauseNo, JsonLd } from '@/components/print/Print';
 import { ScheduleTimeline } from '@/components/sections/ScheduleTimeline';
-import { ClosingBand } from '@/components/pages/ClosingBand';
+import { TicketsClosingBand } from '@/components/pages/ClosingBand';
 import { PageHeader, TopicPage, timeFacts } from '@/components/pages/PageHeader';
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -31,7 +30,6 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function SchedulePage() {
   const [settings, schedule] = await Promise.all([getSettings(), getSchedule()]);
   const published = schedule.published && schedule.items.length > 0;
-  const cta = ticketCta(settings);
   const listHref = settings.newsletterUrl || '/#newsletter';
 
   return (
@@ -49,7 +47,7 @@ export default async function SchedulePage() {
           settings={settings}
           label="Schedule"
           titleId="schedule-page-title"
-          title="One evening."
+          title={published ? 'The evening, in order.' : 'One evening.'}
           intro={
             <>
               Live talks at the {settings.venueName} on <time dateTime={settings.dateISO}>{settings.dateLong}</time>: doors,
@@ -99,12 +97,7 @@ export default async function SchedulePage() {
         </div>
       </section>
 
-      <ClosingBand
-        current="/schedule"
-        heading={`One evening, ${seatsLabel(settings.capacity)}.`}
-        body={settings.ticketPriceNote || undefined}
-        action={{ label: 'Tickets', href: cta.href, ariaLabel: cta.ariaLabel }}
-      />
+      <TicketsClosingBand current="/schedule" settings={settings} />
     </TopicPage>
   );
 }

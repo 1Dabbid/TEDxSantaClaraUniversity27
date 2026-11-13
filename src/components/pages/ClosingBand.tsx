@@ -3,6 +3,9 @@ import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Arrow } from '@/components/print/Print';
 import { footerNavItems, navVisibility } from '@/components/nav';
+import type { Settings } from '@/lib/content';
+import { seatsLabel } from '@/lib/site';
+import { ticketCta } from '@/lib/tickets';
 
 export type Action = { label: string; href: string; ariaLabel?: string };
 
@@ -87,5 +90,32 @@ export async function ClosingBand({
         ) : null}
       </nav>
     </section>
+  );
+}
+
+/** The closing heading of the ticket band, from the ticket state (same words on every page that ends on Tickets). */
+function ticketHeading(s: Settings): string {
+  switch (s.ticketState) {
+    case 'on-sale':
+      return s.ticketUrl ? 'Get your seat.' : `${seatsLabel(s.capacity)}. Tickets open soon.`;
+    case 'sold-out':
+      return 'Every seat is taken.';
+    case 'closed':
+      return 'Ticket sales are closed.';
+    default:
+      return `${seatsLabel(s.capacity)}. Tickets open soon.`;
+  }
+}
+
+/** The end of /speakers, /schedule and /venue: the ticket state and the Tickets button. */
+export function TicketsClosingBand({ current, settings }: { current: string; settings: Settings }) {
+  const cta = ticketCta(settings);
+  return (
+    <ClosingBand
+      current={current}
+      heading={ticketHeading(settings)}
+      body={settings.ticketPriceNote || undefined}
+      action={{ label: 'Tickets', href: cta.href, ariaLabel: cta.ariaLabel }}
+    />
   );
 }
