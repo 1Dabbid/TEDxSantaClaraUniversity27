@@ -53,7 +53,7 @@ export function StatusRegister<T extends string>({
   return (
     <div className={className}>
       <p className="fine-print">{label}</p>
-      <ul className="mt-3 flex flex-wrap gap-x-6 gap-y-2">
+      <ul className="mt-3 grid grid-cols-2 gap-x-6 gap-y-2 sm:flex sm:flex-wrap">
         {options.map((o) => {
           const current = o.value === value;
           return (

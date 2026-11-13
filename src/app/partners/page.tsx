@@ -255,7 +255,7 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
       {groups.map((g) => (
         <div key={g.tier.slug}>
           <h3 className="fine-print text-white">{g.tier.name}s</h3>
-          <ul className="mt-4 grid grid-cols-2 gap-px bg-white/10 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {g.items.map((s) => (
               <SponsorMark key={s.slug} sponsor={s} />
             ))}
@@ -265,7 +265,7 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
       {untiered.length ? (
         <div>
           <h3 className="fine-print text-white">Partners</h3>
-          <ul className="mt-4 grid grid-cols-2 gap-px bg-white/10 sm:grid-cols-3 lg:grid-cols-4">
+          <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {untiered.map((s) => (
               <SponsorMark key={s.slug} sponsor={s} />
             ))}

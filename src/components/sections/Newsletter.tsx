@@ -67,7 +67,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
                     <>
                       {' '}
                       Until then, write to{' '}
-                      <a href={`mailto:${settings.contactEmail}?subject=Mailing%20list`} className="underline underline-offset-4">
+                      <a href={`mailto:${settings.contactEmail}?subject=Mailing%20list`} className="tracking-normal normal-case underline underline-offset-4">
                         {settings.contactEmail}
                       </a>
                       .

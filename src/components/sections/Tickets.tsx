@@ -38,8 +38,8 @@ const COPY: Record<TicketState, Copy> = {
   },
   closed: {
     title: 'Ticket sales are closed.',
-    subtitle: 'Thank you to everyone who will be in the room.',
-    body: 'Talks are recorded and published on the TEDx YouTube channel after the event.',
+    subtitle: 'Thank you.',
+    body: 'To everyone who will be in the room: see you there. Talks are recorded and published on the TEDx YouTube channel after the event.',
   },
 };
 
@@ -175,7 +175,7 @@ export function Tickets({ settings }: { settings: Settings }) {
           <p
             data-reveal="chars"
             aria-hidden="true"
-            className="text-[clamp(3.75rem,17vw,15rem)] leading-[0.82] font-semibold tracking-[-0.06em] tabular-nums"
+            className="text-[clamp(3.75rem,19vw,15rem)] leading-[0.82] font-semibold tracking-[-0.06em] tabular-nums"
           >
             001
             <span className="mx-[0.14em] inline-block h-[0.035em] w-[0.7em] bg-white/50 align-middle" />
@@ -187,7 +187,7 @@ export function Tickets({ settings }: { settings: Settings }) {
           <div className="mt-3 flex justify-between">
             <span className="fine-print">Seat 001</span>
             <span data-cursor="loupe" className="fine-print">
-              Seat 100. That is the whole room.
+              Seat 100.<span className="hidden sm:inline"> That is the whole room.</span>
             </span>
           </div>
         </div>
@@ -203,7 +203,7 @@ export function Tickets({ settings }: { settings: Settings }) {
               </span>
             </SectionTitle>
             <p data-reveal="fade" className="mt-8 max-w-xl text-lg text-mute">
-              {copy.body}
+              {state === 'on-sale' && settings.ticketPriceNote ? `${settings.ticketPriceNote} ${copy.body}` : copy.body}
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <TicketAction settings={settings} />

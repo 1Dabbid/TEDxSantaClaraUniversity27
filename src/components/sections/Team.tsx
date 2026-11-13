@@ -11,10 +11,10 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
     <li className="flex flex-col">
       <div className="flex items-baseline justify-between">
         <ClauseNo>6.{index + 1}</ClauseNo>
-        <span className="fine-print">Signatory</span>
+        <span className="fine-print hidden sm:inline">Signatory</span>
       </div>
       {/* Signature space */}
-      <div className={`relative mt-6 flex items-end gap-4 pb-3 ${member.name ? 'h-24 sm:h-28' : 'h-16 sm:h-20'}`}>
+      <div className={`relative mt-6 flex items-end gap-4 pb-3 ${member.name ? 'h-20 sm:h-28' : 'h-12 sm:h-20'}`}>
         {member.name ? (
           <>
             {member.photo ? (
@@ -26,7 +26,7 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
                 className="size-14 shrink-0 rounded-full object-cover grayscale sm:size-16"
               />
             ) : null}
-            <p className="text-2xl leading-tight font-light tracking-tight text-white sm:text-3xl">{member.name}</p>
+            <p className="text-xl leading-tight font-light tracking-tight text-white sm:text-3xl">{member.name}</p>
           </>
         ) : (
           <span aria-hidden="true" className="font-mono text-sm text-subtle">
@@ -35,7 +35,7 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
         )}
       </div>
       <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/40" />
-      <p className="mt-3 font-medium text-white">{member.role}</p>
+      <p className="mt-3 text-sm leading-snug font-medium text-white sm:text-base">{member.role}</p>
       <p className="fine-print mt-1">
         {member.name ? 'For TEDxSantaClaraUniversity' : 'Name to be announced'}
       </p>
@@ -72,7 +72,7 @@ export async function Team({ team }: { team: TeamMember[] }) {
           <time dateTime={settings.dateISO}>{settings.dateLong}</time>, and to read every clause.
         </p>
 
-        <ul data-reveal="stagger" className="mt-12 grid gap-x-10 gap-y-16 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-16">
+        <ul data-reveal="stagger" className="mt-12 grid grid-cols-2 gap-x-5 gap-y-12 sm:gap-x-10 sm:gap-y-16 lg:grid-cols-3 lg:gap-x-16">
           {team.map((m, i) => (
             <SignatureBlock key={m.slug} member={m} index={i} />
           ))}
