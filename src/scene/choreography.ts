@@ -353,7 +353,8 @@ export const DESKTOP_SHOTS: Shot[] = [
 const P_ANCHOR: readonly [number, number] = [0.5, 0.62];
 const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 1.15, dof: 0.6, key: 0.85, motes: 0.6, scrim: 0.35, bloom: 0.9, focus: [0.6, 0.45] as const };
 const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.02, spot: 0.15, key: 0.75, rim: 3.4, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
-const STAGE_PORTRAIT = { ...STAGE_LOOK, fov: 40, exposure: 1.05, parallax: 0, cone: 1.35, spot: 1.1 };
+/** On phones the speakers and schedule copy sits over the beam: a thinner shaft, darker at the top edge, keeps it at 4.5:1. */
+const STAGE_PORTRAIT = { ...STAGE_LOOK, fov: 40, exposure: 1.0, parallax: 0, cone: 0.55, spot: 1.1, scrimEdge: 0.55 };
 
 export const PORTRAIT_SHOTS: Shot[] = [
   { at: 0, aim: { mic: 0.1 }, dist: 0.62, anchor: [0.5, 0.66], ...HERO_PORTRAIT_LOOK },
@@ -393,10 +394,10 @@ export const PORTRAIT_SHOTS: Shot[] = [
   { at: 2.01, aim: { mic: 0.1 }, dist: 0.98, anchor: [0.5, 0.6], roll: 0.06, ...PULL_DARK, fov: 36, parallax: 0 },
   { at: 2.0825, aim: { stand: 1.5 }, dist: 1.943, anchor: P_ANCHOR, ...PULL_STAND, fov: 37, parallax: 0 },
   { at: 2.155, aim: { stand: 1.38 }, dist: 3.517, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.12, spot: 0.5, key: 0.7, haze: 0.03, dof: 0.15 },
-  { at: 2.2275, aim: { stand: 1.16 }, dist: 6.08, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.7, spot: 0.9, key: 0.6 },
+  { at: 2.2275, aim: { stand: 1.16 }, dist: 6.08, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.45, spot: 0.9, key: 0.6 },
   { at: 2.3, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
   { at: 2.96, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
-  { at: 3.92, aim: { stand: 0.83 }, dist: 10.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 1.5, spot: 1.05, exposure: 1.0 },
+  { at: 3.92, aim: { stand: 0.83 }, dist: 10.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.7, spot: 1.05, exposure: 0.97 },
   { at: 4.6, aim: { stand: 0.68 }, dist: 15, lift: 0.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 1.5, key: 0.3, scrimEdge: 0.6 },
   { at: 5.3, aim: { stand: 0.52 }, dist: 21, lift: 1.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, exposure: 0.95, cone: 1.6, key: 0.3, vignette: 0.64 },
   { at: 5.78, aim: { stand: 0.45 }, dist: 24, lift: 1.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, exposure: 0.88, cone: 1.6, key: 0.3, vignette: 0.66 },
