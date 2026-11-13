@@ -534,13 +534,15 @@ html:not(.motion) .reading-progress {
 
 /* Pinned (motion, md+ and tall enough): a tall runway, a sticky stage, 9px contract text. */
 @media (min-width: 768px) and (min-height: 44rem) {
+  /* 225vh: the opening, a short engraving-only beat and three phrases. Shorter
+     than it was (250vh): without the scene the engraving beat is empty black. */
   html.motion .theme-runway {
-    height: 250vh;
+    height: 225vh;
   }
   /* Touch tablets: a shorter runway (no long pins under a thumb). */
   @media (pointer: coarse) {
     html.motion .theme-runway {
-      height: 190vh;
+      height: 175vh;
     }
   }
   /* When the stage scrolls out, its scrims (clipped by the stage) would end in

@@ -69,7 +69,7 @@ export function Venue({ settings }: { settings: Settings }) {
   const cityLine = [a.city, [a.region, a.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
   return (
-    <SectionShell id="venue" scrim="left" className="py-32 sm:py-44">
+    <SectionShell id="venue" scrim="left" className="py-24 sm:py-36">
       <VenueMotion />
       <div className="shell">
         <div className="grid gap-16 md:grid-cols-12 md:items-end">
@@ -96,8 +96,10 @@ export function Venue({ settings }: { settings: Settings }) {
           >
             <CropMarks />
             <div className="flex items-baseline justify-between gap-4">
-              <span className="fine-print text-white">Fig.&nbsp;4</span>
-              <span className="fine-print text-right text-mute">Site plan · not to scale</span>
+              <span className="fine-print text-white">Location</span>
+              {settings.venueCampus ? (
+                <span className="fine-print text-right text-mute">{keepTedxCase(settings.venueCampus)}</span>
+              ) : null}
             </div>
             <div className="mx-auto mt-5 aspect-square w-full max-w-[15rem]">
               <Reticle />
@@ -123,7 +125,7 @@ export function Venue({ settings }: { settings: Settings }) {
         </div>
 
         {/* Particulars. Clause numbers sit inside each <dt> (hidden from assistive tech) so the list stays valid. */}
-        <div data-reveal="rule" className="mt-20 h-px bg-white/15 sm:mt-28" aria-hidden="true" />
+        <div data-reveal="rule" className="mt-16 h-px bg-white/15 sm:mt-20" aria-hidden="true" />
         <dl data-reveal="stagger" className="grid gap-10 pt-8 sm:grid-cols-3 sm:gap-8">
           <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">
             <dt className="col-span-2 grid grid-cols-subgrid">
@@ -166,13 +168,12 @@ export function Venue({ settings }: { settings: Settings }) {
             </dt>
             <dd className="col-start-2 mt-3 leading-relaxed text-white">
               <span className="block text-xl tracking-tight tabular-nums">{seatsLabel(settings.capacity)}</span>
-              <span className="mt-2 block text-mute">One room, one evening.</span>
             </dd>
           </div>
         </dl>
 
         {/* Getting there */}
-        <div className="mt-20 grid gap-10 md:mt-28 md:grid-cols-12">
+        <div className="mt-16 grid gap-10 md:mt-20 md:grid-cols-12">
           <div className="md:col-span-4">
             <h3 data-reveal="fade" className="flex items-baseline gap-4 text-2xl font-semibold tracking-tight sm:text-3xl">
               <ClauseNo>4.4</ClauseNo>
@@ -194,7 +195,7 @@ export function Venue({ settings }: { settings: Settings }) {
             ) : null}
           </div>
 
-          {notes.length ? (
+          {anyNote ? (
             <ol data-reveal="stagger" className="border-t border-white/15 md:col-span-8">
               {notes.map((n, i) => (
                 <li
@@ -211,11 +212,7 @@ export function Venue({ settings }: { settings: Settings }) {
                 </li>
               ))}
             </ol>
-          ) : (
-            <p className="border-t border-white/15 pt-7 text-mute md:col-span-8">
-              <Tba>Arrival details to be announced</Tba>
-            </p>
-          )}
+          ) : null}
         </div>
       </div>
     </SectionShell>
