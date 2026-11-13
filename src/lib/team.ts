@@ -4,10 +4,12 @@
  * (keystatic.config.ts), the content loader and the pages can all import it.
  *
  * An entry's Level in the admin is "Automatic" unless an editor picks one;
- * Automatic reads the role: "President" (or "Co-President") is the president,
- * "VP of …", "Vice President …" or "Executive …" is the executive board, and
- * every other role (the directors) is operations. Renaming a role, adding one
- * or removing one never needs a code change.
+ * Automatic reads the role, exactly as docs/EDITING.md and the admin's help
+ * text describe it: a role that is just "President" (or "Co-President") is the
+ * president, a role starting "VP" or "Vice President" is the executive board,
+ * and every other role (the directors) is operations. Anything else (a
+ * "Treasurer" on the executive board, say) is what the Level field is for.
+ * Renaming a role, adding one or removing one never needs a code change.
  */
 
 export const TEAM_LEVELS = ['president', 'executive', 'operations'] as const;
@@ -23,18 +25,37 @@ export const TEAM_LEVEL_OPTIONS = [
 
 /** The level a role falls under when Level is Automatic. */
 export function levelFromRole(role: string): TeamLevel {
-  const r = role.trim().toLowerCase();
-  const vice = /\b(vp|vice[\s-]*president|executive)\b/.test(r);
-  if (/\bpresident\b/.test(r) && !vice) return 'president';
-  if (vice) return 'executive';
+  const r = role.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (/^(co[\s-]*)?presidents?$/.test(r)) return 'president';
+  if (/^(vp|vice[\s-]*president)\b/.test(r)) return 'executive';
   return 'operations';
 }
 
-/** A stored Level, forgiving: anything that is not one of the three levels counts as Automatic. */
-export function resolveLevel(stored: unknown, role: string): TeamLevel {
-  return typeof stored === 'string' && (TEAM_LEVELS as readonly string[]).includes(stored)
-    ? (stored as TeamLevel)
-    : levelFromRole(role);
+/** Words an editor might type by hand for each level (lower case, spaces collapsed). */
+const LEVEL_WORDS: Record<string, TeamLevel | 'auto'> = {
+  auto: 'auto',
+  automatic: 'auto',
+  'automatic (from the role)': 'auto',
+  president: 'president',
+  presidents: 'president',
+  executive: 'executive',
+  'executive board': 'executive',
+  exec: 'executive',
+  operations: 'operations',
+  ops: 'operations',
+};
+
+/**
+ * A stored Level, forgiving: case, spaces and the admin's own labels are
+ * accepted ("Executive board" means executive). Blank or Automatic follows the
+ * role. Anything else also follows the role, and `unknown` is true so the
+ * loader can warn about it instead of stopping the build.
+ */
+export function resolveLevel(stored: unknown, role: string): { level: TeamLevel; unknown: boolean } {
+  const key = typeof stored === 'string' ? stored.trim().toLowerCase().replace(/\s+/g, ' ') : '';
+  const word = key ? LEVEL_WORDS[key] : 'auto';
+  if (word && word !== 'auto') return { level: word, unknown: false };
+  return { level: levelFromRole(role), unknown: !word };
 }
 
 export type TeamGroup<T> = { level: TeamLevel; label: string; members: T[] };

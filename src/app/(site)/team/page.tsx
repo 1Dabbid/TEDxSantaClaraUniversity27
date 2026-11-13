@@ -22,7 +22,11 @@ export async function generateMetadata(): Promise<Metadata> {
 
 /** Rendered widths of the portrait frames below (next/image picks the file). */
 const SIZES_LEAD = '(min-width: 640px) 26rem, calc(100vw - 2.5rem)';
+const SIZES_EXEC = '(min-width: 1408px) 352px, (min-width: 1024px) 25vw, 45vw';
 const SIZES_CARD = '(min-width: 1408px) 300px, (min-width: 1024px) 22vw, (min-width: 640px) 30vw, 45vw';
+
+/** Three steps down the chart: the president's portrait, then the executive board's, then operations'. */
+type Tier = 'lead' | 'exec' | 'card';
 
 /**
  * Name, role, major and class year, then LinkedIn: the same lines on every card.
@@ -30,24 +34,27 @@ const SIZES_CARD = '(min-width: 1408px) 300px, (min-width: 1024px) 22vw, (min-wi
  * a role that wraps to two lines never knocks its neighbours' hairlines out of
  * line; a missing line keeps its (empty) place.
  */
-function Details({ member, lead = false }: { member: TeamMember; lead?: boolean }) {
+function Details({ member, tier }: { member: TeamMember; tier: Tier }) {
+  const lead = tier === 'lead';
   if (!member.name) {
     return (
-      <h3 className="mt-5 text-lg leading-snug font-medium tracking-tight text-balance text-white wrap-anywhere">{member.role}</h3>
+      <h3 className="mt-5 text-lg leading-snug font-medium tracking-tight text-balance text-white break-words hyphens-auto">{member.role}</h3>
     );
   }
   return (
     <>
       <h3
-        className={`text-balance text-white wrap-anywhere ${
+        className={`text-balance text-white break-words hyphens-auto ${
           lead
             ? 'text-[2.25rem] leading-[1.02] font-light tracking-tight sm:text-5xl'
-            : 'mt-5 text-xl leading-tight font-light tracking-tight sm:text-[1.625rem]'
+            : tier === 'exec'
+              ? 'mt-5 text-[1.375rem] leading-tight font-light tracking-tight sm:text-[1.875rem]'
+              : 'mt-5 text-xl leading-tight font-light tracking-tight sm:text-2xl'
         }`}
       >
         {member.name}
       </h3>
-      <p className={`mt-1.5 leading-snug font-medium tracking-tight text-balance text-white wrap-anywhere ${lead ? 'text-xl' : 'sm:text-lg'}`}>
+      <p className={`mt-1.5 leading-snug font-medium tracking-tight text-balance text-white break-words hyphens-auto ${lead ? 'text-xl' : 'sm:text-lg'}`}>
         {member.role}
       </p>
       {member.major || member.classYear ? (
@@ -90,15 +97,16 @@ function Details({ member, lead = false }: { member: TeamMember; lead?: boolean 
  * area for the colour; only the portrait itself is the tap target, so the
  * LinkedIn link is always one tap away.
  */
-function BoardMember({ member }: { member: TeamMember }) {
+function BoardMember({ member, tier }: { member: TeamMember; tier: 'exec' | 'card' }) {
   return (
     <li
+      id={member.slug}
       data-team-member={member.name ? '' : undefined}
       data-portrait-card
       className="row-span-5 grid min-w-0 grid-rows-subgrid content-start gap-y-0 pb-12 sm:pb-14"
     >
-      <Portrait member={member} sizes={SIZES_CARD} />
-      <Details member={member} />
+      <Portrait member={member} sizes={tier === 'exec' ? SIZES_EXEC : SIZES_CARD} />
+      <Details member={member} tier={tier} />
     </li>
   );
 }
@@ -107,13 +115,14 @@ function BoardMember({ member }: { member: TeamMember }) {
 function LeadMember({ member }: { member: TeamMember }) {
   return (
     <li
+      id={member.slug}
       data-team-member={member.name ? '' : undefined}
       data-portrait-card
       className="flex min-w-0 flex-col gap-6 sm:flex-row sm:items-end sm:gap-10"
     >
       <Portrait member={member} sizes={SIZES_LEAD} className="max-w-[26rem] shrink-0 sm:w-[min(26rem,55%)]" />
       <div className="flex min-w-0 flex-col sm:pb-2">
-        <Details member={member} lead />
+        <Details member={member} tier="lead" />
       </div>
     </li>
   );
@@ -121,11 +130,14 @@ function LeadMember({ member }: { member: TeamMember }) {
 
 /**
  * A level of the board (President, Executive board, Operations: src/lib/team.ts):
- * its clause number and name in the margin, the people beside it.
+ * its clause number and name in the margin, the people beside it. The portraits
+ * step down the chart: the president alone and largest, the executive board two
+ * to a row (about 350px at desktop), operations three to a row (about 300px).
  */
 function BoardGroup({ group, index }: { group: TeamGroup<TeamMember>; index: number }) {
   const id = `board-${group.level}`;
   const lead = group.level === 'president' && group.members.length === 1;
+  const exec = group.level === 'executive';
   return (
     <section aria-labelledby={id} className="grid gap-y-8 border-t border-white/15 pt-6 lg:grid-cols-12 lg:gap-x-10">
       <h2 id={id} className="fine-print flex items-baseline gap-3 text-white lg:col-span-3">
@@ -140,10 +152,16 @@ function BoardGroup({ group, index }: { group: TeamGroup<TeamMember>; index: num
         className={
           lead
             ? 'lg:col-span-9'
-            : 'grid grid-cols-2 gap-x-4 gap-y-0 sm:grid-cols-3 sm:gap-x-8 lg:col-span-9'
+            : exec
+              ? 'grid grid-cols-2 gap-x-4 gap-y-0 sm:gap-x-8 lg:col-span-9 lg:max-w-[46rem]'
+              : 'grid grid-cols-2 gap-x-4 gap-y-0 sm:grid-cols-3 sm:gap-x-8 lg:col-span-9'
         }
       >
-        {lead ? <LeadMember member={group.members[0]} /> : group.members.map((m) => <BoardMember key={m.slug} member={m} />)}
+        {lead ? (
+          <LeadMember member={group.members[0]} />
+        ) : (
+          group.members.map((m) => <BoardMember key={m.slug} member={m} tier={exec ? 'exec' : 'card'} />)
+        )}
       </ul>
     </section>
   );
@@ -201,15 +219,25 @@ export default async function TeamPage() {
       </section>
 
       <div className="shell flex flex-col gap-16 pb-24 sm:gap-20 sm:pb-32">
-        <p className="fine-print flex items-center gap-3 text-white">
-          <span aria-hidden="true" className="h-px w-8 bg-accent" />
-          The board
-        </p>
-        {team.some((m) => m.photo) ? (
-          <p className="-mt-12 max-w-md text-sm leading-relaxed text-subtle sm:-mt-16">
-            Portraits are shown in black and white. Hover over one, tab to it or tap it to see it in colour.
+        {/* The note on the portraits, as a footnote to the heading in the house voice. */}
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-baseline sm:justify-between">
+          <p className="fine-print flex items-center gap-3 text-white">
+            <span aria-hidden="true" className="h-px w-8 bg-accent" />
+            <span>
+              The board
+              {team.some((m) => m.photo) ? (
+                <sup aria-hidden="true" className="ml-0.5 text-mute">
+                  †
+                </sup>
+              ) : null}
+            </span>
           </p>
-        ) : null}
+          {team.some((m) => m.photo) ? (
+            <p data-team-footnote className="fine-print text-subtle">
+              <span aria-hidden="true">†&nbsp;</span>Portraits appear in monochrome. Colour on hover, focus or tap.
+            </p>
+          ) : null}
+        </div>
         {groupTeam(team).map((g, i) => (
           <BoardGroup key={g.level} group={g} index={i} />
         ))}

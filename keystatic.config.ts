@@ -611,14 +611,14 @@ export default config({
         photo: fields.image({
           label: 'Photo (optional)',
           description:
-            'Portrait headshot in a 4:5 shape (taller than wide), about 960×1200 px: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG). Head and shoulders, the face in the upper third, so the board lines up. Shown in black and white, in colour on hover or tap, only together with the name. Without a photo the site shows the person’s initials in the same frame.',
+            'Portrait headshot in a 4:5 shape (taller than wide), about 960×1200 px: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG). Head and shoulders, the face in the upper third, so the board lines up. Shown in black and white, in colour on hover, keyboard focus or tap, only together with the name. Without a photo the site shows the person’s initials in the same frame.',
           directory: 'public/images/team',
           publicPath: '/images/team/',
         }),
         level: fields.select({
           label: 'Level',
           description:
-            'Which group the person appears in on the home page and /team: President (shown first, larger), Executive board, or Operations. Leave it on Automatic: a role called President goes first, “VP of …” or “Vice President …” goes to the executive board, and every other role (the directors) to operations. Pick a level only when the role name says otherwise.',
+            'Which group the person appears in on the home page and /team: President (shown first, larger), Executive board, or Operations. Leave it on Automatic: a role that is just “President” (or “Co-President”) goes first, a role starting “VP” or “Vice President” goes to the executive board, and every other role (the directors) to operations. Pick a level only when the role name says otherwise, e.g. a “Treasurer” who sits on the executive board.',
           options: [...TEAM_LEVEL_OPTIONS],
           defaultValue: 'auto',
         }),

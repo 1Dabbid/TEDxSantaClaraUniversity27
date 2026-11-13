@@ -55,7 +55,15 @@ const LOADER_CHECKED = new Set([
   'mapUrl', 'ticketUrl', 'ticketEmbedUrl', 'speakerApplicationsUrl', 'interestUrl', 'newsletterUrl', 'livestreamUrl',
   'instagram', 'linkedin', 'youtube', 'tiktok', 'link', 'url',
   'doorsTime', 'talksTime', 'endTime', 'dateISO', 'aboutTedx', 'aboutTed', 'contactEmail', 'partnershipsEmail', 'classYear',
+  'level',
 ]);
+
+/**
+ * Select fields the loader reads leniently, because it has a safe fallback of
+ * its own: a team member's Level (an unknown value follows the role, with a
+ * warning: src/lib/team.ts resolveLevel). Every other select stays strict.
+ */
+const FORGIVING_SELECTS = new Set(['level']);
 
 type FieldNode = {
   kind?: string;
@@ -73,15 +81,15 @@ type FieldNode = {
  * reader enforces those at build time too, so a hand-edited value such as
  * "www.example.com" in a link field would otherwise stop the whole deploy. The raw
  * value is passed on instead, with a warning, and the loader repairs or drops it.
- * Select fields stay strict: an option the admin cannot produce is reported by
- * describeContentError.
+ * Select fields stay strict (an option the admin cannot produce is reported by
+ * describeContentError), except the few in FORGIVING_SELECTS.
  */
 function lenientSchema(schema: Record<string, FieldNode>, file: string, labels: string[] = []): Record<string, FieldNode> {
   const wrap = (node: FieldNode, key: string, path: string[]): FieldNode => {
     if (node.kind === 'object' && node.fields) return { ...node, fields: lenientSchema(node.fields, file, path) };
     if (node.kind === 'array' && node.element) return { ...node, element: wrap(node.element, key, [...path, 'item']) };
     // Text fields report formKind 'slug'; uploads and rich content keep Keystatic's own handling.
-    if (node.kind !== 'form' || node.options || !node.reader || (node.formKind && node.formKind !== 'slug')) return node;
+    if (node.kind !== 'form' || (node.options && !FORGIVING_SELECTS.has(key)) || !node.reader || (node.formKind && node.formKind !== 'slug')) return node;
     const parse = node.reader.parse;
     return {
       ...node,
@@ -643,8 +651,10 @@ function classYearOf(v: number | null | undefined, file: string): number | null 
  * the path the admin itself would use: public/images/team/<slug>/photo.jpg (or
  * .jpeg, .png, .webp). Either way it goes through the same image checks.
  *
- * Level: the admin's Level field, or, when it is Automatic, missing or not
- * recognised, the level the role implies (src/lib/team.ts). Never fails.
+ * Level: the admin's Level field, or, when it is Automatic or missing, the
+ * level the role implies (src/lib/team.ts). A hand-typed value is read
+ * forgivingly ("Executive board", "EXECUTIVE"); one that means nothing follows
+ * the role too, with a warning, and never stops the build.
  */
 export const getTeam = cache(async (): Promise<TeamMember[]> => {
   const entries = await readCollection('team');
@@ -653,6 +663,14 @@ export const getTeam = cache(async (): Promise<TeamMember[]> => {
       const visible = entry.showName && Boolean(str(entry.name));
       const file = entryFile('team', slug);
       const photo = str(entry.photo) || findTeamPhoto(slug);
+      const level = resolveLevel(entry.level, entry.role);
+      if (level.unknown) {
+        contentWarning(
+          file,
+          'Level',
+          `"${String(entry.level)}" is not a level, so the role decides (${level.level}). Pick Automatic, President, Executive board or Operations in the admin.`,
+        );
+      }
       return {
         slug,
         role: entry.role,
@@ -661,7 +679,7 @@ export const getTeam = cache(async (): Promise<TeamMember[]> => {
         classYear: visible ? classYearOf(entry.classYear, file) : null,
         linkedin: visible ? link(entry.linkedin, file, 'LinkedIn profile') : '',
         photo: visible ? checkImage(photo, { file, field: 'Photo' }) : null,
-        level: resolveLevel(entry.level, entry.role),
+        level: level.level,
         order: entry.order ?? 0,
       };
     })

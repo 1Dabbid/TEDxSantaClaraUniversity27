@@ -1437,11 +1437,14 @@ html.save-data #main:has(> [data-scene-stills]) > [data-section]:not([data-secti
  * the card is hovered (mouse only), while the portrait or anything in its card
  * has keyboard focus, and while the portrait is pressed (a tap on a phone).
  * Everything follows one number, --on (0 or 1), so the states cannot drift.
- * The state is also drawn as crop marks around the frame and a brighter edge:
- * never colour alone. Reduced motion: the same swap, instantly.
+ * Pressed is also drawn as crop marks around the frame (--pressed), which hover
+ * and focus never show: the kept state is never colour alone, and a press on a
+ * portrait already in colour still visibly takes. Focus is a square ring
+ * outside the crop marks. Reduced motion: the same swap, instantly.
  * ------------------------------------------------------------------------- */
 .portrait {
   --on: 0;
+  --pressed: 0;
   position: relative;
   display: block;
   width: 100%;
@@ -1450,17 +1453,32 @@ html.save-data #main:has(> [data-scene-stills]) > [data-section]:not([data-secti
 }
 .portrait[aria-pressed='true'],
 .portrait:focus-visible,
+[data-portrait-card]:focus-visible .portrait,
 [data-portrait-card]:has(:focus-visible) .portrait {
   --on: 1;
+}
+.portrait[aria-pressed='true'] {
+  --pressed: 1;
 }
 @media (hover: hover) and (pointer: fine) {
   [data-portrait-card]:hover .portrait {
     --on: 1;
   }
 }
+/* Square, like the frame, and outside the crop marks (inset -7px) so both read at once. */
 .portrait:focus-visible {
   outline: 2px solid #fff;
-  outline-offset: 10px;
+  outline-offset: 12px;
+  border-radius: 0;
+}
+/* The home strip (no crop marks, tight gaps): the whole card is the link, a close square ring goes round the portrait only. */
+[data-portrait-link]:focus-visible {
+  outline: none;
+}
+[data-portrait-link]:focus-visible .portrait {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+  border-radius: 0;
 }
 .portrait-frame {
   position: absolute;
@@ -1494,13 +1512,13 @@ html.save-data #main:has(> [data-scene-stills]) > [data-section]:not([data-secti
   opacity: calc(1 - 0.7 * var(--on));
   transition: opacity 0.9s var(--ease-cinema);
 }
-/* Crop marks at the four corners, just outside the frame: drawn while in colour. */
+/* Crop marks at the four corners, just outside the frame: drawn while pressed. */
 .portrait-marks {
   --m: linear-gradient(#fff, #fff);
   position: absolute;
   inset: -7px;
   pointer-events: none;
-  opacity: var(--on);
+  opacity: var(--pressed);
   transition: opacity 0.35s ease;
   background:
     var(--m) top left / 11px 1px no-repeat,
@@ -1564,4 +1582,97 @@ html:not(.motion) .portrait-frame::after {
 /* Not named publicly: a hatched blank, like an unfilled box on a form. */
 .portrait--vacant .portrait-frame {
   background: repeating-linear-gradient(135deg, rgb(255 255 255 / 0.06) 0 1px, transparent 1px 10px), var(--color-panel);
+}
+
+/* ---------------------------------------------------------------------------
+ * Home team strip (src/components/sections/Team.tsx).
+ *
+ * One grid for the whole board; each level spans as many columns as it has
+ * people (--span, --span-md, --span-xl) and shares the grid's columns and rows
+ * (subgrid), so every portrait is the same width and the name, hairline and
+ * role rows line up across levels. A level with more people than columns
+ * (data-wrap-base, data-wrap-md) wraps inside its own rows instead.
+ *   phones and small tablets: 3 columns (President + Executive board, then
+ *   Operations 3 + 3); md: 6 columns; xl: one row (data-one-row, up to nine).
+ * Gaps between rows are margins, not grid gaps, so subgrids inherit none.
+ * ------------------------------------------------------------------------- */
+.team-strip {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: 0.75rem;
+  row-gap: 0;
+}
+.team-level,
+.team-level-list,
+.team-sign,
+.team-sign-link {
+  display: grid;
+  min-width: 0;
+}
+.team-level {
+  grid-column: span var(--span);
+  grid-template-columns: subgrid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
+  align-content: start;
+}
+.team-level-label {
+  grid-column: 1 / -1;
+  margin-bottom: 1rem;
+  border-top: 1px solid rgb(255 255 255 / 0.15);
+  padding-top: 0.75rem;
+  white-space: nowrap;
+}
+.team-level-list {
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+}
+.team-sign,
+.team-sign-link {
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+}
+.team-sign {
+  padding-bottom: 2.25rem;
+}
+.team-level[data-wrap-base],
+.team-level[data-wrap-base] > .team-level-list {
+  grid-row: auto;
+  grid-template-rows: none;
+}
+@media (min-width: 768px) {
+  .team-strip {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    column-gap: 1rem;
+  }
+  .team-level {
+    grid-column: span var(--span-md);
+  }
+  .team-level[data-wrap-base]:not([data-wrap-md]) {
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+  }
+  .team-level[data-wrap-base]:not([data-wrap-md]) > .team-level-list {
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+  }
+}
+@media (min-width: 1280px) {
+  .team-strip[data-one-row] {
+    grid-template-columns: repeat(var(--n), minmax(0, 1fr));
+  }
+  .team-strip[data-one-row] .team-level {
+    grid-column: span var(--span-xl);
+    grid-row: span 5;
+    grid-template-rows: subgrid;
+  }
+  .team-strip[data-one-row] .team-level-list {
+    grid-row: span 4;
+    grid-template-rows: subgrid;
+  }
+  .team-strip[data-one-row] .team-sign {
+    padding-bottom: 0;
+  }
 }
