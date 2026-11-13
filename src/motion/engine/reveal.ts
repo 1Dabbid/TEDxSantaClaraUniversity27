@@ -230,6 +230,9 @@ function revealRule(el: HTMLElement): Rec {
 function revealStagger(el: HTMLElement, onScreen: ((c: Element) => boolean) | null): Rec {
   // Cold load: children already painted on screen stay as they are (see scanReveals).
   const children = (Array.from(el.children) as HTMLElement[]).filter((c) => !onScreen?.(c));
+  // All painted on screen already (or no children): nothing to arm, and gsap would warn
+  // about an empty target.
+  if (!children.length) return { el, now: () => {}, kill: () => {} };
   const wipe = el.dataset.revealVariant === 'wipe';
   const delay = delayOf(el);
   // transition:none so CSS hover transitions on the children never smear the reveal.
