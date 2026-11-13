@@ -19,6 +19,7 @@ import {
   BENEFIT_GROUP_LABEL,
   CLASS_YEAR_MAX,
   CLASS_YEAR_MIN,
+  type SCHEDULE_KIND_LABEL,
   type BenefitGroup,
   EMAIL_PATTERN,
   SITE_NAME,
@@ -296,6 +297,8 @@ export type Settings = {
   /** When the talks begin ("6:00 PM"), '' while unknown. Structured data falls back to doorsTime. */
   talksTime: string;
   endTime: string;
+  /** One sentence shown wherever the times appear ("Times are approximate…"), or ''. */
+  timesNote: string;
   /** Seat capacity, 1..100 (TEDx licence cap). The single source for every seat count on the site. */
   capacity: number;
   venueName: string;
@@ -353,7 +356,7 @@ export type ScheduleItem = {
   time: string;
   title: string;
   description: string;
-  kind: 'talk' | 'break' | 'doors' | 'other';
+  kind: keyof typeof SCHEDULE_KIND_LABEL;
 };
 
 export type Schedule = { published: boolean; items: ScheduleItem[] };
@@ -494,6 +497,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
     doorsTime: time(s.doorsTime, 'Doors open at'),
     talksTime: time(s.talksTime, 'Talks start at'),
     endTime: time(s.endTime, 'Event ends at'),
+    timesNote: str(s.timesNote),
     capacity: capacityOf(s.capacity),
     accentColor: /^#[0-9a-f]{6}$/i.test(s.accentColor) ? s.accentColor : ACCENT_FALLBACK,
 

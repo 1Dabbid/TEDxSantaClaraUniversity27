@@ -7,7 +7,7 @@ items:
       A board of Santa Clara University students. {eventName} ran in earlier years; the last event was in 2020, after which the club went dormant. The current board has brought it back, so this is the first {eventName} since 2020.
   - question: When and where is {eventName}?
     answer: |-
-      {date}, at the {venue} on the {campus} campus. Doors and running times will be announced with the schedule.
+      {date}, at the {venue} on the {campus} campus. Doors open at about 5:00 PM with a reception outside the venue (drinks, food and lounge seating), talks begin at about 6:00 PM, and the evening ends around 9:00 PM. Times are approximate and may shift slightly. The full running order follows once speakers are confirmed.
   - question: Are tickets on sale?
     answer: |-
       Not yet. Tickets will cost no more than $100. Join the mailing list to hear the moment they go on sale.

@@ -132,6 +132,13 @@ export default config({
         doorsTime: timeField('Doors open at'),
         talksTime: timeField('Talks start at'),
         endTime: timeField('Event ends at'),
+        timesNote: fields.text({
+          label: 'Note about the times (optional)',
+          description:
+            'One short sentence shown wherever the times appear (Schedule, Venue), e.g. “Times are approximate and may shift slightly.” Leave blank once the times are final.',
+          multiline: true,
+          validation: { length: { max: 240 } },
+        }),
         capacity: fields.integer({
           label: 'Seat capacity (a whole number from 1 to 100)',
           description:
@@ -383,11 +390,12 @@ export default config({
             description: fields.text({ label: 'Description (optional)', multiline: true }),
             kind: fields.select({
               label: 'Kind',
-              description: 'The small label shown next to the item on the site. Use Program for anything else (welcome, reception, closing).',
+              description: 'The small label shown next to the item on the site. Use Reception for doors with drinks or food, and Program for anything else (welcome, closing).',
               options: [
                 { label: SCHEDULE_KIND_LABEL.talk, value: 'talk' },
                 { label: SCHEDULE_KIND_LABEL.break, value: 'break' },
                 { label: SCHEDULE_KIND_LABEL.doors, value: 'doors' },
+                { label: SCHEDULE_KIND_LABEL.reception, value: 'reception' },
                 { label: SCHEDULE_KIND_LABEL.other, value: 'other' },
               ],
               defaultValue: 'talk',

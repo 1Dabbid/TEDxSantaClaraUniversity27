@@ -80,6 +80,7 @@ export function PageHeader({
   title,
   intro,
   facts = [],
+  factsNote,
   children,
 }: {
   settings: Settings;
@@ -89,6 +90,8 @@ export function PageHeader({
   title: ReactNode;
   intro: ReactNode;
   facts?: Fact[];
+  /** One small line under the facts, e.g. that the times are approximate. */
+  factsNote?: ReactNode;
   /** Actions under the introduction. */
   children?: ReactNode;
 }) {
@@ -130,6 +133,16 @@ export function PageHeader({
           ))}
         </dl>
       ) : null}
+      {factsNote ? (
+        <p data-reveal="fade" data-times-note className="mt-6 max-w-2xl text-sm text-mute">
+          {factsNote}
+        </p>
+      ) : null}
     </div>
   );
+}
+
+/** The times note (Event basics), only while at least one time is shown. */
+export function timesNoteOf(s: Settings): string {
+  return s.timesNote && (s.doorsTime || s.talksTime || s.endTime) ? s.timesNote : '';
 }

@@ -42,7 +42,7 @@ export const TED_URL = 'https://www.ted.com';
 export const TEDX_MAX_CAPACITY = 100;
 
 /** Schedule item kinds: the admin's options and the labels on the site are the same words. */
-export const SCHEDULE_KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', other: 'Program' } as const;
+export const SCHEDULE_KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', reception: 'Reception', other: 'Program' } as const;
 
 /**
  * Headings of the partner benefits table (/partners), in this order. The admin's

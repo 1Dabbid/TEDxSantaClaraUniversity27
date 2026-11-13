@@ -7,7 +7,9 @@ themeStory: |-
 
   Speakers are to be announced. Until then, consider this the first clause.
 dateISO: '2027-04-23'
-doorsTime: ''
-endTime: ''
+doorsTime: 5:00 PM
+talksTime: 6:00 PM
+endTime: 9:00 PM
+timesNote: Times are approximate and may shift slightly. The full running order follows once speakers are confirmed.
 capacity: 100
 accentColor: '#EB0028'

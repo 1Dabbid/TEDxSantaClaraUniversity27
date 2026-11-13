@@ -164,7 +164,13 @@ export function Venue({ settings }: { settings: Settings }) {
               <span className="mt-2 block text-mute">
                 Doors: {settings.doorsTime ? settings.doorsTime : <Tba />}
               </span>
+              {settings.talksTime ? <span className="block text-mute">Talks: {settings.talksTime}</span> : null}
               {settings.endTime ? <span className="block text-mute">Ends: {settings.endTime}</span> : null}
+              {settings.timesNote && (settings.doorsTime || settings.talksTime || settings.endTime) ? (
+                <span data-times-note className="mt-3 block text-sm text-mute">
+                  {settings.timesNote}
+                </span>
+              ) : null}
             </dd>
           </div>
           <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">

@@ -49,6 +49,11 @@ export function Schedule({ schedule, settings }: { schedule: ScheduleData; setti
             </p>
           </div>
         )}
+        {published && settings.timesNote ? (
+          <p data-reveal="fade" data-times-note className="mt-8 text-sm text-mute lg:max-w-[32rem]">
+            {settings.timesNote}
+          </p>
+        ) : null}
         {published ? <MoreLink href="/schedule" label="Full schedule" /> : null}
       </div>
       <ScheduleMotion />

@@ -83,11 +83,13 @@ To remove a slot entirely, untick **Published**.
 ### Publish the schedule
 
 1. **The event > Schedule**.
-2. Under **Running order**, click **Add** for each moment. A box opens with **Time** (e.g. 5:30 PM, shown as typed), **Title**, **Description (optional)** and **Kind** (Talk, Break, Doors or Program; the site shows the same word next to the item). Click **Add** (or **Done** when editing an existing item) to close the box.
+2. Under **Running order**, click **Add** for each moment. A box opens with **Time** (e.g. 5:30 PM, shown as typed), **Title**, **Description (optional)** and **Kind** (Talk, Break, Doors, Reception or Program; the site shows the same word next to the item: use Reception for doors with drinks or food, Program for anything else, such as the close). Click **Add** (or **Done** when editing an existing item) to close the box.
 3. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter.
 4. Tick **Show the running order** and **Save**. While it is unticked, the site shows a short "running order to follow" note and the menu has no Schedule link.
 
-Doors, talks and end time for the whole evening are in **The event > Event basics**: **Doors open at**, **Talks start at**, **Event ends at** (written like 5:30 PM). Search engines are given the evening's start (**Talks start at**, or **Doors open at** while that is blank) and end time in California time; while no time is set they only see the date.
+Doors, talks and end time for the whole evening are in **The event > Event basics**: **Doors open at**, **Talks start at**, **Event ends at** (written like 5:30 PM). Search engines are given the evening's start (**Talks start at**, or **Doors open at** while that is blank), the doors time and the end time in California time; while no time is set they only see the date.
+
+**Note about the times (optional)**, also in **Event basics**: one sentence shown wherever the times appear (the Schedule section and /schedule, the Venue section and /venue). In 2027 it says "Times are approximate and may shift slightly. The full running order follows once speakers are confirmed." Shorten it once the running order is final, and empty it once the times are firm. The FAQ answer "When and where" types the times out: update it when they change.
 
 ### Put tickets on sale
 
