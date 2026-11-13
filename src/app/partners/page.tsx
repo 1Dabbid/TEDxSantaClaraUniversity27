@@ -7,6 +7,7 @@ import { partnerCta } from '@/lib/links';
 import { ogAlt, SITE_NAME, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { PartnersMotion } from '@/motion/sections/PartnersMotion';
 
@@ -252,7 +253,7 @@ function BenefitsComparison({
           return (
             <li key={b.benefit} className="border-b border-white/15 py-5">
               <p className="text-white">{b.benefit}</p>
-              <p className="fine-print mt-2 text-mute">{names.length ? names.join(' · ') : 'Not yet assigned to a tier'}</p>
+              <p className="fine-print mt-2 text-mute">{names.length ? keepTedxCase(names.join(' · ')) : 'Not yet assigned to a tier'}</p>
             </li>
           );
         })}
@@ -323,7 +324,7 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
               </span>
               <span className={`block h-px ${i === 0 ? 'bg-white/60' : 'bg-white/25'}`} />
               <span className="fine-print mt-2 flex justify-between gap-4 text-mute">
-                <span className={i === 0 ? 'text-white' : undefined}>{name}</span>
+                <span className={i === 0 ? 'text-white' : undefined}>{keepTedxCase(name)}</span>
                 <span>Unsigned</span>
               </span>
             </li>
@@ -337,7 +338,7 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
     <div className="mt-12 space-y-14">
       {groups.map((g) => (
         <div key={g.tier.slug}>
-          <h3 className="fine-print text-white">{g.tier.name}s</h3>
+          <h3 className="fine-print text-white">{keepTedxCase(`${g.tier.name}s`)}</h3>
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {g.items.map((s) => (
               <SponsorMark key={s.slug} sponsor={s} />
@@ -383,7 +384,7 @@ export default async function PartnersPage() {
       {/* Hero */}
       <section aria-labelledby="partners-title" className="shell pb-24 pt-20 sm:pb-32 sm:pt-32">
         <p data-reveal="fade" className="fine-print text-mute">
-          Partners · Prospectus · {settings.themeName}
+          Partners · Prospectus · {keepTedxCase(settings.themeName)}
         </p>
         <h1
           id="partners-title"

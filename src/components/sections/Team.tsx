@@ -3,6 +3,7 @@ import type { TeamMember } from '@/lib/content';
 import { getSettings } from '@/lib/content';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { ClauseNo } from '@/components/print/Print';
+import { EventName } from '@/components/ui/KeepCase';
 import { TeamMotion } from '@/motion/sections/TeamMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
@@ -45,7 +46,15 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
         </div>
         <div data-sign-line aria-hidden="true" className={`h-px ${signed ? 'bg-white/60' : 'bg-white/30'}`} />
         <p data-sign-text className="mt-3 text-base leading-snug font-medium text-balance text-white">{member.role}</p>
-        <p data-sign-text className="fine-print mt-1 text-mute">{signed ? 'For TEDxSantaClaraUniversity' : 'Unsigned · name to follow'}</p>
+        <p data-sign-text className="fine-print mt-1 text-mute">
+          {signed ? (
+            <>
+              For <EventName />
+            </>
+          ) : (
+            'Unsigned · name to follow'
+          )}
+        </p>
       </div>
     </li>
   );
@@ -79,7 +88,7 @@ export async function Team({ team }: { team: TeamMember[] }) {
 
         <div className="mt-20 flex flex-wrap items-baseline justify-between gap-x-10 gap-y-3 border-t border-white/15 pt-5 sm:mt-28">
           <p data-reveal="fade" className="fine-print max-w-xl text-mute">
-            In witness whereof, the board below has agreed to organize {settings.eventName} on{' '}
+            In witness whereof, the board below has agreed to organize <EventName name={settings.eventName} /> on{' '}
             <time dateTime={settings.dateISO}>{settings.dateLong}</time>, and to read every clause.
           </p>
           {/* The visible counter ticks as the lines are drawn (TeamMotion); the sr-only copy is the final value. */}

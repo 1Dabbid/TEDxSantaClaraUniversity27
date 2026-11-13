@@ -4,6 +4,7 @@ import { getFaq } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
 import { WatchLive } from '@/components/ui/WatchLive';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { keepTedxCase } from '@/components/ui/KeepCase';
 import { ClauseNo, StatusRegister } from '@/components/print/Print';
 import { TicketsMotion } from '@/motion/sections/TicketsMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
@@ -173,7 +174,7 @@ function SpeakerApplications({ settings }: { settings: Settings }) {
           </h3>
           <p className="mt-4 max-w-lg text-mute">{copy}</p>
           {state === 'open' && settings.speakerApplicationsDeadline ? (
-            <p className="fine-print mt-3 text-white">Deadline: {settings.speakerApplicationsDeadline}</p>
+            <p className="fine-print mt-3 text-white">Deadline: {keepTedxCase(settings.speakerApplicationsDeadline)}</p>
           ) : null}
         </div>
         <div className="flex flex-col gap-6 md:col-span-5 md:items-end">
