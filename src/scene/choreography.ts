@@ -264,6 +264,8 @@ const MACRO = {
 
 const HERO_LOOK = { fov: 30, exposure: 1.05, drift: 0.012, parallax: 0.022, cone: 0.05, spot: 0.45, key: 1.15, rim: 1.5, rimAng: 0.45, haze: 1, vignette: 0.6, bloom: 1 };
 /** The stage under its light: the speakers hold and everything after it. */
+/** The stage before the light comes on: the spot barely warm, no shaft yet, the key on the mic. */
+const STAGE_WARM = { spot: 0.3, cone: 0.09, key: 0.6, haze: 0.03, dof: 0.12 };
 const STAGE_LOOK = { fov: 32, exposure: 1, dof: 0.1, drift: 0.006, parallax: 0.025, cone: 1.3, spot: 1, key: 0.5, keyCam: 0, rim: 0.9, rimAng: -0.6, haze: 0, motes: 0, vignette: 0.62, bloom: 1.1, env: 1 };
 
 /*
@@ -335,10 +337,15 @@ export const DESKTOP_SHOTS: Shot[] = [
   // The aim slides down the stand line in step with the distance, so the head rises on screen
   // slowly (about 0.42 to 0.25 of the height) while the stand, then the rug, enter from below.
   { at: 2.0825, aim: { stand: 1.5 }, dist: 1.271, anchor: [0.685, 0.43], roll: 0.16, ...PULL_STAND, fov: 31 },
-  { at: 2.155, aim: { stand: 1.395 }, dist: 2.29, anchor: [0.68, 0.44], roll: 0.09, ...STAGE_LOOK, cone: 0.12, spot: 0.5, key: 0.7, rim: 1.05, haze: 0.03, dof: 0.15 },
-  { at: 2.2275, aim: { stand: 1.195 }, dist: 3.942, anchor: [0.68, 0.445], roll: 0.02, ...STAGE_LOOK, cone: 0.65, spot: 0.88, key: 0.6, rim: 0.95 },
-  // Speakers: locked off on the microphone in the shaft of light on the red circle.
-  { at: 2.3, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
+  // The overhead spot stays low until the framing has settled: the stand and the rug arrive in
+  // the key light and a faint warm-up of the spot.
+  { at: 2.155, aim: { stand: 1.395 }, dist: 2.29, anchor: [0.68, 0.44], roll: 0.09, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.18, cone: 0.05, key: 0.7, rim: 1.05 },
+  { at: 2.2275, aim: { stand: 1.195 }, dist: 3.942, anchor: [0.68, 0.445], roll: 0.02, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.24, cone: 0.07, key: 0.65, rim: 1.0 },
+  // Speakers: locked off on the microphone on the red circle. The light coming on is the event:
+  // the frame holds while the spot and its shaft fade up over the first part of the pin.
+  { at: 2.3, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK, ...STAGE_WARM },
+  { at: 2.4, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK, spot: 0.72, cone: 0.6, key: 0.55, haze: 0 },
+  { at: 2.5, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
   { at: 2.96, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.45], ...STAGE_LOOK },
   // Schedule: the same frame drifts back a few percent; the light carries the change (denser haze, a little dimmer).
   { at: 3.92, aim: { stand: 0.88 }, dist: 6.55, anchor: [0.68, 0.45], ...STAGE_LOOK, cone: 1.5, spot: 0.95, exposure: 0.97 },
@@ -396,9 +403,11 @@ export const PORTRAIT_SHOTS: Shot[] = [
   { at: 1.9375, aim: { mic: 0.09 }, dist: 0.494, anchor: [0.515, 0.59], roll: 0.3, ...PULL_MIC, fov: 34.5, scrim: 0.35, parallax: 0 },
   { at: 2.01, aim: { mic: 0.1 }, dist: 0.98, anchor: [0.5, 0.6], roll: 0.23, ...PULL_DARK, fov: 36, parallax: 0 },
   { at: 2.0825, aim: { stand: 1.5 }, dist: 1.943, anchor: P_ANCHOR, roll: 0.16, ...PULL_STAND, fov: 37, parallax: 0 },
-  { at: 2.155, aim: { stand: 1.38 }, dist: 3.517, anchor: P_ANCHOR, roll: 0.09, ...STAGE_PORTRAIT, cone: 0.12, spot: 0.5, key: 0.7, haze: 0.03, dof: 0.15 },
-  { at: 2.2275, aim: { stand: 1.16 }, dist: 6.08, anchor: P_ANCHOR, roll: 0.02, ...STAGE_PORTRAIT, cone: 0.45, spot: 0.9, key: 0.6 },
-  { at: 2.3, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
+  { at: 2.155, aim: { stand: 1.38 }, dist: 3.517, anchor: P_ANCHOR, roll: 0.09, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.18, cone: 0.04, key: 0.7 },
+  { at: 2.2275, aim: { stand: 1.16 }, dist: 6.08, anchor: P_ANCHOR, roll: 0.02, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.24, cone: 0.05, key: 0.65 },
+  { at: 2.3, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT, ...STAGE_WARM, cone: 0.06 },
+  { at: 2.4, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT, spot: 0.8, cone: 0.3, key: 0.55 },
+  { at: 2.5, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
   { at: 2.96, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
   { at: 3.92, aim: { stand: 0.83 }, dist: 10.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.7, spot: 1.05, exposure: 0.97 },
   { at: 4.6, aim: { stand: 0.68 }, dist: 15, lift: 0.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 1.5, key: 0.3, scrimEdge: 0.6 },
