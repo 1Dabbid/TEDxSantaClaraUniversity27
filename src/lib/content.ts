@@ -322,6 +322,8 @@ export type Settings = {
   ticketPrice: number | null;
   /** First day of ticket sales, "YYYY-MM-DD", or '' while not set. */
   ticketSaleStart: string;
+  /** When sales are expected to open, as written ("February 2027"), '' while unknown. Shown while coming soon. */
+  ticketSaleExpected: string;
   speakerApplicationsState: ApplicationsState;
   speakerApplicationsUrl: string;
   speakerApplicationsDeadline: string;
@@ -525,6 +527,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
     ticketPriceNote: str(tickets?.ticketPriceNote),
     ticketPrice: priceOf(tickets?.ticketPrice),
     ticketSaleStart: str(tickets?.ticketSaleStart),
+    ticketSaleExpected: str(tickets?.ticketSaleExpected),
     speakerApplicationsState: tickets?.speakerApplicationsState ?? 'coming-soon',
     speakerApplicationsUrl: link(tickets?.speakerApplicationsUrl, T, 'Speaker application link'),
     speakerApplicationsDeadline: str(tickets?.speakerApplicationsDeadline),

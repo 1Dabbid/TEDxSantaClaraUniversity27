@@ -28,7 +28,7 @@ All of these are in the admin; each field explains itself. See `docs/EDITING.md`
 | --- | --- |
 | **Event basics** | **Theme name**, **Theme tagline**, **Theme story**, **Event date**, **Doors open at** / **Talks start at** / **Event ends at** (blank until confirmed), **Seat capacity** (1 to 100). The date drives every written-out date, the header and footer dates, the hero caption ("2028 theme") and the share image. |
 | **Venue & directions** | **Venue (building) name**, **Campus**, address, **Map link**, coordinates, **Getting there** notes. |
-| **Tickets & speaker applications** | Reset both to **Coming soon**; clear the links, price, sale date and deadline. |
+| **Tickets & speaker applications** | Reset both to **Coming soon**; clear the links, price, sale date, expected on-sale month, deadline and the speaker interest form link. |
 | **Contact, newsletter & socials** | Check the emails and links; empty **Livestream link** unless the new event is streamed. |
 | **Speakers** | Untick **Announced** on every slot, empty the fields, slugs back to `speaker-01`… |
 | **Schedule** | Untick **Show the running order**; clear the items. |

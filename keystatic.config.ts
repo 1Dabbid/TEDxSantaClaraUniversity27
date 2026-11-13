@@ -272,6 +272,12 @@ export default config({
             'Just the number, e.g. 25 (or 0 for free). TEDx rules cap tickets at $100, so it cannot be more than 100. Used by search engines once tickets are on sale; the visible wording is the Price note above. Leave blank until the price is set.',
           validation: { min: 0, max: 100 },
         }),
+        ticketSaleExpected: fields.text({
+          label: 'Expected on-sale month (optional)',
+          description:
+            'While tickets are Coming soon and there is no exact date yet, e.g. February 2027. The site then says “Tickets are expected to go on sale in February 2027.” Leave blank to say nothing. Search engines never see it.',
+          validation: { length: { max: 40 } },
+        }),
         ticketSaleStart: fields.date({
           label: 'Tickets on sale from (optional)',
           description: 'The first day of ticket sales. Used by search engines once tickets are on sale. Leave blank if unsure.',

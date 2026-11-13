@@ -122,7 +122,11 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
                 <dt className="fine-print">Capacity</dt>
                 <dd className="mt-1.5 text-white">
                   {seatsLabel(settings.capacity)}
-                  <span className="block text-mute">Tickets {cta.status}</span>
+                  <span className="block text-mute">
+                    {settings.ticketState === 'coming-soon' && settings.ticketSaleExpected
+                      ? `Tickets expected ${settings.ticketSaleExpected}`
+                      : `Tickets ${cta.status}`}
+                  </span>
                 </dd>
               </div>
             </dl>

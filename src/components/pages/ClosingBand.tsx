@@ -5,7 +5,7 @@ import { Arrow } from '@/components/print/Print';
 import { footerNavItems, navVisibility } from '@/components/nav';
 import type { Settings } from '@/lib/content';
 import { seatsLabel } from '@/lib/site';
-import { ticketCta } from '@/lib/tickets';
+import { ticketCta, ticketSaleLine } from '@/lib/tickets';
 
 export type Action = { label: string; href: string; ariaLabel?: string };
 
@@ -114,7 +114,7 @@ export function TicketsClosingBand({ current, settings }: { current: string; set
     <ClosingBand
       current={current}
       heading={ticketHeading(settings)}
-      body={settings.ticketPriceNote || undefined}
+      body={[ticketSaleLine(settings), settings.ticketPriceNote].filter(Boolean).join(' ') || undefined}
       action={{ label: 'Tickets', href: cta.href, ariaLabel: cta.ariaLabel }}
     />
   );

@@ -1,6 +1,7 @@
 import type { CSSProperties, ReactNode } from 'react';
 import type { Settings, TicketState } from '@/lib/content';
 import { getFaq } from '@/lib/content';
+import { ticketSaleLine } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
 import { TextLink } from '@/components/ui/TextLink';
 import { WatchLive } from '@/components/ui/WatchLive';
@@ -160,6 +161,11 @@ export async function Tickets({ settings }: { settings: Settings }) {
   const showFaq = settings.sections.showFaq && faq.length > 0;
   const state = settings.ticketState;
   const copy = COPY[state];
+  // Coming soon with an expected month: say when, then the list.
+  const saleLine = ticketSaleLine(settings);
+  const body = saleLine
+    ? `${saleLine} They are announced to the mailing list first: join it and you will hear the moment they go on sale.`
+    : copy.body;
   const showEmbed = state === 'on-sale' && Boolean(settings.ticketEmbedUrl);
   const seats = settings.capacity;
   // Plain facts, numbered as clauses (no gaps when one is not set).
@@ -198,7 +204,7 @@ export async function Tickets({ settings }: { settings: Settings }) {
               </span>
             </SectionTitle>
             <p data-reveal="fade" className="mt-8 max-w-xl text-lg text-mute">
-              {copy.body}
+              {body}
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <TicketAction settings={settings} showFaq={showFaq} />
