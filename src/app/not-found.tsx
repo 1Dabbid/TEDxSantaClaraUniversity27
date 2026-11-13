@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { getFaq, getSettings } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
 
 export const metadata: Metadata = {
@@ -9,15 +10,17 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-const LINKS = [
-  { href: '/#speakers', label: 'Speakers' },
-  { href: '/#tickets', label: 'Tickets' },
-  { href: '/#venue', label: 'Venue' },
-  { href: '/partners', label: 'Partners' },
-  { href: '/#faq', label: 'FAQ' },
-];
-
-export default function NotFound() {
+export default async function NotFound() {
+  // Never point at a section that is not rendered.
+  const [settings, faq] = await Promise.all([getSettings(), getFaq()]);
+  const showFaq = settings.sections.showFaq && faq.length > 0;
+  const links = [
+    { href: '/#speakers', label: 'Speakers' },
+    { href: '/#tickets', label: 'Tickets' },
+    { href: '/#venue', label: 'Venue' },
+    { href: '/partners', label: 'Partners' },
+    ...(showFaq ? [{ href: '/#faq', label: 'FAQ' }] : []),
+  ];
   return (
     <section aria-labelledby="nf-title" className="relative isolate">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-black/85" />
@@ -51,9 +54,11 @@ export default function NotFound() {
             <Button href="/" size="lg">
               Back to the event
             </Button>
-            <Button href="/#faq" variant="ghost" size="lg">
-              Read the FAQ
-            </Button>
+            {showFaq ? (
+              <Button href="/#faq" variant="ghost" size="lg">
+                Read the FAQ
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -64,10 +69,10 @@ export default function NotFound() {
             </span>{' '}
             See instead, in order of appearance:
           </p>
-          <ul className="-my-1 flex flex-wrap gap-x-6 text-sm">
-            {LINKS.map((l) => (
+          <ul className="-my-2.5 flex flex-wrap gap-x-6 text-base">
+            {links.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="inline-block py-1 text-mute underline-offset-4 hover:text-white hover:underline">
+                <Link href={l.href} className="link-draw inline-block py-2.5 text-mute hover:text-white focus-visible:text-white">
                   {l.label}
                 </Link>
               </li>

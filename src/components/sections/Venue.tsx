@@ -2,7 +2,7 @@ import type { Settings } from '@/lib/content';
 import { formatCoordinate } from '@/lib/links';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { ClauseNo, Tba } from '@/components/print/Print';
+import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
@@ -50,6 +50,7 @@ function Reticle() {
 export function Venue({ settings }: { settings: Settings }) {
   const coords = settings.venueCoordinates;
   const notes = settings.venueNotes;
+  const anyNote = notes.some((n) => n.body);
   const a = settings.venuePostalAddress;
   const cityLine = [a.city, [a.region, a.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
 
@@ -73,28 +74,28 @@ export function Venue({ settings }: { settings: Settings }) {
             ) : null}
           </div>
 
-          {/* Coordinate plate. Sits on its own near-solid panel so it never depends on the canvas. */}
+          {/* Coordinate plate: a proof with crop marks, on its own near-solid ground so it never depends on the canvas. */}
           <figure
             data-reveal="fade"
-            className="relative mx-auto w-full max-w-sm border border-white/10 bg-black/85 p-6 md:col-span-5 md:mx-0 md:ml-auto lg:col-span-4"
+            className="relative mx-auto w-full max-w-sm bg-black/80 p-6 sm:p-7 md:col-span-5 md:mx-0 md:ml-auto lg:col-span-4"
           >
-            <div className="flex items-start justify-between gap-4">
-              <span className="fine-print text-mute">Fig. 4</span>
-              <span className="fine-print text-right text-mute">Site plan, not to scale</span>
+            <CropMarks />
+            <div className="flex items-baseline justify-between gap-4">
+              <span className="fine-print text-white">Fig.&nbsp;4</span>
+              <span className="fine-print text-right text-mute">Site plan · not to scale</span>
             </div>
-            <div className="mx-auto mt-4 aspect-square w-full max-w-[16rem]">
+            <div className="mx-auto mt-5 aspect-square w-full max-w-[15rem]">
               <Reticle />
             </div>
-            <figcaption className="mt-5 border-t border-white/10 pt-4">
+            <figcaption className="mt-6 border-t border-white/15 pt-5">
               {coords ? (
                 <>
-                  <p className="font-mono text-lg tracking-tight text-white tabular-nums sm:text-xl">
-                    {formatCoordinate(coords.lat, 'lat')}
-                    <br />
-                    {formatCoordinate(coords.lng, 'lng')}
+                  <p className="font-mono text-[1.375rem] leading-[1.25] tracking-[-0.02em] text-white tabular-nums sm:text-2xl">
+                    <span className="block">{formatCoordinate(coords.lat, 'lat')}</span>
+                    <span className="block">{formatCoordinate(coords.lng, 'lng')}</span>
                   </p>
                   {coords.note ? (
-                    <p data-cursor="loupe" className="fine-print mt-2 text-mute">
+                    <p data-cursor="loupe" className="fine-print mt-3 text-mute">
                       {coords.note}
                     </p>
                   ) : null}
@@ -115,32 +116,17 @@ export function Venue({ settings }: { settings: Settings }) {
               <span className="fine-print text-mute">Where</span>
             </dt>
             <dd className="col-start-2 mt-3">
+              <address className="not-italic leading-relaxed text-mute">
+                <span className="block text-xl tracking-tight text-white">{settings.venueName}</span>
+                {settings.venueCampus ? <span className="mt-2 block">{settings.venueCampus}</span> : null}
+                {a.street ? <span className="block">{a.street}</span> : null}
+                {cityLine ? <span className="block">{cityLine}</span> : null}
+              </address>
               {settings.venueAddressLabel ? (
-                <span data-cursor="loupe" className="fine-print mb-2 block text-mute">
+                <span data-cursor="loupe" className="fine-print mt-3 block text-subtle">
                   {settings.venueAddressLabel}
                 </span>
               ) : null}
-              <address className="not-italic leading-relaxed text-white">
-                {settings.venueName}
-                {settings.venueCampus ? (
-                  <>
-                    <br />
-                    {settings.venueCampus}
-                  </>
-                ) : null}
-                {a.street ? (
-                  <>
-                    <br />
-                    {a.street}
-                  </>
-                ) : null}
-                {cityLine ? (
-                  <>
-                    <br />
-                    {cityLine}
-                  </>
-                ) : null}
-              </address>
             </dd>
           </div>
           <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">
@@ -149,8 +135,10 @@ export function Venue({ settings }: { settings: Settings }) {
               <span className="fine-print text-mute">When</span>
             </dt>
             <dd className="col-start-2 mt-3 leading-relaxed text-white">
-              <time dateTime={settings.dateISO}>{settings.dateLong}</time>
-              <span className="mt-1 block text-mute">
+              <time dateTime={settings.dateISO} className="block text-xl tracking-tight">
+                {settings.dateLong}
+              </time>
+              <span className="mt-2 block text-mute">
                 Doors: {settings.doorsTime ? settings.doorsTime : <Tba />}
               </span>
               {settings.endTime ? <span className="block text-mute">Ends: {settings.endTime}</span> : null}
@@ -162,8 +150,8 @@ export function Venue({ settings }: { settings: Settings }) {
               <span className="fine-print text-mute">Capacity</span>
             </dt>
             <dd className="col-start-2 mt-3 leading-relaxed text-white">
-              100 seats
-              <span className="block text-mute">One room, one evening.</span>
+              <span className="block text-xl tracking-tight tabular-nums">100 seats</span>
+              <span className="mt-2 block text-mute">One room, one evening.</span>
             </dd>
           </div>
         </dl>
@@ -171,19 +159,21 @@ export function Venue({ settings }: { settings: Settings }) {
         {/* Getting there */}
         <div className="mt-20 grid gap-10 md:mt-28 md:grid-cols-12">
           <div className="md:col-span-4">
-            <h3 data-reveal="fade" className="flex items-baseline gap-4 text-2xl font-semibold tracking-tight">
+            <h3 data-reveal="fade" className="flex items-baseline gap-4 text-2xl font-semibold tracking-tight sm:text-3xl">
               <ClauseNo>4.4</ClauseNo>
               Getting there
             </h3>
             <p data-reveal="fade" className="mt-4 max-w-xs text-mute">
-              Directions, parking and access, in that order. Anything still blank will be filled in before the event.
+              {anyNote
+                ? 'Directions, parking and access, in that order.'
+                : 'Directions, parking and access details are published here before the event.'}
             </p>
             {settings.mapUrl ? (
               <div className="mt-8">
                 <Button href={settings.mapUrl} variant="ghost">
                   Open in Maps
                   <span className="sr-only">: {settings.venueName}</span>
-                  <span aria-hidden="true">↗</span>
+                  <Arrow dir="up-right" className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
                 </Button>
               </div>
             ) : null}
@@ -194,21 +184,14 @@ export function Venue({ settings }: { settings: Settings }) {
               {notes.map((n, i) => (
                 <li
                   key={`${n.title}-${i}`}
-                  className="grid gap-3 border-b border-white/15 py-7 sm:grid-cols-[4rem_12rem_1fr] sm:gap-6"
+                  className={`grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-2 gap-y-3 border-b border-white/15 sm:grid-cols-[3.5rem_11rem_minmax(0,1fr)] sm:items-baseline sm:gap-x-6 ${n.body ? 'py-7' : 'py-5'}`}
                 >
                   <span aria-hidden="true" className="fine-print text-white">
                     ({LETTERS[i] ?? i + 1})
                   </span>
                   <h4 className="text-lg font-semibold tracking-tight">{n.title}</h4>
-                  <div className="leading-relaxed text-mute">
-                    {n.body ? (
-                      <p className="whitespace-pre-line">{n.body}</p>
-                    ) : (
-                      <p>
-                        <Tba />
-                        <span className="mt-2 block text-sm text-mute">Details will be published here before the event.</span>
-                      </p>
-                    )}
+                  <div className="col-start-2 leading-relaxed text-mute sm:col-start-auto">
+                    {n.body ? <p className="whitespace-pre-line">{n.body}</p> : <Tba />}
                   </div>
                 </li>
               ))}

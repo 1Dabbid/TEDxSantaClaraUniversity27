@@ -78,8 +78,10 @@ src/
   lib/jsonld.ts           Event, FAQPage and speaker Person/Event JSON-LD
   lib/links.ts            partner CTA, coordinate and clause formatting
   lib/quality.ts          quality tier store + useQuality()
-  motion/                 SmoothScroll (Lenis + ScrollTrigger), gsap.ts (plugin registration), lenisRef
-  scene/                  scrollState, SceneLoader, SceneCanvas, Experience (placeholder)
+  motion/                 MotionRoot, SmoothScroll (Lenis + ScrollTrigger), SceneGate, gsap.ts, lenisRef
+  motion/engine/          reveal, cursor, magnetic, navigation, chrome, focus (the global motion engine)
+  motion/sections/        HeroMotion, ThemeMotion, ScheduleMotion (section-specific timelines)
+  scene/                  scrollState, SceneLoader, SceneCanvas, Experience
 ```
 
 ### `src/scene/scrollState.ts`
@@ -99,17 +101,26 @@ A plain mutable singleton. Read it freely in `useFrame` or GSAP callbacks; it ne
 - `high`: everything else.
 
 ### Canvas
-`SceneLoader` (in the root layout) mounts `SceneCanvas` via `next/dynamic({ ssr: false })` only when quality is not `static`, after `load` + `requestIdleCallback`. three.js is therefore never in the initial bundle. `SceneCanvas` is fixed, full viewport, `aria-hidden`, `pointer-events: none`, at `z-index: var(--z-canvas)` (0). Page content sits at `var(--z-content)` (10) and the header at `var(--z-header)` (50). DPR is `[1,2]` on high and `[1,1.5]` on low. `Experience.tsx` is a placeholder: replace it, keeping the default export and the `quality` prop.
+`SceneGate` (in the root layout) decides whether the scene exists on the current route: it is mounted on `/`; on `/partners`, `/speakers/*` and the 404 page it is not mounted, unless the home page was already shown in this browsing session, in which case the live canvas is kept hidden and paused (R3F `frameloop: 'never'`) so returning home is instant. A cold load of a secondary page never downloads three.js. Inside the gate, `SceneLoader` mounts `SceneCanvas` via `next/dynamic({ ssr: false })` only when quality is not `static`, after `load` + `requestIdleCallback`. three.js is therefore never in the initial bundle. `SceneCanvas` is fixed, full viewport, `aria-hidden`, `pointer-events: none`, at `z-index: var(--z-canvas)` (0). Page content sits at `var(--z-content)` (10) and the header at `var(--z-header)` (50). DPR is `[1,2]` on high and `[1,1.5]` on low. `Experience.tsx` holds the scene; keep its default export and the `quality` prop.
 
 Readability never depends on the canvas: each section has its own gradient scrim (`scrim-y`, `scrim-left`, `scrim-solid` in `globals.css`).
 
 ### Motion
 - Always import GSAP from `@/motion/gsap` (registers ScrollTrigger and SplitText once). `@gsap/react` (`useGSAP`) is installed.
-- `SmoothScroll` dynamically imports gsap and Lenis, so they load only when motion is on. Lenis runs on the GSAP ticker and calls `ScrollTrigger.update` on scroll.
-- `lenisRef.current` gives programmatic scrolling (null in `static` mode).
-- Gate every animation on `useQuality() !== 'static'`. Animate from the static layout (e.g. `gsap.from`) so the no-JS and reduced-motion look stays correct.
-- `[data-magnetic]` on buttons is a hook for a magnetic hover effect. It does nothing yet.
-- The Theme section is 250vh tall on md+ with a sticky inner panel: the runway for the macro push-in.
+- `SmoothScroll` dynamically imports gsap and Lenis, so they load only when motion is on. Lenis runs on the GSAP ticker and calls `ScrollTrigger.update` on scroll. `lenisRef.current` gives programmatic scrolling (null in `static` mode).
+- `html.motion` is set by an inline script before first paint (JS on, no reduced motion, no Save-Data) and removed again by `MotionRoot` if quality resolves to `static`. All pre-reveal CSS is scoped to it, so the server HTML is the complete, fully visible design.
+- `MotionRoot` loads the engine (`src/motion/engine/index.ts`) on demand, never in the first-load bundle:
+  - `reveal.ts`: the attribute API for entrance animations, scanned on every route.
+    - `data-reveal="lines"` (SplitText lines, masked), `"chars"` (per character), `"fade"`, `"rule"` (a hairline drawn left to right), `"stagger"` (direct children one after another; add `data-reveal-variant="wipe"` for a clip-path wipe). `data-reveal-delay="0.2"` delays in seconds.
+    - Nested reveals: the outermost owns the animation. Splits are reverted when done, and keyboard focus landing inside a pending reveal finishes it at once. A CSS failsafe shows everything after 3s if the engine never arrives.
+  - `cursor.ts`: custom dot + ring for fine pointers. `data-cursor="link"` gives the link state to non-link elements (e.g. a whole row); `data-cursor="loupe"` (optionally `data-cursor-zoom="2.4"`) turns the cursor into a magnifying glass over fine print.
+  - `magnetic.ts`: elements with `data-magnetic` lean toward the pointer (fine pointers only). `Button` opts in by default (`magnetic={false}` to opt out).
+  - `navigation.ts`: smooth in-page anchors with header offset, a curtain transition between routes, focus moved to the target or `#main`.
+  - `chrome.ts`: the header hides on scroll down and returns on scroll up or focus; the red hairline tracks reading progress.
+  - `focus.ts`: keyboard focus cancels any Lenis glide in flight and nudges the focused element clear of the header.
+- Plain CSS link style: `link-draw` draws a 1px underline from the left on hover/focus. Bare `<a>` inside running text (`p`, `li`, `dd`) gets a resting underline automatically.
+- Gate any new animation on `useQuality() !== 'static'` and animate from the static layout (e.g. `gsap.from`) so the no-JS and reduced-motion look stays correct.
+- Theme: on viewports at least 768px wide and 44rem tall it is a 250vh runway with a sticky stage (the phrase scrub in `ThemeMotion`); smaller or shorter viewports get a natural-height section with masked line reveals.
 
 ## Brand rules baked in
 - Always write **TEDxSantaClaraUniversity** in full.
@@ -130,4 +141,4 @@ Readability never depends on the canvas: each section has its own gradient scrim
    When `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` is set, `keystatic.config.ts` switches storage from `local` to `github`. Each save commits to the repo, and Vercel rebuilds the static site. Without these variables, `/keystatic` only works in local dev. See `.env.example`, and never commit real values.
 4. `robots.txt` disallows `/keystatic` and `/api/`.
 
-The public site makes no runtime requests to third parties: fonts are self-hosted and there is no analytics. The Keystatic admin UI loads its own fonts from Google Fonts, which affects editors only.
+The public site makes no runtime requests to third parties: fonts are self-hosted and there is no analytics. The OG image is rendered at build time in Inter from OTF copies in `src/app/_og/` (the renderer cannot read woff2; SIL OFL, license alongside). The Keystatic admin UI loads its own fonts from Google Fonts, which affects editors only.
