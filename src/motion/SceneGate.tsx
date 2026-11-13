@@ -3,6 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSceneEnabled } from '@/lib/quality';
+import type { EngravingFacts } from '@/scene/engraving';
 
 // Not even the loader is in the first-load bundle: it (and next/dynamic) is fetched only when the
 // scene may actually run on this route and device.
@@ -104,7 +105,7 @@ async function setPaused(container: HTMLElement | null, paused: boolean, saved: 
   }
 }
 
-export default function SceneGate() {
+export default function SceneGate({ engraving }: { engraving?: Partial<EngravingFacts> } = {}) {
   const pathname = usePathname();
   const onHome = pathname === '/';
   // Set during render (no extra commit); the layout keeps this component alive
@@ -196,7 +197,7 @@ export default function SceneGate() {
     <div ref={ref} className="scene-gate" data-hidden={onHome ? undefined : ''} aria-hidden="true">
       <SceneBoundary onFail={() => setFailed(true)}>
         <Suspense fallback={null}>
-          <SceneLoader />
+          <SceneLoader engraving={engraving} />
         </Suspense>
       </SceneBoundary>
     </div>

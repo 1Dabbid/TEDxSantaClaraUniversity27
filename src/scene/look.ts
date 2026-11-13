@@ -28,6 +28,8 @@ export const look = {
   scrim: 0,
   /** Top / bottom edge darkening 0..1. */
   scrimEdge: 0,
+  /** Upper-middle band darkening 0..1 behind a full-width heading. */
+  band: 0,
   /** Highlight bloom multiplier. */
   bloom: 1,
   /** Vignette strength 0..1. */

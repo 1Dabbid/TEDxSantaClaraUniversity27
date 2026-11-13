@@ -4,6 +4,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { SkipLink } from '@/components/SkipLink';
 import { getSettings } from '@/lib/content';
+import { engravingLines } from '@/lib/site';
 import MotionRoot from '@/motion/MotionRoot';
 import SmoothScroll from '@/motion/SmoothScroll';
 import SceneGate from '@/motion/SceneGate';
@@ -36,7 +37,7 @@ export async function SiteShell({ children }: { children: ReactNode }) {
       <style dangerouslySetInnerHTML={{ __html: `:root{--accent:${settings.accentColor}}` }} />
       <SkipLink />
       <Header settings={settings} />
-      <SceneGate />
+      <SceneGate engraving={engravingLines(settings)} />
       <SmoothScroll>
         <div className="relative z-[var(--z-content)]">
           <main id="main" tabIndex={-1} className="outline-none">

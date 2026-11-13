@@ -53,28 +53,30 @@ const FILLER: readonly string[] = [
 
 const body = (...phrases: string[]): EngravingRow => ({ kind: 'text', style: 'body', phrases });
 
-/** Content facts engraved on the barrel; every field defaults to the constants above. */
+/**
+ * Content facts engraved on the barrel (from Event basics / Venue via
+ * `engravingLines()` in src/lib/site.ts); every field falls back to the
+ * constants above. The licensed name and the license line are not content:
+ * they always render in full, in exact case.
+ */
 export type EngravingFacts = {
-  eventName: string;
   theme: string;
   dateLine: string;
   venueLine: string;
   seatsLine: string;
-  licenseLine: string;
 };
 
 export const DEFAULT_FACTS: EngravingFacts = {
-  eventName: EVENT_NAME,
   theme: THEME,
   dateLine: DATE_LINE,
   venueLine: VENUE_LINE,
   seatsLine: SEATS_LINE,
-  licenseLine: LICENSE_LINE,
 };
 
-/** The engraved rows for a set of facts (missing fields use the defaults above). */
-export function engravingRows(facts: Partial<EngravingFacts> = {}): readonly EngravingRow[] {
-  const f = { ...DEFAULT_FACTS, ...facts };
+/** The engraved rows for a set of facts (missing or empty fields use the defaults above). */
+export function engravingRows(facts: Partial<EngravingFacts> = DEFAULT_FACTS): readonly EngravingRow[] {
+  const pick = (k: keyof EngravingFacts) => facts[k]?.trim() || DEFAULT_FACTS[k];
+  const f = { theme: pick('theme'), dateLine: pick('dateLine'), venueLine: pick('venueLine'), seatsLine: pick('seatsLine'), eventName: EVENT_NAME, licenseLine: LICENSE_LINE };
   return [
     { kind: 'rule' },
     { kind: 'text', style: 'title', phrases: [f.eventName, f.theme] },
