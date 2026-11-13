@@ -5,7 +5,7 @@ import { isIndexable, SITE_NAME, seatsLabel, venueLine } from '@/lib/site';
 import { ticketCta } from '@/lib/tickets';
 import { SpeakerCard, SpeakersToCome } from '@/components/sections/Speakers';
 import { Button } from '@/components/ui/Button';
-import { JsonLd, Tba } from '@/components/print/Print';
+import { JsonLd } from '@/components/print/Print';
 import { ClosingBand } from '@/components/pages/ClosingBand';
 import { PageHeader, TopicPage } from '@/components/pages/PageHeader';
 
@@ -69,7 +69,8 @@ export default async function SpeakersPage() {
           facts={[
             { k: 'Date', v: <time dateTime={settings.dateISO}>{settings.dateLong}</time> },
             { k: 'Venue', v: venueLine(settings) },
-            { k: 'Speakers', v: anyAnnounced ? `${announced.length} announced` : <Tba /> },
+            // Before any is announced the title already says so: no second "to be announced".
+            ...(anyAnnounced ? [{ k: 'Speakers', v: `${announced.length} announced` }] : []),
           ]}
         >
           {anyAnnounced ? null : (
