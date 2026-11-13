@@ -179,6 +179,50 @@ for (const reducedMotion of ['no-preference', 'reduce'] as const) {
   });
 }
 
+test('back pressed while the transition curtain covers the page: scroll restoration keeps working', async ({ page }) => {
+  const scrollY = () => page.evaluate(() => Math.round(window.scrollY));
+  const scrollTo = async (y: number) => {
+    await page.evaluate((v) => window.scrollTo(0, v), y);
+    await expect.poll(scrollY).toBe(y);
+    await page.waitForTimeout(300);
+  };
+  await page.goto('/partners');
+  await settle(page, 300);
+  await page.evaluate(() => document.querySelector<HTMLAnchorElement>('header a[href="/"]')?.click());
+  await page.waitForURL((u) => u.pathname === '/');
+  await page.waitForTimeout(1500);
+  await scrollTo(2400);
+
+  // Start a transition back to /partners, then press Back while the curtain is coming down.
+  await page.evaluate(() => document.querySelector<HTMLAnchorElement>('header a[href="/partners"]')?.click());
+  await page.waitForTimeout(150);
+  await page.goBack();
+  await page.waitForURL('**/partners');
+  // The curtain lifts and nothing is left pending.
+  await expect
+    .poll(() =>
+      page.evaluate(() => ({
+        curtain: getComputedStyle(document.querySelector('.curtain')!).visibility,
+        pending: document.documentElement.classList.contains('nav-pending'),
+        stopped: document.documentElement.classList.contains('lenis-stopped'),
+      })),
+    )
+    .toEqual({ curtain: 'hidden', pending: false, stopped: false });
+  // The route the visitor went back from is not pushed afterwards.
+  await page.waitForTimeout(1200);
+  expect(new URL(page.url()).pathname).toBe('/partners');
+
+  // Positions are recorded again on this page, and restored on the next traversal.
+  await scrollTo(1500);
+  await page.goForward();
+  await page.waitForURL((u) => u.pathname === '/');
+  await expect.poll(scrollY, { timeout: 5_000 }).toBeGreaterThan(2400 - 40);
+  await page.goBack();
+  await page.waitForURL('**/partners');
+  await expect.poll(scrollY, { timeout: 5_000 }).toBeGreaterThan(1500 - 40);
+  expect(await scrollY()).toBeLessThan(1500 + 40);
+});
+
 test.describe('no horizontal overflow', () => {
   for (const width of [320, 390, 768, 1440]) {
     for (const route of ['/', '/partners']) {
