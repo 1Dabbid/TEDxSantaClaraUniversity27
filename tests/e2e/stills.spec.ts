@@ -158,7 +158,7 @@ test.describe('scene stills', () => {
       })
       .toBe('true none');
     // Scroll the whole stack's range: nothing below the hero is fetched.
-    for (const id of ['theme', 'speakers', 'schedule', 'venue', 'team']) {
+    for (const id of ['theme', 'speakers', 'schedule', 'venue', 'tickets', 'faq']) {
       await scrollToSection(page, id, 0.2);
       await page.waitForTimeout(200);
     }
