@@ -119,8 +119,8 @@ function CoordinatePlate({ settings }: { settings: Settings }) {
 }
 
 /**
- * /venue: everything needed to get there. The address and a large map action
- * first, the coordinate plate beside them, then Directions, Parking and
+ * /venue: everything needed to get there. The street address and a large map
+ * action in the page header, the address block and coordinate plate below, then Directions, Parking and
  * Accessibility as clauses that show the editors' notes, or something true and
  * useful while those are blank, never three identical placeholders.
  */
@@ -128,6 +128,7 @@ export default async function VenuePage() {
   const settings = await getSettings();
   const a = settings.venuePostalAddress;
   const cityLine = cityLineOf(settings);
+  const addressLine = [a.street, cityLine].filter(Boolean).join(', ');
   const notes = settings.venueNotes.length ? settings.venueNotes : DEFAULT_NOTES;
   const pending = notes.filter((n) => !n.body).map((n) => n.title);
   const cta = ticketCta(settings);
@@ -154,15 +155,32 @@ export default async function VenuePage() {
           title={settings.venueName}
           intro={
             <>
-              Where {settings.eventName} takes place{settings.venueCampus ? `, on the ${settings.venueCampus} campus` : ''}, when
-              to arrive, and how to get there.
+              Where {settings.eventName} takes place{settings.venueCampus ? `, on the ${settings.venueCampus} campus` : ''}
+              {addressLine ? (
+                <>
+                  : <span className="text-white">{addressLine}</span>
+                </>
+              ) : null}
+              .
             </>
           }
           facts={[
             { k: 'Date', v: <time dateTime={settings.dateISO}>{settings.dateLong}</time> },
             ...timeFacts(settings),
           ]}
-        />
+        >
+          {/* The address (in the intro) and the map come first: they are why most visitors open this page. */}
+          {settings.mapUrl ? (
+            <Button href={settings.mapUrl} size="lg" className="w-full sm:w-auto sm:min-w-72">
+              Open in Maps
+              <span className="sr-only">: {venueLine(settings)}</span>
+              <Arrow
+                dir="up-right"
+                className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+              />
+            </Button>
+          ) : null}
+        </PageHeader>
       </section>
 
       {/* Address, map, coordinates */}
@@ -173,11 +191,9 @@ export default async function VenuePage() {
               <ClauseNo>1</ClauseNo>
               Address
             </h2>
+            {/* The venue name is the page title; the block keeps campus, street and city beside the plate. */}
             <address className="mt-8 not-italic">
-              <span className="block text-2xl font-semibold tracking-tight text-balance sm:text-3xl">
-                {settings.venueName}
-              </span>
-              <span className="mt-4 block text-lg leading-relaxed text-mute sm:text-xl">
+              <span className="block text-lg leading-relaxed text-mute sm:text-xl">
                 {settings.venueCampus ? <span className="block text-white">{settings.venueCampus}</span> : null}
                 {a.street ? <span className="block">{a.street}</span> : null}
                 {cityLine ? <span className="block">{cityLine}</span> : null}
@@ -189,18 +205,6 @@ export default async function VenuePage() {
             <p className="mt-6 text-mute">
               Capacity: <span className="text-white tabular-nums">{seatsLabel(settings.capacity)}</span>
             </p>
-            {settings.mapUrl ? (
-              <div className="mt-10">
-                <Button href={settings.mapUrl} size="lg" className="w-full sm:w-auto sm:min-w-72">
-                  Open in Maps
-                  <span className="sr-only">: {venueLine(settings)}</span>
-                  <Arrow
-                    dir="up-right"
-                    className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
-                  />
-                </Button>
-              </div>
-            ) : null}
           </div>
           <div className="md:col-span-5">
             <CoordinatePlate settings={settings} />

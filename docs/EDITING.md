@@ -55,7 +55,7 @@ Besides the home page (the scroll story), each topic has its own page with an ad
 
 | Page | While nothing is published | Once you publish |
 | --- | --- | --- |
-| **/venue** | Address, **Open in Maps**, the coordinates, and Directions, Parking and Accessibility with one line saying the details follow (Directions points to the address; Accessibility to the contact email). Times show "To be announced". | Each **Getting there** note you fill in (**Venue & directions**) appears under its title; **Doors open at**, **Talks start at**, **Event ends at** appear at the top. |
+| **/venue** | The street address and **Open in Maps** at the top, the coordinates, and Directions, Parking and Accessibility with one line saying the details follow (Directions points to the address; Accessibility to the contact email). The times show as one line, "Doors and talk times to follow". | Each **Getting there** note you fill in (**Venue & directions**) appears under its title; **Doors open at**, **Talks start at**, **Event ends at** appear at the top. |
 | **/schedule** | The date, "Running order to follow" and the mailing list button. | The full running order (**Show the running order**). |
 | **/team** | Every board role from **People > Team**, as a plain list of roles. | Names and photos for people with **Show name publicly** ticked. Turning off the Team switch removes the page. |
 | **/faq** | Every question. Each has its own link (e.g. `/faq#tickets-on-sale`, made from the question's words): send it to someone and the answer opens. Rewording a question changes its link. Turning off the FAQ switch removes the page. | |
