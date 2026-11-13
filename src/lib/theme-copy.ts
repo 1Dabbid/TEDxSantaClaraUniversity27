@@ -42,7 +42,7 @@ export const THEME_COPY_DEFAULTS = {
     'It returns on {date}, the first {eventName} since 2020, organized by students at {campus}: one evening of live talks for up to {capacity} guests, recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to make it possible.',
   /** /partners search and link-preview description. Placeholders. */
   partnersDescription:
-    'Partner with {eventName}, the first {eventName} since 2020: up to {capacity} guests; talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
+    'Partner with {eventName}, returning for the first time since 2020: up to {capacity} guests; talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
   /** /partners, first "What your support makes possible" card. Blank title: the card is left out. Body: placeholders. */
   partnersEditionFigure: '2020',
   partnersEditionTitle: 'The first since 2020.',
