@@ -32,7 +32,7 @@ Do this before changing anything, so the 2027 site stays online as a record.
 | Team | names | new board; untick **Show name publicly** until people agree |
 | Partner tiers | **Tier name** | this year's names are theme puns: "Fine Print Supporter", "Bold Print Partner" (`content/tiers/*.yaml`) |
 | Partners (logos) | each | untick **Published** or delete; partnerships are per event |
-| FAQ | questions | review every answer (dates, venue, ticket price) |
+| FAQ | questions | review every answer (ticket price, applications). Write `{date}`, `{venue}`, `{campus}`, `{capacity}` and `{eventName}` instead of typing those facts, so answers follow Event basics and Venue |
 
 ## 3. Theme-specific code (search list)
 
@@ -42,7 +42,7 @@ Search the codebase for `Fine Print`, `fine print`, `2027`, `04.23`, `Locatelli`
 | --- | --- |
 | `src/scene/engraving.ts` | the text etched on the 3D microphone: `THEME = 'FINE PRINT'`, `DATE_LINE = 'FRIDAY · APRIL 23 · 2027'`, `VENUE_LINE = 'LOCATELLI STUDENT ACTIVITY CENTER'`, `SEATS_LINE`, and the nine legal-style `CLAUSES`. Hard-coded, not read from content: **must** be edited by hand. |
 | `src/scene/choreography.ts`, `src/scene/*.tsx` | the scene itself (a microphone on a red rug, 100 seats). Theme-neutral for a TEDx talk, but the camera shots are tuned to this page's sections. After any change here, regenerate the still frames shown to visitors without the live scene: `npm run build && npm run stills`, then commit `public/stills/` (see the README, "Still frames"). |
-| `src/lib/site.ts` | `SITE_URL` (`https://fineprint.tedxscu.com`), the canonical domain. The share-image alt text is built from content by `ogAlt()` (event name, theme name, long date, venue and campus), so it needs no edit. |
+| `src/lib/site.ts` | `SITE_URL` (`https://fineprint.tedxscu.com`), the canonical domain. The event name `SITE_NAME` (`TEDxSantaClaraUniversity`) is also a constant here, not an admin field: it is the licensed name and only changes if TED issues a licence under another name. `TED_LANGUAGE_DEFAULTS` holds the fallback About TEDx / About TED texts. The share-image alt text is built from content by `ogAlt()` (event name, theme name, long date, venue and campus), so it needs no edit. |
 | `src/app/opengraph-image.tsx` | the share image: the theme name, tagline, date and venue come from content, but the seat count is the **Seat capacity** field; the layout copy "§ 01 · The theme" and "fineprint.tedxscu.com" are hard-coded. |
 | `src/components/sections/Hero.tsx` | the footnote marker and note "1. Terms and conditions apply. They are the whole point."; "Scroll to read the fine print". (Venue campus and seat count come from content.) |
 | `src/components/sections/Theme.tsx` | "Read the fine print."; the caption "Fig. 1 The fine print, engraved. Read it closely."; § 1.x clause numbering of the story. |
@@ -58,8 +58,8 @@ Search the codebase for `Fine Print`, `fine print`, `2027`, `04.23`, `Locatelli`
 | `src/motion/MotionRoot.tsx` | the page-transition caption "§ continuing…". |
 | `src/motion/sections/TeamMotion.tsx`, `ThemeMotion.tsx` | animated "NN of NN signed" counter; theme clause counter "1.x(a)". |
 | `src/components/print/Print.tsx`, `src/components/ui/SectionLabel.tsx`, `src/lib/links.ts` (`clause()`) | the reusable "fine print" primitives: clause numbers, TBA marker, redaction bars, crop marks. Keep them if the new design reuses them; otherwise stop using them. |
-| `src/app/layout.tsx` | the default meta description template "… presents <theme>: <tagline> <date>, <venue>, <campus>. Limited to <capacity> seats." (all values from content; only the wording is code). |
-| `src/lib/content.ts` | fallbacks used only when content is missing: date `2027-04-23`, venue "Locatelli Student Activity Center". |
+| `src/app/layout.tsx` (root layout: metadata only; the site chrome is `src/components/SiteShell.tsx`) | the default meta description template "… presents <theme>: <tagline> <date>, <venue>, <campus>. Limited to <capacity> seats." (all values from content; only the wording is code). |
+| `src/lib/content.ts` | fallbacks used only when content is missing or invalid: date `DEFAULT_DATE = '2027-04-23'` (also used when the Event date is not a real date), venue "Locatelli Student Activity Center". |
 | `keystatic.config.ts` | defaults and examples shown to editors: `themeName` default "Fine Print", `dateISO` default `2027-04-23`, FAQ description "§ 7.01, § 7.02", the GitHub repo name. |
 | `src/app/globals.css` | the look (black, red, Inter, hairlines). `.fine-print` is a utility class name for small uppercase labels; it is not visible text and can stay. |
 | `package.json` (`name`), `README.md`, `docs/*` | names and dates of this edition. |
