@@ -10,7 +10,7 @@ items:
       Not yet. Tickets are coming soon. In line with TEDx rules, they will cost no more than $100. Join the mailing list to hear the moment they go on sale.
   - question: How many people can attend?
     answer: |-
-      Attendance is limited to 100 people, so seats will be limited.
+      Attendance is limited to {capacity} people, so seats will be limited.
   - question: How can I apply to speak?
     answer: |-
       Speaker applications are coming soon. When they open, the link will appear on this site and go out to the mailing list.

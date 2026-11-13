@@ -32,14 +32,15 @@ npm run test:e2e   # Playwright end-to-end suite (see Testing)
 - **Local mode** (default): edits write straight to files on your computer. Use it with `npm run dev`.
 - **GitHub mode**: switched on when `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` is set (see `.env.example` and [docs/DEPLOY.md](docs/DEPLOY.md)). Editors sign in with GitHub on the live site; each save is a commit to the repo, and Vercel rebuilds.
 
-Pages read content only through `src/lib/content.ts` (Keystatic's reader, at build time); components never import Keystatic. The admin splits event settings into five singletons (Event basics, Venue & directions, Tickets & speaker applications, Contact, Show / hide sections) and `getSettings()` merges them into one `Settings` object. The canonical site URL, club URL and share-image alt text are constants in `src/lib/site.ts`, not content.
+Pages read content only through `src/lib/content.ts` (Keystatic's reader, at build time); components never import Keystatic. The admin splits event settings into five singletons (Event basics, Venue & directions, Tickets & speaker applications, Contact, Show / hide sections) and `getSettings()` merges them into one `Settings` object. The canonical site URL, club URL and the TEDx seat cap are constants in `src/lib/site.ts`, not content; the share-image alt text (`ogAlt()`), venue line and seat label helpers there are built from content. **Event basics > Seat capacity** (`settings.capacity`) is the single seat count for every page; the Tickets ruler draws one tick per seat and passes the count to its scroll moment as `data-seats`. **Livestream link** renders as `WatchLive` (`src/components/ui/WatchLive.tsx`) in the hero and Tickets, and nothing while blank.
 
 ## Architecture
 
 ```
 src/
   app/                  routes: /, /partners, /speakers/[slug], /keystatic, /api/keystatic,
-                        sitemap.ts, robots.ts, opengraph-image.tsx (built at build time), not-found.tsx
+                        sitemap.ts, robots.ts, opengraph-image.tsx (built at build time), not-found.tsx,
+                        error.tsx (page error boundary), global-error.tsx (self-contained, root layout failures)
   components/           Header, Footer, MobileMenu, Logo, SkipLink, ChromeGate (no chrome on /keystatic), nav.ts
   components/sections/  Hero, Theme, Speakers, Schedule, Venue, Tickets, Team, Faq, Newsletter
   components/print/     the "fine print" primitives: clause numbers, TBA marker, redaction bars, crop marks, JSON-LD
@@ -101,7 +102,7 @@ Build and environment switches: `ANALYZE=1 npm run build` emits browser source m
 
 ## Testing
 
-`tests/e2e` holds a Playwright suite (Chromium) that runs against a production build (`npm run build && npm run start` on port 3100, configured in `playwright.config.ts`). It covers: every public route (status 200, exactly one `h1`, a title and description, no console errors or failed requests), the no-JavaScript home page (full event name, date, venue, Tickets link, the TEDx license sentence), no sponsor logos on the home page, anchors that resolve, the mobile menu (focus trap, Escape), reduced motion, the `?quality=` overrides (the canvas mounts with `?quality=low`), scroll restoration across a page transition, the FAQ by keyboard, horizontal overflow at 320/390/768/1440 px, robots.txt, the sitemap, noindex on unannounced speakers, the Keystatic shell, and axe-core accessibility checks on `/`, `/partners` and a speaker page. `known-issues.spec.ts` holds `test.fixme` cases for known bugs.
+`tests/e2e` holds a Playwright suite (Chromium) that runs against a production build (`npm run build && npm run start` on port 3100, configured in `playwright.config.ts`). It covers: every public route (status 200, exactly one `h1`, a title and description, no console errors or failed requests), the no-JavaScript home page (full event name, date, venue, Tickets link, the TEDx license sentence), no sponsor logos on the home page, anchors that resolve, the mobile menu (focus trap, Escape), reduced motion, the `?quality=` overrides (the canvas mounts with `?quality=low`), scroll restoration across a page transition, the FAQ by keyboard, horizontal overflow at 320/390/768/1440 px, robots.txt, the sitemap, noindex on unannounced speakers, the Keystatic shell, the "Watch live" livestream link (`livestream.spec.ts` renders the component with a sample URL, so no livestream URL is ever committed for testing, and checks the built home page against `content/contact.yaml`), and axe-core accessibility checks on `/`, `/partners` and a speaker page. Record a known bug as a `test.fixme` that describes the correct behaviour, and remove the marker with the fix.
 
 ```bash
 npm run test:e2e                                         # builds, serves, tests

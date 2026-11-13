@@ -79,7 +79,7 @@ The whole section can be hidden in **Contact & site > Show / hide sections > Sho
 
 ### Edit the FAQ
 
-1. **The event > FAQ > Questions**: each item has a **Question** and an **Answer** (plain text, line breaks are kept).
+1. **The event > FAQ > Questions**: each item has a **Question** and an **Answer** (plain text, line breaks are kept). Write `{capacity}` for the seat count so it always matches **Seat capacity**.
 2. Drag to reorder; numbering is automatic.
 3. Hide the section with **Show / hide sections > Show the FAQ section on the home page**.
 
@@ -91,12 +91,24 @@ The whole section can be hidden in **Contact & site > Show / hide sections > Sho
 - **Contact email**: shown in the footer and FAQ.
 - **Partnerships email**: used by every "Become a partner" button (falls back to tedxscu.com while blank).
 - **Social links**: **Instagram**, **LinkedIn**, **YouTube**, **TikTok** (full links; blank ones are hidden).
-- **Livestream link (optional)**: currently not shown anywhere on the site (known issue); filling it in has no effect yet.
+- **Livestream link (optional)**: see "Add the livestream link" below.
+
+### Add the livestream link
+
+Only if the event is streamed.
+
+1. **Contact & site > Contact, newsletter & socials > Livestream link (optional)**: paste the full link to the stream page (e.g. the YouTube live page; it must start with `https://`).
+2. **Save**. A small **Watch live** link (with a red dot) appears in two places: next to the buttons at the top of the home page, and next to the main button in the Tickets section. It opens the stream in a new tab.
+3. After the event, empty the field and **Save**: the link disappears. While the field is blank, nothing is shown.
+
+### Change the number of seats
+
+**The event > Event basics > Seat capacity** (a number, 100 by default). TEDx rules cap a standard licence at **100 attendees**, so the admin will not accept more than 100; lower it only if the room is smaller. This one number drives every seat count on the site: the hero, Venue, the Tickets ruler and counter (one tick per seat), the Partners page, the share image and search descriptions. In FAQ answers, write `{capacity}` where the number belongs (e.g. "Attendance is limited to {capacity} people") and the site fills it in. (The 3D room behind the page always shows 100 seats; that is decoration and does not change.)
 
 ### Other places
 
-- **The event > Event basics**: **Event name**, **Theme name**, **Theme tagline** (also used in search results and link previews), **Theme story**, **Event date** (YYYY-MM-DD), times, **Accent colour**.
-- **The event > Venue & directions**: building, campus, address, **Map link**, coordinates, and **Getting there (directions, parking, accessibility)** notes.
+- **The event > Event basics**: **Event name**, **Theme name**, **Theme tagline** (also used in search results and link previews), **Theme story**, **Event date** (YYYY-MM-DD), times, **Seat capacity**, **Accent colour**. The description of the share image (read aloud by screen readers when the link is shared) is written automatically from the theme name, date and venue.
+- **The event > Venue & directions**: building, **Campus** (shown under the building name in the hero and wherever the venue is written out), address, **Map link**, coordinates, and **Getting there (directions, parking, accessibility)** notes.
 
 ## 4. Image sizes
 

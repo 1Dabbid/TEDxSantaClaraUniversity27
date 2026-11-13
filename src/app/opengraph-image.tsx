@@ -2,9 +2,10 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ImageResponse } from 'next/og';
 import { getSettings } from '@/lib/content';
-import { OG_ALT } from '@/lib/site';
+import { ogAlt, seatsLabel, venueLine } from '@/lib/site';
 
-export const alt = OG_ALT;
+// Built from content at build time (top-level await), like the image itself.
+export const alt = ogAlt(await getSettings());
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -87,10 +88,10 @@ export default async function OpenGraphImage() {
             <div style={{ display: 'flex', flexDirection: 'column' }}>
               <div style={{ display: 'flex', fontSize: 30 }}>{s.eventName}</div>
               <div style={{ display: 'flex', fontSize: 22, color: '#a6a6a6', marginTop: 8 }}>
-                {`${s.dateLong} · ${s.venueName}, ${s.venueCampus || 'Santa Clara University'}`}
+                {`${s.dateLong} · ${venueLine(s)}`}
               </div>
             </div>
-            <div style={{ display: 'flex', ...mono, fontSize: 16 }}>100 seats</div>
+            <div style={{ display: 'flex', ...mono, fontSize: 16 }}>{seatsLabel(s.capacity)}</div>
           </div>
         </div>
       </div>

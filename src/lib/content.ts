@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
+import { TEDX_MAX_CAPACITY } from './site';
 
 /**
  * Typed content loader. Components never import Keystatic directly; they get
@@ -56,6 +57,8 @@ export type Settings = {
   dateShort: string;
   doorsTime: string;
   endTime: string;
+  /** Seat capacity, 1..100 (TEDx licence cap). The single source for every seat count on the site. */
+  capacity: number;
   venueName: string;
   /** "Santa Clara University" */
   venueCampus: string;
@@ -69,8 +72,6 @@ export type Settings = {
   venueCoordinates: { lat: number; lng: number; note: string } | null;
   mapUrl: string;
   venueNotes: VenueNote[];
-  /** Legacy single string: the filled-in venue notes joined. '' when none. */
-  directionsNotes: string;
   ticketState: TicketState;
   ticketUrl: string;
   ticketEmbedUrl: string;
@@ -81,6 +82,7 @@ export type Settings = {
   newsletterUrl: string;
   contactEmail: string;
   partnershipsEmail: string;
+  /** Livestream page ('' when the event is not streamed). Rendered by WatchLive. */
   livestreamUrl: string;
   socials: Socials;
   accentColor: string;
@@ -144,6 +146,9 @@ export type PartnerBenefit = { benefit: string; tiers: string[] };
 export const PLACEHOLDER_SPEAKER_NAME = 'Speaker to be announced';
 
 const ACCENT_FALLBACK = '#EB0028';
+function capacityOf(v: number | null | undefined): number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 1 ? Math.min(v, TEDX_MAX_CAPACITY) : TEDX_MAX_CAPACITY;
+}
 
 function formatDate(iso: string, style: 'long' | 'short'): string {
   const d = new Date(`${iso}T12:00:00Z`);
@@ -202,6 +207,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
     dateShort: formatDate(dateISO, 'short'),
     doorsTime: str(s.doorsTime),
     endTime: str(s.endTime),
+    capacity: capacityOf(s.capacity),
     accentColor: /^#[0-9a-f]{6}$/i.test(s.accentColor) ? s.accentColor : ACCENT_FALLBACK,
 
     venueName,
@@ -212,10 +218,6 @@ export const getSettings = cache(async (): Promise<Settings> => {
     venueCoordinates: coordinates(str(venue?.latitude), str(venue?.longitude), str(venue?.coordinatesNote)),
     mapUrl: str(venue?.mapUrl),
     venueNotes,
-    directionsNotes: venueNotes
-      .filter((n) => n.body)
-      .map((n) => `${n.title}: ${n.body}`)
-      .join('\n'),
 
     ticketState: tickets?.ticketState ?? 'coming-soon',
     ticketUrl: str(tickets?.ticketUrl),
@@ -274,9 +276,15 @@ export const getSchedule = cache(async (): Promise<Schedule> => {
   return { published: s?.published ?? false, items: [...(s?.items ?? [])] };
 });
 
+/** FAQ answers may write {capacity}; it is replaced with the seat capacity from Event basics. */
 export const getFaq = cache(async (): Promise<FaqItem[]> => {
-  const f = await reader.singletons.faq.read();
-  return (f?.items ?? []).filter((i) => i.question && i.answer);
+  const [f, s] = await Promise.all([reader.singletons.faq.read(), getSettings()]);
+  return (f?.items ?? [])
+    .filter((i) => i.question && i.answer)
+    .map((i) => ({
+      question: i.question.replaceAll('{capacity}', String(s.capacity)),
+      answer: i.answer.replaceAll('{capacity}', String(s.capacity)),
+    }));
 });
 
 export const getTeam = cache(async (): Promise<TeamMember[]> => {

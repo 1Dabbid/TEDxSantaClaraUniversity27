@@ -7,7 +7,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { SkipLink } from '@/components/SkipLink';
 import { getSettings } from '@/lib/content';
-import { SITE_NAME, SITE_URL } from '@/lib/site';
+import { SITE_NAME, SITE_URL, venueLine } from '@/lib/site';
 import MotionRoot from '@/motion/MotionRoot';
 import SmoothScroll from '@/motion/SmoothScroll';
 import SceneGate from '@/motion/SceneGate';
@@ -23,7 +23,7 @@ const inter = localFont({
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
   const title = `${s.themeName} · ${SITE_NAME}`;
-  const description = `${SITE_NAME} presents ${s.themeName}: ${s.themeTagline} ${s.dateLong}, ${s.venueName}, Santa Clara University. Limited to 100 seats.`;
+  const description = `${SITE_NAME} presents ${s.themeName}: ${s.themeTagline} ${s.dateLong}, ${venueLine(s)}. Limited to ${s.capacity} seats.`;
   return {
     metadataBase: new URL(SITE_URL),
     title: { default: title, template: `%s · ${SITE_NAME}` },

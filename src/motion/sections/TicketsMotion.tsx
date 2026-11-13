@@ -5,18 +5,19 @@ import { belowFold, COMPACT, FULL, maskText, scrubbable } from './kit';
 
 /** A counter wheel: 0-9 and a second 0, so 9 -> 0 rolls forward. */
 const WHEEL = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '0'];
-const SEATS = 100;
 const STEP = 0.05; // timeline seconds between two ticks
 
 /**
  * § 05 · The room as a ruler.
  *
- * - The 100-tick seat ruler prints tick by tick from its baseline, every tenth
- *   tick's number settling with it, scrubbed to scroll (mouse / trackpad, md+).
+ * - The seat ruler (one tick per seat; `data-seats` carries settings.capacity)
+ *   prints tick by tick from its baseline, every tenth tick's number settling
+ *   with it, scrubbed to scroll (mouse / trackpad, md+).
  * - The big "001 – 100" counts the seats as they are drawn: the right-hand
  *   number becomes a mechanical counter (one wheel per digit, units rolling
  *   continuously, tens and hundreds turning only on the carry), from 001 to
- *   100. Tabular figures and a ghost glyph per wheel keep every width exact.
+ *   the capacity. Tabular figures and a ghost glyph per wheel keep every
+ *   width exact.
  *   The numerals are aria-hidden; clause 5.1 and the heading carry the capacity.
  * - The current box of each status register is stamped: the cross lands from
  *   above at speed and stops dead.
@@ -29,6 +30,8 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const count = root.querySelector<HTMLElement>('[data-seat-count]');
   const dash = root.querySelector<HTMLElement>('[data-seat-dash]');
   const cells = ruler ? (Array.from(ruler.children) as HTMLElement[]) : [];
+  // One cell per seat; the server writes the count on the ruler.
+  const seats = Number(ruler?.dataset.seats) || cells.length;
   const crosses = Array.from(root.querySelectorAll<SVGElement>('[aria-current] svg'));
 
   const mm = gsap.matchMedia();
@@ -36,8 +39,8 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
     const full = Boolean(ctx.conditions?.full);
     const undo: (() => void)[] = [];
 
-    if (ruler && cells.length === SEATS && (full ? scrubbable(ruler) : belowFold(ruler))) {
-      // The counter: three wheels in place of the "100" glyphs.
+    if (ruler && seats > 1 && cells.length === seats && (full ? scrubbable(ruler) : belowFold(ruler))) {
+      // The counter: one wheel per glyph of the printed count ("100" -> three).
       let wheels: HTMLElement[] = [];
       if (count && /^\d+$/.test(count.textContent ?? '')) {
         const m = maskText(count, { strip: () => WHEEL });
@@ -65,8 +68,8 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       const tl = gsap.timeline({
         paused: true,
         defaults: { ease: 'power3.out' },
-        // The count lands on 100 just before the last tick finishes printing.
-        onUpdate: () => setCount(1 + (SEATS - 1) * Math.min(1, tl.progress() / 0.94)),
+        // The count lands on the capacity just before the last tick finishes printing.
+        onUpdate: () => setCount(1 + (seats - 1) * Math.min(1, tl.progress() / 0.94)),
       });
       if (dash) tl.fromTo(dash, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 1.4, ease: 'power3.inOut' }, 0);
       cells.forEach((cell, i) => {

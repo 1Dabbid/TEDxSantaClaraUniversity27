@@ -4,30 +4,31 @@ import Image from 'next/image';
 import type { PartnerBenefit, Sponsor, Tier } from '@/lib/content';
 import { getPartnerBenefits, getSettings, getSponsors, getTiers } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
-import { OG_ALT, SITE_NAME } from '@/lib/site';
+import { ogAlt, SITE_NAME, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { PartnersMotion } from '@/motion/sections/PartnersMotion';
 
-const DESCRIPTION =
-  'Partner with TEDxSantaClaraUniversity: support the first mainstage event at Santa Clara University, up to 100 guests, with talks published on the TEDx YouTube channel.';
-
-export const metadata: Metadata = {
-  title: 'Partners',
-  description: DESCRIPTION,
-  alternates: { canonical: '/partners' },
-  openGraph: {
-    type: 'website',
-    siteName: SITE_NAME,
-    title: `Partners · ${SITE_NAME}`,
-    description: DESCRIPTION,
-    url: '/partners',
-    locale: 'en_US',
-    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: OG_ALT }],
-  },
-  twitter: { card: 'summary_large_image', title: `Partners · ${SITE_NAME}`, description: DESCRIPTION },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSettings();
+  const description = `Partner with ${SITE_NAME}: support the first mainstage event${s.venueCampus ? ` at ${s.venueCampus}` : ''}, up to ${s.capacity} guests, with talks published on the TEDx YouTube channel.`;
+  return {
+    title: 'Partners',
+    description,
+    alternates: { canonical: '/partners' },
+    openGraph: {
+      type: 'website',
+      siteName: SITE_NAME,
+      title: `Partners · ${SITE_NAME}`,
+      description,
+      url: '/partners',
+      locale: 'en_US',
+      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: ogAlt(s) }],
+    },
+    twitter: { card: 'summary_large_image', title: `Partners · ${SITE_NAME}`, description },
+  };
+}
 
 /** Play mark and loop mark for the recitals: drawn, so they match the arrow set. */
 function PlayMark() {
@@ -54,15 +55,15 @@ function LoopMark() {
   );
 }
 
-const REASONS: { figure: ReactNode; title: string; body: string }[] = [
+const reasons = (capacity: number): { figure: ReactNode; title: string; body: string }[] => [
   {
     figure: '1st',
     title: 'The first mainstage.',
     body: 'This is the first TEDxSantaClaraUniversity mainstage event. Founding partners are named from the very first clause.',
   },
   {
-    figure: '100',
-    title: 'A room of 100.',
+    figure: String(capacity),
+    title: `A room of ${capacity}.`,
     body: 'One evening, an audience that chose to be there. Small enough that support is noticed.',
   },
   {
@@ -372,6 +373,7 @@ export default async function PartnersPage() {
       : cta.href;
   const lastLetter = String.fromCharCode(64 + Math.max(tiers.length, 1));
   const anyTerms = tiers.some((t) => t.amount || t.slots);
+  const REASONS = reasons(settings.capacity);
 
   return (
     <div id="prospectus" className="relative isolate">
@@ -416,8 +418,8 @@ export default async function PartnersPage() {
           {[
             ['Party of the first part', settings.eventName],
             ['Date', settings.dateLong],
-            ['Venue', `${settings.venueName}, ${settings.venueCampus || 'Santa Clara University'}`],
-            ['Capacity', 'Up to 100 guests'],
+            ['Venue', venueLine(settings)],
+            ['Capacity', `Up to ${settings.capacity} guests`],
           ].map(([k, v]) => (
             <div key={k}>
               <dt className="fine-print text-mute">{k}</dt>

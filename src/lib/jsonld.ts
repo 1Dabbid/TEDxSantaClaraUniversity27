@@ -1,5 +1,5 @@
 import type { FaqItem, Settings, Speaker } from './content';
-import { CLUB_URL, SITE_NAME, SITE_URL } from './site';
+import { CLUB_URL, SITE_NAME, SITE_URL, venueLine } from './site';
 
 /** Serialises JSON-LD for a <script> tag, escaping `<` so content cannot close the tag. */
 export function jsonLdString(data: unknown): string {
@@ -12,7 +12,7 @@ function placeJsonLd(s: Settings) {
   const hasAddress = Boolean(a.street || a.city || a.postalCode);
   return {
     '@type': 'Place',
-    name: [s.venueName, s.venueCampus].filter(Boolean).join(', '),
+    name: venueLine(s),
     ...(hasAddress
       ? {
           address: {
@@ -26,6 +26,16 @@ function placeJsonLd(s: Settings) {
         }
       : {}),
   };
+}
+
+/** In person only, or in person plus the livestream (when a livestream link is set). */
+function attendanceJsonLd(s: Settings) {
+  return s.livestreamUrl
+    ? {
+        eventAttendanceMode: 'https://schema.org/MixedEventAttendanceMode',
+        location: [placeJsonLd(s), { '@type': 'VirtualLocation', url: s.livestreamUrl }],
+      }
+    : { eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', location: placeJsonLd(s) };
 }
 
 const organizer = { '@type': 'Organization', name: SITE_NAME, url: CLUB_URL } as const;
@@ -48,11 +58,10 @@ export function eventJsonLd(s: Settings, speakers: Speaker[]) {
     startDate: s.dateISO,
     endDate: s.dateISO,
     eventStatus: 'https://schema.org/EventScheduled',
-    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
-    maximumAttendeeCapacity: 100,
+    ...attendanceJsonLd(s),
+    maximumAttendeeCapacity: s.capacity,
     url: SITE_URL,
     image: [`${SITE_URL}/opengraph-image`],
-    location: placeJsonLd(s),
     organizer,
     ...(availability
       ? {
@@ -108,9 +117,8 @@ export function speakerJsonLd(sp: Speaker, s: Settings) {
     ...(sp.talkTitle ? { about: sp.talkTitle } : {}),
     startDate: s.dateISO,
     eventStatus: 'https://schema.org/EventScheduled',
-    eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
+    ...attendanceJsonLd(s),
     url: SITE_URL,
-    location: placeJsonLd(s),
     organizer,
     performer: { '@id': `${url}#person` },
   };

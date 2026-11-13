@@ -27,9 +27,3 @@ export function navItems(visible: NavVisibility): NavItem[] {
   ];
   return items.filter((i): i is NavItem => Boolean(i));
 }
-
-/**
- * Legacy static list (no Team link, FAQ always on), kept so existing callers
- * still compile. Prefer `navItems()` with the real visibility.
- */
-export const NAV_ITEMS: readonly NavItem[] = navItems({ team: false, faq: true });
