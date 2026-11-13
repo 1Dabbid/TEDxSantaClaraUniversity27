@@ -138,9 +138,8 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
             </div>
             <div data-speakers-meta className="speakers-meta mt-6 flex flex-col items-start gap-y-3 sm:mt-8">
               <p className="max-w-[34rem] text-lg text-mute">
-                {any
-                  ? 'Each speaker gives one talk, on one evening, in front of the room.'
-                  : 'Each talk is given once, on one evening, in front of the room. The lineup is announced here and to the mailing list first.'}
+                Live talks on <time dateTime={settings.dateISO}>{settings.dateLong}</time>, at the{' '}
+                {settings.venueName}.
               </p>
               {any && appsOpen ? (
                 <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -178,7 +177,7 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
                 <div>
                   <h3 className="text-lg font-semibold tracking-tight">Hear it first</h3>
                   <p className="mt-2 max-w-md text-[#d0d0d0]">
-                    Speakers, the running order and tickets are announced to the mailing list before anywhere else.
+                    Speaker announcements, the running order and ticket sales go to the mailing list before anywhere else.
                   </p>
                   <div className="mt-5">
                     <Button href={listHref}>Join the mailing list</Button>
