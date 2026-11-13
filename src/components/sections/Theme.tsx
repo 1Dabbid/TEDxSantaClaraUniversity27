@@ -99,7 +99,8 @@ export function Theme({ settings }: { settings: Settings }) {
           {/* Motion only: a figure caption for the 3D engraving, shown in the beat
               where it is the only fine print on screen. */}
           <p aria-hidden="true" data-theme-fig className="theme-fig fine-print">
-            <span className="text-white">Fig.&nbsp;1</span> {copy.themeFigureCaption}
+            <span className="text-white">Fig.&nbsp;1</span>
+            {` ${copy.themeFigureCaption}`}
           </p>
 
           <div
@@ -137,7 +138,8 @@ export function Theme({ settings }: { settings: Settings }) {
             </ol>
             {copy.themeFootnote ? (
               <p data-theme-foot className="fine-print mt-2 text-[0.5625rem] tracking-[0.18em]">
-                <span className="text-[#ff4d63]">*</span> {copy.themeFootnote}
+                <span className="text-[#ff4d63]">*</span>
+                {` ${copy.themeFootnote}`}
               </p>
             ) : null}
           </div>

@@ -373,8 +373,8 @@ export default async function PartnersPage() {
         </h1>
         <div className="mt-12 grid gap-10 md:grid-cols-12 md:items-end">
           <p data-reveal="fade" className="max-w-xl text-lg text-pretty text-mute sm:text-xl md:col-span-7">
-            <span className="text-white">Become a partner of {settings.eventName}.</span>{' '}
-            {settings.copy.partnersIntro}
+            <span className="text-white">Become a partner of {settings.eventName}.</span>
+            {` ${settings.copy.partnersIntro}`}
           </p>
           <div className="flex flex-wrap gap-3 md:col-span-5 md:justify-end">
             <Button href={cta.href} size="lg">

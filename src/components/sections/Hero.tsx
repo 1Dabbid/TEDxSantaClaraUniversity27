@@ -168,7 +168,8 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
           <div className="mt-8 flex items-end justify-between gap-8 max-sm:order-3 sm:mt-12">
             {heroFootnote ? (
               <p id="hero-note" data-hero-seq style={seq(3)} className="fine-print max-w-md">
-                <span className="text-accent">1.</span> {heroFootnote}
+                <span className="text-accent">1.</span>
+                {` ${heroFootnote}`}
               </p>
             ) : (
               <span />
