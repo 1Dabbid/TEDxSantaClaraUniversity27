@@ -1,7 +1,7 @@
 'use client';
 
 import { useSectionMotion, type MotionKit } from '../useSectionMotion';
-import { belowFold, COMPACT, FULL, maskText, visualCopy } from './kit';
+import { belowFold, COMPACT, FULL, maskText, moment, visualCopy } from './kit';
 
 /** Ten glyphs ending on the target: the wheel rolls forward one full turn and locks. */
 const rollTo = (ch: string) => {
@@ -30,9 +30,8 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const coords = Array.from(plate.querySelectorAll<HTMLElement>('[data-venue-coord]'));
 
   const mm = gsap.matchMedia();
-  mm.add({ full: FULL, compact: COMPACT }, (ctx) => {
+  mm.add({ full: FULL, compact: COMPACT }, moment((ctx: gsap.Context, undo) => {
     const full = Boolean(ctx.conditions?.full);
-    const undo: (() => void)[] = [];
 
     if (belowFold(plate)) {
       const strips: HTMLElement[] = [];
@@ -95,8 +94,7 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       );
     }
 
-    return () => undo.forEach((u) => u());
-  });
+  }));
   return () => mm.revert();
 }
 

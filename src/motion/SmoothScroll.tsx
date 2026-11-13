@@ -156,6 +156,8 @@ export default function SmoothScroll({ children }: { children?: ReactNode }) {
         lenisRef.current = null;
         delete document.documentElement.dataset.smoothScroll;
       };
+    }).catch(() => {
+      // gsap or Lenis failed to load: native scrolling stays.
     });
 
     return () => {

@@ -319,24 +319,45 @@ export function scanReveals(root: ParentNode = document) {
       arm(el);
     } else own.push(el);
   }
-  for (const el of own) {
-    // Everything a reveal creates (tweens, ScrollTriggers, batch delayedCalls, the
-    // split) is recorded by its context, so kill() can let go of all of it.
-    let r!: Rec;
-    const ctx = gsap.context(() => {
-      r = create(el, onScreen);
-    });
-    arm(el);
-    records.push({
-      el,
-      now: r.now,
-      kill: () => {
-        r.kill();
-        ctx.revert();
-      },
-    });
+  try {
+    for (const el of own) {
+      // Everything a reveal creates (tweens, ScrollTriggers, batch delayedCalls, the
+      // split) is recorded by its context, so kill() can let go of all of it.
+      let r = null as Rec | null;
+      const ctx = gsap.context(() => {
+        // Caught in here: a throw inside a gsap.context function would leave it the
+        // active context for everything created afterwards.
+        try {
+          r = create(el, onScreen);
+        } catch (err) {
+          console.error('[reveal]', el, err);
+        }
+      });
+      try {
+        if (r) {
+          const rec = r;
+          records.push({
+            el,
+            now: rec.now,
+            kill: () => {
+              rec.kill();
+              ctx.revert();
+            },
+          });
+        } else {
+          // This one failed: undo whatever it set up and leave it as rendered. The others still run.
+          ctx.revert();
+        }
+      } catch (err) {
+        console.error('[reveal]', el, err);
+      } finally {
+        // Armed either way, which lifts the CSS pre-reveal hide.
+        arm(el);
+      }
+    }
+  } finally {
+    html.setAttribute(READY_ATTR, '');
   }
-  html.setAttribute(READY_ATTR, '');
 }
 
 /** Kills reveals whose elements left the document (route change). */

@@ -1,7 +1,7 @@
 'use client';
 
 import { useSectionMotion, type MotionKit } from '../useSectionMotion';
-import { belowFold, COMPACT, FULL, pad2, scrubbable } from './kit';
+import { belowFold, COMPACT, FULL, moment, pad2, scrubbable } from './kit';
 
 const GAP = 0.42; // timeline seconds between two signatures
 const LINE = 1; // one signature line
@@ -49,8 +49,9 @@ function setup({ gsap, root }: MotionKit) {
   };
 
   const mm = gsap.matchMedia();
-  mm.add({ full: FULL, compact: COMPACT }, (ctx) => {
+  mm.add({ full: FULL, compact: COMPACT }, moment((ctx: gsap.Context, undo) => {
     const full = Boolean(ctx.conditions?.full);
+    undo.push(restoreCounter);
 
     if (full) {
       if (!scrubbable(list)) return;
@@ -72,7 +73,7 @@ function setup({ gsap, root }: MotionKit) {
         if (mark) tl.fromTo(mark, { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.55, ease: 'power2.out' }, at + 0.62);
       });
       show(0);
-      return restoreCounter;
+      return;
     }
 
     // Compact: per block, once.
@@ -99,8 +100,7 @@ function setup({ gsap, root }: MotionKit) {
         scrollTrigger: { trigger: counter, start: 'top 90%', once: true },
       });
     }
-    return restoreCounter;
-  });
+  }));
   return () => mm.revert();
 }
 
