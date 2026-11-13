@@ -24,12 +24,12 @@ import {
   AWAY_SHOT,
   AWAY_SHOT_PORTRAIT,
   DARK_FROM,
-  DESKTOP_SHOTS,
-  PORTRAIT_SHOTS,
   journey,
   micPoint,
   resolveShot,
   resolveShots,
+  shotsFor,
+  type ShotOptions,
 } from './choreography';
 import { createStudioEnvironment } from './environment';
 import type { EngravingFacts } from './engraving';
@@ -47,6 +47,9 @@ type Tier = 'high' | 'low';
 
 /** Section heights (px) for the journey coordinate. Re-measured on resize / route change. */
 const metrics: { heights: Partial<Record<SectionId, number>>; vh: number } = { heights: {}, vh: 1 };
+/** Page content that changes the choreography (speakers announced or not, a short schedule). */
+let contentKey = '';
+const contentListeners = new Set<() => void>();
 function measureSections() {
   metrics.vh = window.innerHeight || 1;
   metrics.heights = {};
@@ -54,6 +57,18 @@ function measureSections() {
     const el = document.querySelector<HTMLElement>(`[data-section="${id}"]`);
     if (el) metrics.heights[id] = el.getBoundingClientRect().height;
   }
+  const opts = contentOptions();
+  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}`;
+  if (key !== contentKey) {
+    contentKey = key;
+    contentListeners.forEach((f) => f());
+  }
+}
+function contentOptions(): ShotOptions {
+  const sched = metrics.heights.schedule;
+  // The orbit was authored for a schedule about 1.45 viewports tall.
+  const scheduleScale = sched ? Math.min(1, Math.max(0.4, sched / (1.45 * metrics.vh))) : 1;
+  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale };
 }
 const currentJourney = () => journey(scrollState.sections, metrics.heights, metrics.vh);
 
@@ -285,7 +300,19 @@ export default function Experience({
   }, [get, setFrameloop, pathname, contextGen]);
 
   const portrait = size.width / Math.max(1, size.height) < 0.9;
-  const shots = useMemo(() => resolveShots(portrait ? PORTRAIT_SHOTS : DESKTOP_SHOTS), [portrait]);
+  const [content, setContent] = useState(() => contentKey);
+  useEffect(() => {
+    const on = () => setContent(contentKey);
+    contentListeners.add(on);
+    on();
+    return () => {
+      contentListeners.delete(on);
+    };
+  }, []);
+  const shots = useMemo(() => {
+    void content;
+    return resolveShots(shotsFor(portrait, contentOptions()));
+  }, [portrait, content]);
   const away = useMemo(() => resolveShot(portrait ? AWAY_SHOT_PORTRAIT : AWAY_SHOT), [portrait]);
 
   const stateRef = useRef<FrameState | null>(null);

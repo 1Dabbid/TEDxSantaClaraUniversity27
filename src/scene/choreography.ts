@@ -72,6 +72,8 @@ export type Shot = {
   bloom?: number;
   /** Studio environment (reflection strips) intensity, default 1. */
   env?: number;
+  /** Set by stageOrbit(): lets a variant re-aim the same orbit at another azimuth. */
+  orbit?: { az: number; el: number; dist: number; shiftRight: number; shiftUp: number };
 };
 
 export type ResolvedShot = {
@@ -188,6 +190,11 @@ function pullBackLevel(phi: number, dist: number, el: number, centre: Vector3) {
 
 const MIC_MID = micPoint(0.095);
 const STAGE = new Vector3(0, 0.15, 0);
+
+/** Orbit around the stage centre that remembers its parameters (see shotsFor). */
+function stageOrbit(az: number, el: number, dist: number, shiftRight = 0, shiftUp = 0) {
+  return { ...orbit(STAGE, az, el, dist, shiftRight, shiftUp), orbit: { az, el, dist, shiftRight, shiftUp } };
+}
 
 /** Hero: low, close, heroic three-quarter on the mic, subject on the right third. */
 const heroDesk = orbit(MIC_MID, 0.44, -0.07, 0.4, 0.088, -0.004);
@@ -306,12 +313,12 @@ export const DESKTOP_SHOTS: Shot[] = [
   { at: 2.3, pos: [3.1, 1.05, 4.45], target: [-1.35, 0.28, -0.7], fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 1.3, spot: 1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.1 },
   { at: 2.48, ...RUG_CARDS, fov: 34, exposure: 0.95, drift: 0.025, parallax: 0.04, cone: 1.15, spot: 0.95, key: 0.5, rim: 0.8, rimAng: -0.6, vignette: 0.66 },
   { at: 3.05, pos: [2.4, 2.45, 5.3], target: [-1.15, -1.08, -0.7], fov: 34, exposure: 0.95, drift: 0.025, parallax: 0.04, cone: 1.15, spot: 0.95, key: 0.5, rim: 0.8, rimAng: -0.6, vignette: 0.66 },
-  { at: 3.3, ...orbit(STAGE, 0.5, 0.32, 6.6, 1.3, 0.5), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
-  { at: 3.6, ...orbit(STAGE, 0.12, 0.3, 6.6, 1.3, 0.45), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
-  { at: 3.9, ...orbit(STAGE, -0.3, 0.28, 6.6, 1.2, 0.4), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 3.3, ...stageOrbit(0.5, 0.32, 6.6, 1.3, 0.5), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 3.6, ...stageOrbit(0.12, 0.3, 6.6, 1.3, 0.45), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
+  { at: 3.9, ...stageOrbit(-0.3, 0.28, 6.6, 1.2, 0.4), fov: 34, exposure: 1, drift: 0.03, parallax: 0.05, cone: 1.1, key: 0.5, rim: 0.8, vignette: 0.6 },
   { at: 4.5, pos: [0.9, 3.3, 15.2], target: [0, 0.55, 0], fov: 30, exposure: 1, drift: 0.04, parallax: 0.08, cone: 0.8, key: 0.3, vignette: 0.6, scrimEdge: 0.7 },
   { at: 5.5, pos: [-1.4, 4.9, 18.4], target: [0, 0.4, 0], fov: 28, exposure: 0.85, drift: 0.04, parallax: 0.08, cone: 0.9, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
-  { at: 6.2, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
+  { at: 6.0, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
   { at: 9.5, pos: DARK_POS, target: DARK_TARGET, fov: 28, exposure: 0, drift: 0, parallax: 0, cone: 1, key: 0, vignette: 0.8 },
 ];
 
@@ -356,11 +363,11 @@ export const PORTRAIT_SHOTS: Shot[] = [
   { at: 2.1, pos: [8.6, 3.0, 3.6], target: [0.15, 0.0, -0.1], fov: 40, exposure: 0.9, drift: 0.02, cone: 1.2, spot: 0.95, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
   { at: 2.3, pos: [8.4, 3.1, 3.4], target: [0.15, 0.0, -0.1], fov: 40, exposure: 0.9, drift: 0.02, cone: 1.2, spot: 0.95, key: 0.5, rim: 1, rimAng: -0.6, vignette: 0.62 },
   { at: 2.6, pos: [8.0, 3.8, 3.8], target: [0.1, -0.2, -0.1], fov: 40, exposure: 0.75, drift: 0.03, cone: 1.1, spot: 0.8, key: 0.5, rim: 0.8, vignette: 0.66 },
-  { at: 3.2, ...orbit(STAGE, 0.55, 0.32, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
-  { at: 3.9, ...orbit(STAGE, -0.3, 0.3, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
+  { at: 3.2, ...stageOrbit(0.55, 0.32, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
+  { at: 3.9, ...stageOrbit(-0.3, 0.3, 7.4), fov: 40, exposure: 0.8, drift: 0.03, cone: 1.1, key: 0.5, vignette: 0.6 },
   { at: 4.5, pos: [0.4, 2.6, 15.5], target: [0, 0.6, 0], fov: 40, exposure: 0.8, drift: 0.04, cone: 0.85, key: 0.3, vignette: 0.6, scrimEdge: 0.6 },
   { at: 5.5, pos: [-0.8, 4.4, 19], target: [0, 0.3, 0], fov: 38, exposure: 0.7, drift: 0.04, cone: 1.2, key: 0.3, vignette: 0.65 },
-  { at: 6.2, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
+  { at: 6.0, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
   { at: 9.5, pos: DARK_POS, target: DARK_TARGET, fov: 38, exposure: 0, cone: 1, key: 0, vignette: 0.8 },
 ];
 
@@ -386,8 +393,55 @@ export const AWAY_SHOT_PORTRAIT: Shot = {
   exposure: 0.4,
 };
 
-/** Journey position at or beyond which the scene is fully dark. */
-export const DARK_FROM = 6.2;
+/**
+ * Journey position at or beyond which the scene is fully dark: the end of
+ * Tickets. The text-only partner band after Tickets has no data-section, so J
+ * rests at 6 while it scrolls past; the scene is already black behind it.
+ */
+export const DARK_FROM = 6.0;
+
+/* ------------------------------------------------------------------------- */
+/* Content-dependent variants                                                */
+/* ------------------------------------------------------------------------- */
+
+export type ShotOptions = {
+  /** No speaker announced yet: no card strip, one panel low-left; the rug holds through the whole pin. */
+  speakersTba: boolean;
+  /** Schedule height / the height its orbit was authored for (0.4..1): shortens the orbit arc for a short section. */
+  scheduleScale: number;
+};
+
+/**
+ * Rug hold for the speakers pin while nothing is announced, seen from the
+ * front of the house: rug centred right and mid-height, clear of the heading
+ * (top left) and the wide glass panel (bottom left); the stand runs up the
+ * right edge past the end of the heading. A slow push across the pin.
+ */
+const RUG_CENTRE = new Vector3(0, 0.1, 0);
+const RUG_TBA_A = orbit(RUG_CENTRE, 0.2, 0.2, 7.5, 1.12, 0.6);
+const RUG_TBA_B = orbit(RUG_CENTRE, 0.15, 0.2, 7.2, 1.2, 0.6);
+const RUG_TBA_C = orbit(RUG_CENTRE, 0.11, 0.21, 6.95, 1.25, 0.62);
+
+/** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
+export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
+  const base = portrait ? PORTRAIT_SHOTS : DESKTOP_SHOTS;
+  const k = Math.min(1, Math.max(0.4, opts.scheduleScale));
+  return base.flatMap((sh): Shot[] => {
+    // Schedule orbit: azimuth range shrinks around its middle for a short section.
+    if (sh.orbit && k < 1) {
+      const mid = portrait ? 0.12 : 0.1;
+      const o = sh.orbit;
+      return [{ ...sh, ...stageOrbit(mid + (o.az - mid) * k, o.el, o.dist, o.shiftRight, o.shiftUp) }];
+    }
+    if (!opts.speakersTba || portrait) return [sh];
+    const hold = { fov: 33, exposure: 1, dof: 0.12, drift: 0.02, parallax: 0.04, cone: 1.3, spot: 1, key: 0.5, rim: 0.9, rimAng: -0.6, vignette: 0.62, bloom: 1.1 };
+    if (sh.at === 2.1) return [{ at: 2.1, ...RUG_TBA_A, ...hold }];
+    if (sh.at === 2.3) return [{ at: 2.4, ...RUG_TBA_B, ...hold }];
+    if (sh.at === 2.48) return [{ at: 2.75, ...RUG_TBA_C, ...hold, exposure: 0.97 }];
+    return [sh];
+  });
+}
+
 
 /* ------------------------------------------------------------------------- */
 /* Resolution and sampling                                                   */
