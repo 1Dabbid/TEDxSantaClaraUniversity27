@@ -150,18 +150,26 @@ export function requiredText(value: string | null | undefined, fallback: string,
 // FAQ placeholders
 // ---------------------------------------------------------------------------
 
-/** The placeholders FAQ answers (and questions) may use. Documented in the admin. */
+/** The placeholders FAQ answers (and questions) and placeholder theme copy may use. Documented in the admin. */
 export const FAQ_PLACEHOLDERS = ['capacity', 'date', 'venue', 'campus', 'eventName'] as const;
 export type FaqPlaceholder = (typeof FAQ_PLACEHOLDERS)[number];
+/** Placeholders only FAQ answers may use: {interestUrl} (Tickets & applications › Interest form link). */
+export const FAQ_ONLY_PLACEHOLDERS = ['interestUrl'] as const;
+export type FaqOnlyPlaceholder = (typeof FAQ_ONLY_PLACEHOLDERS)[number];
 
 /**
- * Replaces {capacity}, {date}, {venue}, {campus} and {eventName}. Unknown
- * {words} are left as typed and returned in `unknown`, so a typo can be warned about.
+ * Replaces each {name} that `values` has a value for ({capacity}, {date}, {venue},
+ * {campus}, {eventName}, and in FAQ answers {interestUrl}). Unknown {words} are
+ * left as typed and returned in `unknown`, so a typo can be warned about.
  */
-export function fillPlaceholders(text: string, values: Record<FaqPlaceholder, string>): { text: string; unknown: string[] } {
+export function fillPlaceholders(
+  text: string,
+  values: Record<FaqPlaceholder, string> & Partial<Record<FaqOnlyPlaceholder, string>>,
+): { text: string; unknown: string[] } {
   const unknown: string[] = [];
+  const known: Record<string, string | undefined> = values;
   const out = text.replace(/\{([A-Za-z]+)\}/g, (whole, name: string) => {
-    if ((FAQ_PLACEHOLDERS as readonly string[]).includes(name)) return values[name as FaqPlaceholder];
+    if (Object.hasOwn(known, name) && typeof known[name] === 'string') return known[name];
     unknown.push(whole);
     return whole;
   });

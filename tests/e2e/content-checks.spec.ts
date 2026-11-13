@@ -98,6 +98,9 @@ test('FAQ placeholders are filled in; unknown ones are reported', () => {
   const r = fillPlaceholders('{eventName}: {date}, at the {venue} on the {campus} campus, {capacity} seats. {price}', values);
   expect(r.text).toBe('TEDxSantaClaraUniversity: Friday, April 23, 2027, at the Locatelli Student Activity Center on the Santa Clara University campus, 100 seats. {price}');
   expect(r.unknown).toEqual(['{price}']);
+  // {interestUrl} is known only where a value is passed (FAQ answers), not in theme copy.
+  expect(fillPlaceholders('Form: {interestUrl}.', values).unknown).toEqual(['{interestUrl}']);
+  expect(fillPlaceholders('Form: {interestUrl}.', { ...values, interestUrl: 'https://example.com' }).text).toBe('Form: https://example.com.');
 });
 
 test('Theme copy: blanks fall back to the defaults, optional lines can be hidden, placeholders are filled', () => {

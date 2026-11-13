@@ -19,10 +19,10 @@ items:
       The talks are recorded and submitted for publication on the TEDx Talks YouTube channel.
   - question: How can I apply to speak?
     answer: |-
-      Formal speaker applications are not open yet. To hear first when they open, and to get an early look at pitching a talk, register your interest on the club’s interest form: https://bernard29020.softr.app
+      Formal speaker applications are not open yet. To hear first when they open, and to get an early look at pitching a talk, register your interest on the club’s interest form: {interestUrl}
   - question: How can I get involved?
     answer: |-
-      Fill in the club’s interest form: https://bernard29020.softr.app. It is one form for three things: helping to organize {eventName}, joining the club’s contact list, and registering your interest in speaking.
+      Fill in the club’s interest form: {interestUrl}. It is one form for three things: helping to organize {eventName}, joining the club’s contact list, and registering your interest in speaking.
   - question: How can my organization become a partner?
     answer: |-
       We are inviting a small number of partners to support the event. The Partners page explains what partnership means under TEDx rules and how to get in touch.

@@ -586,9 +586,9 @@ export const getSchedule = cache(async (): Promise<Schedule> => {
 });
 
 /**
- * FAQ questions and answers may write {capacity}, {date}, {venue}, {campus} and
- * {eventName}; they are filled in from Event basics and Venue, so answers never go
- * stale when those change. An unknown {placeholder} is left as typed, with a warning.
+ * FAQ questions and answers may write {capacity}, {date}, {venue}, {campus},
+ * {eventName} and {interestUrl}; they are filled in from Event basics, Venue and
+ * Tickets & applications, so answers never go stale when those change. An unknown {placeholder} is left as typed, with a warning.
  */
 export const getFaq = cache(async (): Promise<FaqItem[]> => {
   const [f, s] = await Promise.all([readSingleton('faq'), getSettings()]);
@@ -598,14 +598,22 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
     venue: s.venueName,
     campus: s.venueCampus || s.venueName,
     eventName: s.eventName,
+    interestUrl: s.interestUrl,
   };
   const fill = (text: string, n: number) => {
+    if (!s.interestUrl && text.includes('{interestUrl}')) {
+      contentWarning(
+        'content/faq.yaml',
+        `Questions › item ${n}`,
+        '{interestUrl} is used but Tickets & applications › Interest form link is empty, so the answer has a gap where the link was. Reword the answer or add the link.',
+      );
+    }
     const r = fillPlaceholders(text, values);
     for (const u of r.unknown) {
       contentWarning(
         'content/faq.yaml',
         `Questions › item ${n}`,
-        `${u} is not a known placeholder (use {capacity}, {date}, {venue}, {campus} or {eventName}); it is shown as typed.`,
+        `${u} is not a known placeholder (use {capacity}, {date}, {venue}, {campus}, {eventName} or {interestUrl}); it is shown as typed.`,
       );
     }
     return r.text;

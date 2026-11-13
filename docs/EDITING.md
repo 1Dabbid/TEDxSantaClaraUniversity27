@@ -120,7 +120,7 @@ Until formal applications open, the club's interest form is the way in: one form
 
 1. **The event > Tickets & speaker applications > Interest form link (speak or get involved)**: the form's full address (2027: `https://bernard29020.softr.app`). **Save**.
 2. While applications are **Coming soon**, the Speakers section on the home page and **/speakers** show "Want to speak? Register your interest" with this link, and **/team** ends with **Get involved**. All of them open the form in a new tab. Once applications are **Open** (with an application link), the Apply to speak button replaces it in Speakers; **/team** keeps **Get involved**. Empty the field to remove all of them.
-3. The FAQ answers **How can I apply to speak?** and **How can I get involved?** type the address out (a full `https://` address in any FAQ answer becomes a link that opens in a new tab). If the form changes, update those two answers as well.
+3. The FAQ answers **How can I apply to speak?** and **How can I get involved?** use the `{interestUrl}` placeholder, so they follow this field (a full `https://` address in any FAQ answer becomes a link that opens in a new tab). If you empty the field, reword those two answers too; `npm run check:content` warns while they still use the placeholder.
 
 ### Add a sponsor (partner)
 
@@ -155,7 +155,7 @@ The home page shows a compact roster (initials or photo, name, role) and a link,
 ### Edit the FAQ
 
 1. **The event > FAQ > Questions**: click a question to open it in a box with **Question** and **Answer** (plain text, line breaks are kept), or **Add** for a new one. Close the box with **Done** (or **Add**), then **Save**.
-2. Instead of typing details that change, write a placeholder and the site fills it in from **Event basics** and **Venue & directions**: `{date}` (e.g. Friday, April 23, 2027), `{venue}` (the building), `{campus}` (e.g. Santa Clara University), `{capacity}` (the seat count) and `{eventName}` (TEDxSantaClaraUniversity). The "When and where" answer already uses them, so it follows the Event date and venue automatically.
+2. Instead of typing details that change, write a placeholder and the site fills it in from **Event basics** and **Venue & directions**: `{date}` (e.g. Friday, April 23, 2027), `{venue}` (the building), `{campus}` (e.g. Santa Clara University), `{capacity}` (the seat count), `{eventName}` (TEDxSantaClaraUniversity) and `{interestUrl}` (the Interest form link under **Tickets & applications**). The "When and where" answer already uses them, so it follows the Event date and venue automatically.
 3. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Numbering is automatic.
 4. To delete a question, click the bin icon next to it. There is no confirmation, but nothing is gone until you **Save**: reload the page to get it back.
 5. The home page shows the first five questions, then a link to **/faq** with all of them. Put the most asked ones first.

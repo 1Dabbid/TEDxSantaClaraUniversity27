@@ -426,7 +426,7 @@ export default config({
             answer: fields.text({
               label: 'Answer',
               description:
-                'Plain text. Line breaks are kept. Instead of typing details that may change, write a placeholder and the site fills it in: {date} (the event date, e.g. Friday, April 23, 2027), {venue} (the building), {campus} (e.g. Santa Clara University), {capacity} (the seat count) and {eventName} (TEDxSantaClaraUniversity). They also work in the question.',
+                'Plain text. Line breaks are kept. Instead of typing details that may change, write a placeholder and the site fills it in: {date} (the event date, e.g. Friday, April 23, 2027), {venue} (the building), {campus} (e.g. Santa Clara University), {capacity} (the seat count), {eventName} (TEDxSantaClaraUniversity) and {interestUrl} (the Interest form link under Tickets & applications; it becomes a link). They also work in the question.',
               multiline: true,
               validation: { isRequired: true },
             }),
@@ -434,7 +434,7 @@ export default config({
           {
             label: 'Questions',
             description:
-              'To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Each one is numbered as a clause (§ 7.01, § 7.02 …). Answers can use placeholders such as {date}, {venue}, {campus}, {capacity} and {eventName}, filled in from Event basics and Venue; open a question to see what each one means.',
+              'To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Each one is numbered as a clause (§ 7.01, § 7.02 …). Answers can use placeholders such as {date}, {venue}, {campus}, {capacity}, {eventName} and {interestUrl}, filled in from Event basics, Venue and Tickets & applications; open a question to see what each one means.',
             itemLabel: (props) => props.fields.question.value || 'Question',
           },
         ),
