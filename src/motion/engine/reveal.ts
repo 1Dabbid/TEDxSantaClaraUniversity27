@@ -4,6 +4,7 @@ import { gsap, ScrollTrigger, SplitText } from '../gsap';
  * Global `data-reveal` system.
  *
  *   data-reveal="lines"   SplitText lines, masked, rise in
+ *       data-reveal-variant="shear"  lines rise with a shear (left edge leads), slower: display headlines
  *   data-reveal="chars"   per character (words masked), rise in
  *   data-reveal="fade"    fade + small translate up
  *   data-reveal="stagger" direct children one after another (batched per row)
@@ -54,6 +55,7 @@ function delayOf(el: HTMLElement) {
 function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
   const delay = delayOf(el);
   const heading = /^H[1-6]$/.test(el.tagName);
+  const shear = kind === 'lines' && el.dataset.revealVariant === 'shear';
   const interactive = el.querySelector(INTERACTIVE) !== null;
 
   // Accessibility: headings get aria-label (+ hidden split). Running text split into
@@ -112,9 +114,10 @@ function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
       const parts = kind === 'lines' ? self.lines : self.chars;
       current = gsap.from(parts, {
         yPercent: kind === 'lines' ? 105 : 110,
-        duration: (kind === 'lines' ? 1.25 : 1) * T.dur,
+        ...(shear ? { skewY: 6, transformOrigin: '0% 100%' } : null),
+        duration: (shear ? 1.5 : kind === 'lines' ? 1.25 : 1) * T.dur,
         ease: 'expo.out',
-        stagger: (kind === 'lines' ? 0.1 : 0.024) * T.stagger,
+        stagger: (shear ? 0.13 : kind === 'lines' ? 0.1 : 0.024) * T.stagger,
         delay,
         scrollTrigger: { trigger: el, start: T.start, once: true },
         onComplete: finish,

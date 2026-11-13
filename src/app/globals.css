@@ -574,6 +574,74 @@ html.motion .timeline-line {
   transform: scaleY(0);
 }
 
+/* --- Section moments (src/motion/sections/kit.ts) ----------------------- *
+ * Per-character masks created at runtime only when motion is on. A mask is an
+ * inline-block with the glyph's own advance and baseline; clip-path (not
+ * overflow) does the clipping so the baseline never moves: no layout shift.  */
+.mo-mask {
+  position: relative;
+  display: inline-block;
+  clip-path: inset(-0.25em -0.2em var(--mo-bottom, 0) -0.2em);
+}
+.mo-mask[data-strip] {
+  clip-path: inset(0 -0.2em);
+}
+.mo-char {
+  display: inline-block;
+}
+.mo-ghost {
+  visibility: hidden;
+}
+.mo-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+}
+.mo-strip > span {
+  display: block;
+}
+
+/* --- FAQ: clauses open and close smoothly ------------------------------- *
+ * Native <details> everywhere. Where `::details-content` and interpolate-size
+ * exist (and motion is on) the height eases open and shut and the answer
+ * settles in; elsewhere it opens instantly, exactly as without CSS.          */
+.faq-icon-v {
+  transition: rotate 0.6s var(--ease-weight);
+}
+/* Plus to minus: the upright turns flat onto the bar. A shape change, not a colour. */
+.faq-clause[open] .faq-icon-v {
+  rotate: 90deg;
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (interpolate-size: allow-keywords) {
+    html.motion .faq-clause {
+      interpolate-size: allow-keywords;
+    }
+    html.motion .faq-clause::details-content {
+      block-size: 0;
+      overflow-y: clip;
+      transition:
+        block-size 0.7s var(--ease-weight),
+        content-visibility 0.7s allow-discrete;
+    }
+    html.motion .faq-clause[open]::details-content {
+      block-size: auto;
+    }
+    html.motion .faq-clause[open] .faq-answer {
+      animation: faq-answer 0.9s var(--ease-cinema) 0.08s both;
+    }
+  }
+}
+@keyframes faq-answer {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 0.75rem, 0);
+  }
+}
+
 /* --- Mobile menu --------------------------------------------------------- */
 @media (prefers-reduced-motion: no-preference) {
   html.motion [data-menu-panel]:not([hidden]) {

@@ -3,7 +3,10 @@ import type { TeamMember } from '@/lib/content';
 import { getSettings } from '@/lib/content';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { ClauseNo } from '@/components/print/Print';
+import { TeamMotion } from '@/motion/sections/TeamMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
+
+const pad2 = (n: number) => String(n).padStart(2, '0');
 
 /**
  * One signatory: clause number in the margin, a signature space with its
@@ -13,11 +16,11 @@ import { SectionShell, SectionTitle } from './SectionShell';
 function SignatureBlock({ member, index }: { member: TeamMember; index: number }) {
   const signed = Boolean(member.name);
   return (
-    <li>
+    <li data-sign data-signed={signed ? '' : undefined}>
       {/* Phones: the clause number sits on the signature line itself; wider: above it. */}
       <ClauseNo className="hidden sm:block">6.{index + 1}</ClauseNo>
       <div>
-        <div className="relative flex h-14 items-end gap-4 pb-3 sm:mt-3 sm:h-20">
+        <div data-sign-mark className="relative flex h-14 items-end gap-4 pb-3 sm:mt-3 sm:h-20">
           <ClauseNo className="w-12 shrink-0 pb-px sm:hidden">6.{index + 1}</ClauseNo>
           {signed ? (
             <>
@@ -40,9 +43,9 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
             </span>
           )}
         </div>
-        <div data-reveal="rule" aria-hidden="true" className={`h-px ${signed ? 'bg-white/60' : 'bg-white/30'}`} />
-        <p className="mt-3 text-base leading-snug font-medium text-balance text-white">{member.role}</p>
-        <p className="fine-print mt-1 text-mute">{signed ? 'For TEDxSantaClaraUniversity' : 'Unsigned · name to follow'}</p>
+        <div data-sign-line aria-hidden="true" className={`h-px ${signed ? 'bg-white/60' : 'bg-white/30'}`} />
+        <p data-sign-text className="mt-3 text-base leading-snug font-medium text-balance text-white">{member.role}</p>
+        <p data-sign-text className="fine-print mt-1 text-mute">{signed ? 'For TEDxSantaClaraUniversity' : 'Unsigned · name to follow'}</p>
       </div>
     </li>
   );
@@ -51,9 +54,11 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
 export async function Team({ team }: { team: TeamMember[] }) {
   const settings = await getSettings();
   if (!settings.sections.showTeam || team.length === 0) return null;
+  const signedCount = team.filter((m) => m.name).length;
 
   return (
     <SectionShell id="team" scrim="solid" className="py-32 sm:py-44">
+      <TeamMotion />
       <div className="shell">
         <div className="grid gap-10 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">
@@ -77,12 +82,18 @@ export async function Team({ team }: { team: TeamMember[] }) {
             In witness whereof, the board below has agreed to organize {settings.eventName} on{' '}
             <time dateTime={settings.dateISO}>{settings.dateLong}</time>, and to read every clause.
           </p>
-          <p aria-hidden="true" className="fine-print text-mute tabular-nums">
-            {String(team.filter((m) => m.name).length).padStart(2, '0')} of {String(team.length).padStart(2, '0')} signed
+          {/* The visible counter ticks as the lines are drawn (TeamMotion); the sr-only copy is the final value. */}
+          <p className="fine-print text-mute tabular-nums">
+            <span className="sr-only">
+              {signedCount} of {team.length} signed
+            </span>
+            <span aria-hidden="true" data-sign-count>
+              {pad2(signedCount)} of {pad2(team.length)} signed
+            </span>
           </p>
         </div>
 
-        <ul data-reveal="stagger" className="mt-10 grid gap-y-9 sm:mt-14 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-16 lg:grid-cols-3 lg:gap-x-16">
+        <ul data-sign-list className="mt-10 grid gap-y-9 sm:mt-14 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-16 lg:grid-cols-3 lg:gap-x-16">
           {team.map((m, i) => (
             <SignatureBlock key={m.slug} member={m} index={i} />
           ))}

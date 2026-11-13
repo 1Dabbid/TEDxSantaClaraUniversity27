@@ -3,6 +3,7 @@ import { getFaq } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { ClauseNo, StatusRegister } from '@/components/print/Print';
+import { TicketsMotion } from '@/motion/sections/TicketsMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 const TICKET_OPTIONS = [
@@ -51,7 +52,11 @@ const COPY: Record<TicketState, Copy> = {
  */
 function SeatStrip({ filled }: { filled: boolean }) {
   return (
-    <div aria-hidden="true" className="grid grid-cols-[repeat(50,minmax(0,1fr))] gap-y-12 md:grid-cols-[repeat(100,minmax(0,1fr))]">
+    <div
+      aria-hidden="true"
+      data-seat-ruler
+      className="grid grid-cols-[repeat(50,minmax(0,1fr))] gap-y-12 md:grid-cols-[repeat(100,minmax(0,1fr))]"
+    >
       {Array.from({ length: 100 }, (_, i) => {
         const n = i + 1;
         const major = n % 10 === 0;
@@ -59,12 +64,14 @@ function SeatStrip({ filled }: { filled: boolean }) {
         return (
           <span key={n} className="relative flex h-7 items-end border-b border-white/25">
             <span
+              data-seat-tick
               className={`block w-px ${n === 1 ? 'mr-auto' : 'ml-auto'} ${
                 major ? `h-7 ${filled ? 'bg-white' : 'bg-white/70'}` : `h-3.5 ${filled ? 'bg-white/80' : 'bg-white/30'}`
               }`}
             />
             {labelled ? (
               <span
+                data-seat-label
                 className={`absolute top-full mt-2 font-mono text-[0.625rem] tracking-[0.04em] text-mute tabular-nums ${
                   n === 1 ? 'left-0' : 'right-0'
                 } ${n === 1 || n === 100 ? 'text-white' : ''} ${n % 20 === 10 && n !== 1 ? 'max-md:hidden' : ''}`}
@@ -188,6 +195,7 @@ export async function Tickets({ settings }: { settings: Settings }) {
 
   return (
     <SectionShell id="tickets" className="py-32 sm:py-44">
+      <TicketsMotion />
       <div className="shell">
         <div className="flex flex-wrap items-start justify-between gap-8">
           <div data-reveal="fade">
@@ -201,14 +209,13 @@ export async function Tickets({ settings }: { settings: Settings }) {
           {/* Sized to the container so the numerals span the full measure, like the ruler beneath. */}
           <div className="@container">
           <p
-            data-reveal="chars"
             aria-hidden="true"
             className="-ml-[0.04em] leading-[0.82] font-semibold tracking-[-0.06em] whitespace-nowrap tabular-nums"
             style={{ fontSize: 'calc(100cqi / 4.5)' }}
           >
             001
-            <span className="mx-[0.14em] inline-block h-[0.035em] w-[0.7em] bg-white/50 align-middle" />
-            100
+            <span data-seat-dash className="mx-[0.14em] inline-block h-[0.035em] w-[0.7em] bg-white/50 align-middle" />
+            <span data-seat-count>100</span>
           </p>
           </div>
           <div className="mt-8 sm:mt-12">
