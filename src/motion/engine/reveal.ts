@@ -22,11 +22,21 @@ type Rec = { el: HTMLElement; kill: () => void; now: (target: Element) => void }
 
 const finishTween = (t: gsap.core.Tween | null | undefined) => {
   if (!t) return;
-  t.scrollTrigger?.kill();
+  // kill(revert, allowAnimation): keep the tween alive, or progress(1) never renders.
+  t.scrollTrigger?.kill(false, true);
   t.progress(1);
 };
 
-const START = 'top 90%';
+/**
+ * Touch / small screens get shorter, snappier reveals that start a little
+ * earlier (a thumb flick covers a lot of ground). Read once per scan.
+ */
+const COMPACT_MQ = '(max-width: 767.98px), (pointer: coarse)';
+let T = { dur: 1, dist: 1, stagger: 1, start: 'top 90%' };
+function tune() {
+  const compact = window.matchMedia(COMPACT_MQ).matches;
+  T = compact ? { dur: 0.7, dist: 0.6, stagger: 0.6, start: 'top 94%' } : { dur: 1, dist: 1, stagger: 1, start: 'top 90%' };
+}
 const records: Rec[] = [];
 const done = new WeakSet<Element>();
 
@@ -102,11 +112,11 @@ function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
       const parts = kind === 'lines' ? self.lines : self.chars;
       current = gsap.from(parts, {
         yPercent: kind === 'lines' ? 105 : 110,
-        duration: kind === 'lines' ? 1.25 : 1,
+        duration: (kind === 'lines' ? 1.25 : 1) * T.dur,
         ease: 'expo.out',
-        stagger: kind === 'lines' ? 0.1 : 0.024,
+        stagger: (kind === 'lines' ? 0.1 : 0.024) * T.stagger,
         delay,
-        scrollTrigger: { trigger: el, start: START, once: true },
+        scrollTrigger: { trigger: el, start: T.start, once: true },
         onComplete: finish,
       });
       return current;
@@ -129,12 +139,12 @@ function revealSplit(el: HTMLElement, kind: 'lines' | 'chars'): Rec {
 function revealFade(el: HTMLElement): Rec {
   const tween = gsap.from(el, {
     opacity: 0,
-    y: 28,
-    duration: 1.2,
+    y: 28 * T.dist,
+    duration: 1.2 * T.dur,
     ease: 'expo.out',
     delay: delayOf(el),
     clearProps: 'opacity,transform',
-    scrollTrigger: { trigger: el, start: START, once: true },
+    scrollTrigger: { trigger: el, start: T.start, once: true },
     onComplete: () => void done.add(el),
   });
   return { el, kill: () => tween.revert(), now: () => finishTween(tween) };
@@ -144,7 +154,7 @@ function revealRule(el: HTMLElement): Rec {
   const tween = gsap.from(el, {
     scaleX: 0,
     transformOrigin: '0% 50%',
-    duration: 1.6,
+    duration: 1.6 * T.dur,
     ease: 'power4.inOut',
     delay: delayOf(el),
     clearProps: 'transform',
@@ -160,21 +170,21 @@ function revealStagger(el: HTMLElement): Rec {
   const delay = delayOf(el);
   // transition:none so CSS hover transitions on the children never smear the reveal.
   const from = wipe
-    ? { clipPath: 'inset(100% 0% 0% 0%)', y: 48, transition: 'none' }
-    : { opacity: 0, y: 32, transition: 'none' };
+    ? { clipPath: 'inset(100% 0% 0% 0%)', y: 48 * T.dist, transition: 'none' }
+    : { opacity: 0, y: 32 * T.dist, transition: 'none' };
   const to = wipe ? { clipPath: 'inset(0% 0% 0% 0%)', y: 0 } : { opacity: 1, y: 0 };
   gsap.set(children, from);
   const tweens: gsap.core.Tween[] = [];
   const triggers = ScrollTrigger.batch(children, {
-    start: START,
+    start: T.start,
     once: true,
     onEnter: (batch) => {
       tweens.push(
         gsap.to(batch, {
           ...to,
-          duration: wipe ? 1.4 : 1.1,
+          duration: (wipe ? 1.4 : 1.1) * T.dur,
           ease: 'expo.out',
-          stagger: 0.11,
+          stagger: 0.11 * T.stagger,
           delay,
           clearProps: 'clipPath,opacity,transform,transition',
         }),
@@ -200,14 +210,16 @@ function revealStagger(el: HTMLElement): Rec {
 
 /** Arms every not-yet-armed [data-reveal] element under `root`. */
 export function scanReveals(root: ParentNode = document) {
+  tune();
   const els = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]:not([data-reveal-armed])'));
+  // Nested reveals: the outermost one owns the animation. Arm them all first,
+  // before any outer split re-creates them.
+  const own: HTMLElement[] = [];
   for (const el of els) {
-    // Nested reveals: the outermost one owns the animation.
-    const outer = el.parentElement?.closest('[data-reveal]');
-    if (outer || done.has(el)) {
-      arm(el);
-      continue;
-    }
+    if (el.parentElement?.closest('[data-reveal]') || done.has(el)) arm(el);
+    else own.push(el);
+  }
+  for (const el of own) {
     let rec: Rec | null = null;
     switch (el.dataset.reveal) {
       case 'lines':

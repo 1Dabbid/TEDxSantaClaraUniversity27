@@ -12,6 +12,13 @@ export type MotionKit = typeof import('./gsap') & { quality: Exclude<Quality, 's
  * unmount (route change) or when quality changes, so no ScrollTriggers or
  * SplitText instances leak across navigations. `setup` may return extra cleanup.
  */
+// Several sections mount in the same commit: coalesce their refreshes into one.
+let refreshRaf = 0;
+function refreshSoon(ST: typeof import('./gsap')['ScrollTrigger']) {
+  cancelAnimationFrame(refreshRaf);
+  refreshRaf = requestAnimationFrame(() => ST.refresh());
+}
+
 export function useSectionMotion(sectionId: string, setup: (kit: MotionKit) => void | (() => void)) {
   const quality = useQuality();
 
@@ -28,7 +35,7 @@ export function useSectionMotion(sectionId: string, setup: (kit: MotionKit) => v
       ctx = mod.gsap.context(() => {
         extra = setup({ ...mod, quality, root });
       }, root);
-      mod.ScrollTrigger.refresh();
+      refreshSoon(mod.ScrollTrigger);
     });
 
     return () => {

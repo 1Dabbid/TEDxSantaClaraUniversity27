@@ -114,6 +114,9 @@ export default function SmoothScroll({ children }: { children?: ReactNode }) {
 
     Promise.all([import('./gsap'), import('lenis')]).then(([{ gsap, ScrollTrigger }, { default: Lenis }]) => {
       if (cancelled) return;
+      // Mobile URL-bar show/hide changes the viewport height on every direction change:
+      // never let that refresh every trigger (layout uses svh, so nothing needs it).
+      ScrollTrigger.config({ ignoreMobileResize: true });
       // Anchor links are handled by the motion engine (header offset + focus).
       const lenis = new Lenis({
         autoRaf: false,
