@@ -59,24 +59,24 @@ export function Hero({ settings }: { settings: Settings }) {
         className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-black via-black/70 to-transparent"
       />
       <div data-hero className="shell flex flex-1 flex-col justify-end pb-10 pt-10 sm:pb-16 sm:pt-16">
-        <p className="fine-print">
+        {/* The h1 holds the visible event-name line and the theme; the scroll-out
+            (data-hero-title) still moves only the theme, as before. */}
+        <h1 id="hero-title">
+        <span className="fine-print block">
           <span className="hero-type" style={{ '--steps': settings.eventName.length + caption.length + 3 } as CSSProperties}>
             <span className="tracking-normal normal-case text-white">{settings.eventName}</span>
             <span aria-hidden="true"> · </span>
             <span className="sr-only">, </span>
             {caption}
           </span>
-        </p>
+        </span>
 
-        <h1
-          id="hero-title"
+        <span
           data-hero-title
-          className="hero-title mt-5 origin-[0%_100%] font-bold leading-[0.86] tracking-[-0.06em] sm:mt-6 sm:text-display sm:leading-[0.88] sm:font-semibold"
+          className="hero-title mt-5 block origin-[0%_100%] font-bold leading-[0.86] tracking-[-0.06em] sm:mt-6 sm:text-display sm:leading-[0.88] sm:font-semibold"
           style={{ '--hero-em': fitEm.toFixed(3) } as CSSProperties}
         >
-          <span className="sr-only">
-            {settings.eventName}: {settings.themeName}
-          </span>
+          <span className="sr-only">: {settings.themeName}</span>
           <span aria-hidden="true">
             {words.map((word, w) => (
               <span key={w}>
@@ -95,6 +95,7 @@ export function Hero({ settings }: { settings: Settings }) {
             <span aria-hidden="true">1</span>
             <span className="sr-only"> (see note 1)</span>
           </a>
+        </span>
         </h1>
 
         <div data-hero-body>
