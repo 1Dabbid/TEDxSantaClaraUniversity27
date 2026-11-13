@@ -3,6 +3,7 @@ import type { Settings } from '@/lib/content';
 import { getFaq, getTeam } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
 import { CLUB_URL, TEDX_PROGRAM_URL } from '@/lib/site';
+import { FooterMotion } from '@/motion/sections/FooterMotion';
 import { Logo } from './Logo';
 import { navItems } from './nav';
 
@@ -43,7 +44,8 @@ export async function Footer({ settings }: { settings: Settings }) {
   const parts = dateParts(settings.dateISO);
 
   return (
-    <footer className="relative z-[var(--z-content)] border-t border-white/10 bg-black">
+    <footer id="site-footer" className="relative z-[var(--z-content)] border-t border-white/10 bg-black">
+      <FooterMotion />
       <div className="shell pt-16 sm:pt-24">
         <div className="flex flex-wrap items-start justify-between gap-8">
           <Link href="/" aria-label="TEDxSantaClaraUniversity, home" className="-m-3 inline-block p-3">
@@ -60,12 +62,17 @@ export async function Footer({ settings }: { settings: Settings }) {
         {/* Sized to the container so the eight characters always span the full measure. */}
         <p className="@container mt-16 sm:mt-24" aria-hidden="true">
           <span
+            data-footer-date
             className="-ml-[0.035em] block leading-[0.8] font-semibold tracking-[-0.065em] whitespace-nowrap tabular-nums"
             style={{ fontSize: 'calc(100cqi / 3.92)' }}
           >
             {parts.map((p, i) => (
               <span key={i}>
-                {i > 0 ? <span className="text-accent">.</span> : null}
+                {i > 0 ? (
+                  <span data-footer-dot className="text-accent">
+                    .
+                  </span>
+                ) : null}
                 {p}
               </span>
             ))}

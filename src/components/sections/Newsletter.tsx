@@ -3,6 +3,7 @@ import type { Settings } from '@/lib/content';
 import { Arrow } from '@/components/print/Print';
 import styles from './Newsletter.module.css';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { NewsletterMotion } from '@/motion/sections/NewsletterMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 function instagramHandle(url: string): string | null {
@@ -27,6 +28,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
 
   return (
     <SectionShell id="newsletter" scrim="solid" className="py-32 sm:py-48">
+      <NewsletterMotion />
       <div className="shell">
         <div data-reveal="fade">
           <SectionLabel index={8}>Stay informed</SectionLabel>
@@ -71,7 +73,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
                   <Arrow dir="up-right" className="text-lg transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 sm:text-xl" />
                 </span>
               </span>
-              <span aria-hidden="true" className={styles.rule} data-reveal="rule" />
+              <span aria-hidden="true" className={styles.rule} data-sign-rule />
               <span className="fine-print mt-3 flex flex-wrap justify-between gap-x-6 gap-y-1 text-mute">
                 <span>Mailing list · one form, no account</span>
                 {host ? <span className="text-subtle">Opens {host} in a new tab</span> : null}
@@ -88,7 +90,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
                   The list opens soon.
                 </p>
               </div>
-              <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/30" />
+              <div data-sign-rule aria-hidden="true" className="h-px bg-white/30" />
               <p className="fine-print mt-3 text-mute">
                 Mailing list · not yet open
                 {settings.contactEmail ? (

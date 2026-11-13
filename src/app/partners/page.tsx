@@ -8,6 +8,7 @@ import { OG_ALT, SITE_NAME } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
+import { PartnersMotion } from '@/motion/sections/PartnersMotion';
 
 const DESCRIPTION =
   'Partner with TEDxSantaClaraUniversity: support the first mainstage event at Santa Clara University, up to 100 guests, with talks published on the TEDx YouTube channel.';
@@ -373,7 +374,8 @@ export default async function PartnersPage() {
   const anyTerms = tiers.some((t) => t.amount || t.slots);
 
   return (
-    <div className="relative isolate">
+    <div id="prospectus" className="relative isolate">
+      <PartnersMotion />
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-black/85" />
 
       {/* Hero */}
@@ -384,6 +386,7 @@ export default async function PartnersPage() {
         <h1
           id="partners-title"
           data-reveal="lines"
+          data-reveal-variant="shear"
           className="mt-8 max-w-[13ch] text-[clamp(3rem,9.5vw,9rem)] leading-[0.9] font-semibold tracking-[-0.055em] text-balance"
         >
           Put your name in the fine print.
@@ -471,7 +474,7 @@ export default async function PartnersPage() {
           ) : null}
         </div>
         {tiers.length ? (
-          <ol data-reveal="stagger" className="mt-14 border-t border-white/15">
+          <ol data-ledger className="mt-14 border-t border-white/15">
             {tiers.map((tier, i) => (
               <TierRow
                 key={tier.slug}
@@ -567,7 +570,7 @@ export default async function PartnersPage() {
           >
             <span className="min-w-0 text-[clamp(1.75rem,6.2vw,6rem)] leading-none font-semibold tracking-[-0.045em] [overflow-wrap:anywhere]">
               <span className="sr-only">{cta.kind === 'email' ? 'Email ' : 'Contact us via '}</span>
-              {cta.display}
+              <span data-cta-text>{cta.display}</span>
             </span>
             <span
               aria-hidden="true"
