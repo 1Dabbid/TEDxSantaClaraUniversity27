@@ -46,7 +46,7 @@ export async function Footer({ settings }: { settings: Settings }) {
       <FooterMotion />
       <div className="shell pt-16 sm:pt-24">
         <div className="flex flex-wrap items-start justify-between gap-8">
-          <Link href="/" aria-label="TEDxSantaClaraUniversity, home" className="-m-3 inline-block p-3">
+          <Link href="/" aria-label="TEDxSantaClaraUniversity, home" data-cursor="none" className="-m-3 inline-block p-3">
             <Logo className="h-14 sm:h-16" />
           </Link>
           <p className="fine-print text-right text-mute">

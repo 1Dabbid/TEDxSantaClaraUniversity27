@@ -27,12 +27,15 @@ export async function Header({ settings }: { settings: Settings }) {
       className="site-header sticky top-0 z-[var(--z-header)] h-[var(--header-h)] border-b border-white/10 bg-black"
     >
       <div className="shell flex h-full items-center gap-4">
+        {/* Clear space: 48px logo in the 80px bar leaves 16px above and below; pr-4 + gap-4 keeps the
+            divider 32px away. data-cursor="none": the custom cursor never draws over the logo. */}
         <Link
           href="/"
-          className="-my-1 flex shrink-0 items-center py-1 pr-2"
+          className="-my-1 flex shrink-0 items-center py-1 pr-4"
           aria-label="TEDxSantaClaraUniversity, home"
+          data-cursor="none"
         >
-          <Logo priority className="h-12 lg:h-14" />
+          <Logo priority className="h-12" />
         </Link>
 
         <p className="fine-print hidden border-l border-white/15 pl-4 text-mute sm:block">

@@ -1075,6 +1075,14 @@ html.has-cursor label,
 html.has-cursor [role='button'] {
   cursor: none;
 }
+/* Opt-out (the logo links): no custom cursor drawn over it, the native pointer instead. */
+.cursor[data-state='none'] {
+  visibility: hidden;
+}
+html.has-cursor [data-cursor='none'],
+html.has-cursor [data-cursor='none'] * {
+  cursor: pointer;
+}
 html.has-cursor input,
 html.has-cursor textarea,
 html.has-cursor select,
