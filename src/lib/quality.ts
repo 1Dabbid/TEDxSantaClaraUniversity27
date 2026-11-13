@@ -1,6 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
+import { REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY } from './motion-pref';
 
 /**
  * Rendering quality tier.
@@ -28,6 +29,15 @@ import { useSyncExternalStore } from 'react';
  * QA override: `?quality=high|low|static` on the first URL of a visit forces
  * the tier (and forces the scene on for high/low, even on software WebGL).
  *
+ * Visitor override: the "Reduce motion" switch in the footer (MotionToggle)
+ * stores `fp:reduce-motion` = '1' in localStorage. While it is set the tier is
+ * `static` whatever else applies (it wins over the QA override too), exactly
+ * as for prefers-reduced-motion: no canvas, no smooth scroll, no reveals, and
+ * the stills as per-section plates. The inline boot script in SiteShell reads
+ * the same key before first paint and sets `html.reduce-motion` instead of
+ * `html.motion`; CSS that follows the media query also follows that class.
+ * Change it with `setReduceMotion()`, read it with `useReduceMotion()`.
+ *
  * Read it in components with `useQuality()`. Outside React use `getQuality()`
  * and `subscribeQuality()`. Everything here is SSR safe: the server always
  * sees `static` and no scene.
@@ -51,6 +61,19 @@ let gpu: GpuInfo | null = null;
 const ASSUMED_GPU: GpuInfo = { webgl: true, software: false, weak: false, renderer: '' };
 let override: Quality | null | undefined;
 const listeners = new Set<() => void>();
+
+let userReduce: boolean | undefined;
+
+function readUserReduce(): boolean {
+  if (userReduce !== undefined) return userReduce;
+  userReduce = false;
+  try {
+    userReduce = window.localStorage.getItem(REDUCE_MOTION_KEY) === '1';
+  } catch {
+    /* storage blocked: the switch still works for this page view */
+  }
+  return userReduce;
+}
 
 // Software rasterizers: WebGL "works" but every frame is drawn on the CPU.
 const SOFTWARE_GPU = /swiftshader|llvmpipe|softpipe|software|basic render driver|mesa offscreen|lavapipe/i;
@@ -118,6 +141,7 @@ function probeGpu(): GpuInfo {
 
 function compute(): Quality {
   if (typeof window === 'undefined') return 'static';
+  if (readUserReduce()) return 'static';
   const forced = readOverride();
   if (forced) return forced;
 
@@ -206,6 +230,12 @@ function watch() {
   for (const q of ['(prefers-reduced-motion: reduce)', '(pointer: coarse)', '(any-pointer: fine)']) {
     window.matchMedia(q).addEventListener('change', recompute);
   }
+  // The switch flipped in another tab of the site.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== REDUCE_MOTION_KEY && e.key !== null) return;
+    userReduce = undefined;
+    applyUserReduce(readUserReduce());
+  });
   let t: ReturnType<typeof setTimeout> | undefined;
   window.addEventListener('resize', () => {
     clearTimeout(t);
@@ -228,6 +258,43 @@ export function subscribeQuality(listener: () => void): () => void {
   watch();
   listeners.add(listener);
   return () => listeners.delete(listener);
+}
+
+function applyUserReduce(on: boolean) {
+  userReduce = on;
+  document.documentElement.classList.toggle(REDUCE_MOTION_CLASS, on);
+  recompute();
+  // The switch's own state changed even when the tier did not (e.g. already static).
+  listeners.forEach((l) => l());
+}
+
+/**
+ * Turns the visitor's "Reduce motion" override on or off, remembers it in
+ * localStorage, and moves every consumer of the tier (motion engine, smooth
+ * scroll, section motion, the scene gate) to or from `static` at once.
+ */
+export function setReduceMotion(on: boolean) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (on) window.localStorage.setItem(REDUCE_MOTION_KEY, '1');
+    else window.localStorage.removeItem(REDUCE_MOTION_KEY);
+  } catch {
+    /* storage blocked: applies to this page view only */
+  }
+  applyUserReduce(on);
+}
+
+/** The visitor's override (not the media query). False on the server. */
+export function getReduceMotion(): boolean {
+  if (typeof window === 'undefined') return false;
+  return readUserReduce();
+}
+
+const getServerReduce = () => false;
+
+/** SSR safe: false on the server and during hydration, then the stored choice. */
+export function useReduceMotion(): boolean {
+  return useSyncExternalStore(subscribeQuality, getReduceMotion, getServerReduce);
 }
 
 const getServerQuality = (): Quality => 'static';

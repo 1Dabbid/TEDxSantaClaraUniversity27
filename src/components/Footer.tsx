@@ -6,6 +6,7 @@ import { CLUB_URL, TED_URL, TEDX_PROGRAM_URL } from '@/lib/site';
 import { FooterMotion } from '@/motion/sections/FooterMotion';
 import { Logo } from './Logo';
 import { EventName, Tedx } from './ui/KeepCase';
+import { MotionToggle } from './ui/MotionToggle';
 import { navItems, navVisibility } from './nav';
 
 const SOCIAL_LABELS: Record<keyof Settings['socials'], string> = {
@@ -209,9 +210,13 @@ export async function Footer({ settings }: { settings: Settings }) {
       <div className="border-t border-white/10">
         <div className="shell flex flex-col gap-3 py-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-white">This independent TEDx event is operated under license from TED.</p>
-          <p className="fine-print text-mute">
-            © {new Date().getFullYear()}&nbsp;<EventName />
-          </p>
+          <div className="flex flex-wrap items-center gap-x-8 gap-y-2">
+            {/* Stops the 3D scene, smooth scroll and every animation; remembered on this device. */}
+            <MotionToggle />
+            <p className="fine-print text-mute">
+              © {new Date().getFullYear()}&nbsp;<EventName />
+            </p>
+          </div>
         </div>
       </div>
     </footer>

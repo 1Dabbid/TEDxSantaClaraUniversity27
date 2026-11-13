@@ -1366,6 +1366,10 @@ html.has-cursor [contenteditable] {
     --fp-plates: block;
   }
 }
+/* The site's own "Reduce motion" switch (footer) behaves like the media query. */
+html.reduce-motion {
+  --fp-plates: block;
+}
 @supports not (animation-timeline: view()) {
   html:not(.motion) {
     --fp-plates: block;
