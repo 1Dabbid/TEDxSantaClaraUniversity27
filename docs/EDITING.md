@@ -33,6 +33,8 @@ The left-hand menu has four groups: **The event**, **People**, **Partners**, **C
 6. **Order**: lower numbers come first.
 7. Tick **Announced** and press **Save**. Until it is ticked, the name, photo and bio stay hidden everywhere and the page is hidden from search engines.
 
+Every speaker is also listed on **/speakers** (announced speakers first). That page is hidden from search engines until at least one speaker is announced. Each announced speaker gets their own share image (name, talk title, portrait in black and white) automatically, and the **Short bio** is used in their search description.
+
 To remove a slot entirely, untick **Published**.
 
 ### Publish the schedule
@@ -41,16 +43,21 @@ To remove a slot entirely, untick **Published**.
 2. Under **Running order**, add one item per moment: **Time** (e.g. 5:30 PM), **Title**, **Description (optional)**, **Kind** (Talk, Break, Doors, Other). Drag items to reorder.
 3. Tick **Show the running order** and **Save**. While it is unticked, the site shows "schedule coming soon".
 
-Doors and end time for the whole evening are in **The event > Event basics**: **Doors open at**, **Event ends at** (written like 5:30 PM).
+Doors, talks and end time for the whole evening are in **The event > Event basics**: **Doors open at**, **Talks start at**, **Event ends at** (written like 5:30 PM). Search engines are given the evening's start (**Talks start at**, or **Doors open at** while that is blank) and end time in California time; while no time is set they only see the date.
 
 ### Put tickets on sale
 
 1. **The event > Tickets & speaker applications**.
 2. **Ticket link**: the ticketing page (must start with `https://`).
 3. Optional: **Ticket checkout embed link (optional)**, only if the ticketing service gives you an "embed" link. Leave blank if unsure. If the embedded checkout stays blank on the live site, tell the web team: some services need one more allowed address (`CSP_FRAME_SRC` on Vercel).
-4. **Price note**: one short sentence. TEDx rules cap tickets at **$100**.
-5. Set **Ticket status** to **On sale** and **Save**. Every Tickets button on the site updates. ("On sale" only shows the buy button when a ticket link is filled in.)
-6. Later: switch to **Sold out** or **Closed (sales have ended)**.
+4. **Price note**: one short sentence, shown on the site. TEDx rules cap tickets at **$100**.
+5. **Ticket price in US dollars (optional)**: just the number, e.g. `25` (`0` if free). The admin will not accept more than 100. Search engines show it in event listings; visitors read the Price note.
+6. **Tickets on sale from (optional)**: the first day of sales (pick the date).
+7. Set **Ticket status** to **On sale** and **Save**. Every Tickets button on the site updates. ("On sale" only shows the buy button when a ticket link is filled in.)
+8. **The event > FAQ**: update the answer to **Are tickets on sale?** (it still says "Not yet" until you change it), e.g. "Yes. Get them from the Tickets button; they cost $25." and **Save**.
+9. Later: switch to **Sold out** or **Closed (sales have ended)**, and update that FAQ answer again.
+
+Search engines only receive ticket details (price, sale start, link) while the status is **On sale** or **Sold out**; while it is "Coming soon" or "Closed" they get none, so never fill in a price you have not confirmed.
 
 ### Open speaker applications
 
@@ -107,7 +114,7 @@ Only if the event is streamed.
 
 ### Other places
 
-- **The event > Event basics**: **Event name**, **Theme name**, **Theme tagline** (also used in search results and link previews), **Theme story**, **Event date** (YYYY-MM-DD), times, **Seat capacity**, **Accent colour**. The description of the share image (read aloud by screen readers when the link is shared) is written automatically from the theme name, date and venue.
+- **The event > Event basics**: **Event name**, **Theme name**, **Theme tagline** (also used in search results and link previews), **Theme story**, **Event date** (YYYY-MM-DD), times (**Doors open at**, **Talks start at**, **Event ends at**), **Seat capacity**, **Accent colour**. The description of the share image (read aloud by screen readers when the link is shared) is written automatically from the theme name, date and venue.
 - **The event > Venue & directions**: building, **Campus** (shown under the building name in the hero and wherever the venue is written out), address, **Map link**, coordinates, and **Getting there (directions, parking, accessibility)** notes.
 
 ## 4. Image sizes

@@ -71,7 +71,7 @@ const cardBase =
 
 const COUNT_WORDS = ['No', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve'];
 
-function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
+export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
   const clause = `§ 2.${index + 1}`;
   const num = String(index + 1).padStart(2, '0');
 
