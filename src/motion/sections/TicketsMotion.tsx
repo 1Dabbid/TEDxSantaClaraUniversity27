@@ -19,8 +19,8 @@ const STEP = 0.05; // timeline seconds between two ticks
  *   the capacity. Tabular figures and a ghost glyph per wheel keep every
  *   width exact.
  *   The numerals are aria-hidden; clause 5.1 and the heading carry the capacity.
- * - The current box of each status register is stamped: the cross lands from
- *   above at speed and stops dead.
+ *   This is the section's one moment (no stamp on the status register: the
+ *   status is read, not performed).
  *
  * Touch / small screens: the same timeline, played once in 1.6s when the ruler
  * enters. Nothing is hidden unless it is still below the fold at setup.
@@ -32,7 +32,6 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const cells = ruler ? (Array.from(ruler.children) as HTMLElement[]) : [];
   // One cell per seat; the server writes the count on the ruler.
   const seats = Number(ruler?.dataset.seats) || cells.length;
-  const crosses = Array.from(root.querySelectorAll<SVGElement>('[aria-current] svg'));
 
   const mm = gsap.matchMedia();
   mm.add({ full: FULL, compact: COMPACT }, moment((ctx: gsap.Context, undo) => {
@@ -91,24 +90,6 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
           onEnter: () => void gsap.to(tl, { progress: 1, duration: 1.6, ease: 'power2.inOut' }),
         });
       }
-    }
-
-    // The stamp: fast in, dead stop, no rebound.
-    for (const cross of crosses) {
-      if (!belowFold(cross)) continue;
-      gsap.fromTo(
-        cross,
-        { scale: 2.1, opacity: 0, rotation: -9, transformOrigin: '50% 50%' },
-        {
-          scale: 1,
-          opacity: 1,
-          rotation: 0,
-          duration: full ? 0.42 : 0.32,
-          delay: full ? 0.35 : 0.2,
-          ease: 'power4.in',
-          scrollTrigger: { trigger: cross, start: 'top 86%', once: true },
-        },
-      );
     }
 
   }));

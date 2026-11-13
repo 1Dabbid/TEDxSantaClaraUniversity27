@@ -178,22 +178,6 @@ html.lenis body {
   :where(main) :where(p, li, dd) > a:not([class]):focus-visible {
     background-size: 100% 1px, 100% 1px;
   }
-
-  /* Redaction bar: a premium "withheld" placeholder. */
-  .redacted {
-    display: block;
-    position: relative;
-    overflow: hidden;
-    background: linear-gradient(180deg, #1c1c1c, #121212);
-    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
-  }
-  .redacted::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.07) 50%, transparent 70%);
-    transform: translateX(-110%);
-  }
 }
 
 @keyframes scene-in {
@@ -534,13 +518,15 @@ html:not(.motion) .reading-progress {
 
 /* Pinned (motion, md+ and tall enough): a tall runway, a sticky stage, 9px contract text. */
 @media (min-width: 768px) and (min-height: 44rem) {
+  /* 225vh: the opening, a short engraving-only beat and three phrases. Shorter
+     than it was (250vh): without the scene the engraving beat is empty black. */
   html.motion .theme-runway {
-    height: 250vh;
+    height: 225vh;
   }
   /* Touch tablets: a shorter runway (no long pins under a thumb). */
   @media (pointer: coarse) {
     html.motion .theme-runway {
-      height: 190vh;
+      height: 175vh;
     }
   }
   /* When the stage scrolls out, its scrims (clipped by the stage) would end in
@@ -720,24 +706,28 @@ html:not(.motion) .reading-progress {
     border-color: rgb(255 255 255 / 0.28);
     background-color: rgb(0 0 0 / 0.3);
   }
-  html.motion .speaker-card:hover .redacted::after {
-    transition: transform 1.2s var(--ease-weight);
-    transform: translateX(110%);
-  }
 }
 
 /* Stage moment. Static / no JS: normal flow on black (none of this applies).
    Keep the two media blocks in sync with STAGE in SpeakersMotion. */
 @media (min-width: 1024px) and (min-height: 44rem) {
-  /* Desktop: a tall runway with a sticky full-viewport stage. Camera timing keys
-     off section progress, so the rug lands at ~0.46 of the runway. */
+  /* Desktop: a runway with a sticky full-viewport stage. The camera keys off
+     section progress (0..1), so the height only sets the pace: about 0.4 of a
+     screen of unobstructed rug once pinned, then the strip rises (SpeakersMotion).
+     Nothing announced yet: one panel and no sideways travel, so a shorter runway. */
   html.motion .speakers-runway {
-    height: 340vh;
+    height: 225vh;
     padding-block: 0;
+  }
+  html.motion .speakers-runway--tba {
+    height: 200vh;
   }
   @media (pointer: coarse) {
     html.motion .speakers-runway {
-      height: 280vh;
+      height: 200vh;
+    }
+    html.motion .speakers-runway--tba {
+      height: 180vh;
     }
   }
   html.motion .speakers-stage {
@@ -786,18 +776,17 @@ html:not(.motion) .reading-progress {
     aspect-ratio: auto;
     padding: 1.5rem;
   }
-  html.motion .speakers-track .speaker-num {
-    display: none;
-  }
-  html.motion .speakers-track .speaker-body,
-  html.motion .speakers-track .speaker-foot {
-    margin-top: 1.25rem;
-  }
   html.motion .speakers-track .speaker-photo {
     aspect-ratio: 16 / 10;
   }
   html.motion .speakers-track .speaker-text {
     padding: 1.25rem 0 0;
+  }
+  /* The "to be announced" panel: one block, no travel. */
+  html.motion .speakers-runway--tba .speakers-track {
+    display: block;
+    width: auto;
+    max-width: 60rem;
   }
 }
 @media (max-width: 1023.98px), (max-height: 43.99rem) {
@@ -807,7 +796,7 @@ html:not(.motion) .reading-progress {
     padding-top: 0;
   }
   html.motion .speakers-head {
-    height: 150svh;
+    height: 125svh;
   }
   html.motion .speakers-head-inner {
     position: sticky;
@@ -1144,10 +1133,6 @@ html.has-cursor [contenteditable] {
   .btn {
     border: 1px solid ButtonText;
   }
-  .redacted {
-    forced-color-adjust: none;
-    background: GrayText;
-  }
   [data-progress] {
     forced-color-adjust: none;
     background: Highlight;
@@ -1252,8 +1237,10 @@ html.has-cursor [contenteditable] {
   html.motion .speakers-track > .speaker-card {
     width: auto !important;
   }
-  /* Redaction bars and hairlines (translucent white on screen) print grey. */
-  .redacted,
+  html.motion .speakers-runway--tba .speakers-track {
+    display: block !important;
+  }
+  /* Hairlines (translucent white on screen) print grey. */
   [class*='bg-white/'] {
     background: #d4d4d4 !important;
     print-color-adjust: exact;
@@ -1313,5 +1300,94 @@ html.has-cursor [contenteditable] {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+/* --- Scene stills (src/components/SceneStills.tsx) ----------------------- *
+ * Home page only (the stack is a direct child of <main> there). The sections
+ * the fixed stack follows publish named view timelines, visible to the stack
+ * through timeline-scope on <main>. --fp-plate is each section's still.     */
+#main:has(> [data-scene-stills]) {
+  timeline-scope: --fp-still-theme, --fp-still-speakers, --fp-still-schedule, --fp-still-venue, --fp-still-team;
+}
+#main:has(> [data-scene-stills]) > [data-section='hero'] {
+  --fp-plate: image-set(url('/stills/hero-landscape.avif') type('image/avif'), url('/stills/hero-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='theme'] {
+  view-timeline-name: --fp-still-theme;
+  --fp-plate: image-set(url('/stills/theme-landscape.avif') type('image/avif'), url('/stills/theme-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='speakers'] {
+  view-timeline-name: --fp-still-speakers;
+  --fp-plate: image-set(url('/stills/speakers-landscape.avif') type('image/avif'), url('/stills/speakers-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='schedule'] {
+  view-timeline-name: --fp-still-schedule;
+  --fp-plate: image-set(url('/stills/schedule-landscape.avif') type('image/avif'), url('/stills/schedule-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='venue'] {
+  view-timeline-name: --fp-still-venue;
+  --fp-plate: image-set(url('/stills/venue-landscape.avif') type('image/avif'), url('/stills/venue-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='team'] {
+  view-timeline-name: --fp-still-team;
+}
+@media (max-aspect-ratio: 9/10) {
+  #main:has(> [data-scene-stills]) > [data-section='hero'] {
+    --fp-plate: image-set(url('/stills/hero-portrait.avif') type('image/avif'), url('/stills/hero-portrait.webp') type('image/webp'));
+  }
+  #main:has(> [data-scene-stills]) > [data-section='theme'] {
+    --fp-plate: image-set(url('/stills/theme-portrait.avif') type('image/avif'), url('/stills/theme-portrait.webp') type('image/webp'));
+  }
+  #main:has(> [data-scene-stills]) > [data-section='speakers'] {
+    --fp-plate: image-set(url('/stills/speakers-portrait.avif') type('image/avif'), url('/stills/speakers-portrait.webp') type('image/webp'));
+  }
+  #main:has(> [data-scene-stills]) > [data-section='schedule'] {
+    --fp-plate: image-set(url('/stills/schedule-portrait.avif') type('image/avif'), url('/stills/schedule-portrait.webp') type('image/webp'));
+  }
+  #main:has(> [data-scene-stills]) > [data-section='venue'] {
+    --fp-plate: image-set(url('/stills/venue-portrait.avif') type('image/avif'), url('/stills/venue-portrait.webp') type('image/webp'));
+  }
+}
+/* Plates: with reduced motion (no scroll-linked fades), and in browsers without
+   scroll-driven animations while motion is off, each section carries its still
+   as its own background instead of the fixed stack: the top of the section,
+   fading out, under its scrims. Switched on through --fp-plates. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fp-plates: block;
+  }
+}
+@supports not (animation-timeline: view()) {
+  html:not(.motion) {
+    --fp-plates: block;
+  }
+}
+#main:has(> [data-scene-stills])
+  > :is([data-section='hero'], [data-section='theme'], [data-section='speakers'], [data-section='schedule'], [data-section='venue'])::before {
+  content: '';
+  display: var(--fp-plates, none);
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: min(100%, 100svh);
+  z-index: -20;
+  pointer-events: none;
+  background: var(--fp-plate) center / cover no-repeat;
+  mask-image: linear-gradient(to bottom, #000 62%, transparent);
+}
+/* The hero plate lines up with the viewport like the canvas (from under the header). */
+#main:has(> [data-scene-stills]) > [data-section='hero']::before {
+  top: calc(-1 * var(--header-h));
+  height: 100svh;
+  mask-image: none;
+}
+/* Save-Data (set by SceneGate): the hero still only. */
+html.save-data #main:has(> [data-scene-stills]) > [data-section]:not([data-section='hero'])::before {
+  display: none;
+}
+@media print {
+  #main:has(> [data-scene-stills]) > [data-section]::before {
+    display: none;
   }
 }

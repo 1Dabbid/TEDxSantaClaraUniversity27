@@ -29,8 +29,9 @@ npm run test:e2e   # Playwright end-to-end suite (see Testing)
 
 `/keystatic` is a Keystatic admin generated from `keystatic.config.ts`. Each save writes a YAML file in `content/` (or an image in `public/images/speakers|team|sponsors/`).
 
-- **Local mode** (default): edits write straight to files on your computer. Use it with `npm run dev`.
-- **GitHub mode**: switched on when `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` is set (see `.env.example` and [docs/DEPLOY.md](docs/DEPLOY.md)). Editors sign in with GitHub on the live site; each save is a commit to the repo, and Vercel rebuilds.
+- **Local mode** (default): edits write straight to files on your computer. It only runs under `npm run dev`.
+- **GitHub mode**: switched on when all four Keystatic variables are set at build time (`KEYSTATIC_GITHUB_CLIENT_ID`, `KEYSTATIC_GITHUB_CLIENT_SECRET`, `KEYSTATIC_SECRET`, `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG`; see `.env.example` and [docs/DEPLOY.md](docs/DEPLOY.md)). Editors sign in with GitHub on the live site; each save is a commit to the repo, and Vercel rebuilds.
+- **Off** everywhere else: a production build (`npm run build`, any Vercel deployment) without all four variables answers **404** on `/keystatic` and `/api/keystatic/*` (`src/lib/admin.ts`). Local mode has no sign-in of its own, so it must never be reachable on a deployed site.
 
 Pages read content only through `src/lib/content.ts` (Keystatic's reader, at build time); components never import Keystatic. The admin splits event settings into five singletons (Event basics, Venue & directions, Tickets & speaker applications, Contact, Show / hide sections) and `getSettings()` merges them into one `Settings` object. The canonical site URL, club URL and the TEDx seat cap are constants in `src/lib/site.ts`, not content; the share-image alt text (`ogAlt()`), venue line and seat label helpers there are built from content. **Event basics > Seat capacity** (`settings.capacity`) is the single seat count for every page; the Tickets ruler draws one tick per seat and passes the count to its scroll moment as `data-seats`. **Livestream link** renders as `WatchLive` (`src/components/ui/WatchLive.tsx`) in the hero and Tickets, and nothing while blank.
 
@@ -44,9 +45,9 @@ src/
                         opengraph-image.tsx and speakers/[slug]/opengraph-image.tsx (built at build time), not-found.tsx,
                         error.tsx (page error boundary), global-error.tsx (self-contained, root layout failures)
   components/           Header, Footer, MobileMenu, Logo, SkipLink, ChromeGate (no chrome on /keystatic), nav.ts
-  components/sections/  Hero, Theme, Speakers, Schedule, Venue, Tickets, Team, Faq, Newsletter
-  components/print/     the "fine print" primitives: clause numbers, TBA marker, redaction bars, crop marks, JSON-LD
-  lib/                  content.ts (loader), quality.ts (tiers), site.ts (constants), dates.ts (fixed-timezone dates), jsonld.ts, links.ts, tickets.ts
+  components/sections/  Hero, Theme, Speakers, Schedule, Venue, Tickets, PartnerBand (not a scene section), Team, Faq, Newsletter
+  components/print/     the "fine print" primitives: clause numbers, TBA marker, status register, crop marks, JSON-LD
+  lib/                  content.ts (loader), quality.ts (tiers), site.ts (constants), dates.ts (fixed-timezone dates), jsonld.ts, links.ts, tickets.ts, admin.ts (whether /keystatic exists)
   motion/               MotionRoot, SmoothScroll (Lenis), SceneGate, gsap.ts, lenisRef.ts, useSectionMotion.ts
   motion/engine/        reveal, cursor, magnetic, navigation (page transitions), chrome (header), focus
   motion/sections/      one scroll moment per section (*Motion.tsx) + kit.ts
@@ -57,12 +58,30 @@ src/
 
 ### Scene contracts (`src/scene/`)
 
-- `scrollState.ts`: a plain mutable singleton (no React renders): `progress` (page 0..1), `sections[id]` for each entry of `SECTION_IDS` (`hero, theme, speakers, schedule, venue, tickets, team, faq, newsletter`; 0 when the section top meets the viewport bottom, 1 when its bottom meets the viewport top), `pointer` (-1..1, y up), `velocity`. `src/motion/SmoothScroll.tsx` is its only writer; sections are found by `[data-section="<id>"]`. The order of sections in `src/app/page.tsx` must match `SECTION_IDS`.
+- `scrollState.ts`: a plain mutable singleton (no React renders): `progress` (page 0..1), `sections[id]` for each entry of `SECTION_IDS` (`hero, theme, speakers, schedule, venue, tickets, team, faq, newsletter`; 0 when the section top meets the viewport bottom, 1 when its bottom meets the viewport top), `pointer` (-1..1, y up), `velocity`. `src/motion/SmoothScroll.tsx` is its only writer; sections are found by `[data-section="<id>"]`. The order of sections in `src/app/page.tsx` must match `SECTION_IDS`. Sections follow content state (docs/EDITING.md, "What appears when"): Speakers and Schedule shrink to a short "to be announced" beat, and Team renders nothing until a name is public, so its progress stays 0 and `journey()` skips it.
 - `SceneCanvas.tsx`: the single fixed, full-viewport, `aria-hidden`, `pointer-events: none` canvas. DPR `[1,2]` on high, `[1,1.5]` on low. Never import it statically: `SceneLoader` loads it with `next/dynamic({ ssr: false })` after `load` + idle.
 - `Experience.tsx`: the scene itself (microphone, rug, spotlight, 100 seats, one scroll-driven camera); keeps its default export and `quality` prop. It steps resolution and post-processing down by itself when the frame rate stays low.
 - **Tuning points**: `choreography.ts` is the camera choreography as data (`DESKTOP_SHOTS`, `PORTRAIT_SHOTS`, `AWAY_SHOT`: one shot per point of the scroll journey, where section k spans J = k..k+1). `engraving.ts` is the text laser-etched around the microphone (event name, theme, date, venue, license line, numbered clauses). Both are meant to be edited.
 - `SceneGate` (`src/motion/SceneGate.tsx`, in the root layout) decides whether the scene exists: mounted on `/` when `useSceneEnabled()`; on other routes only if the home page was already shown in this visit (then the canvas is hidden and paused, so going back home is instant). A cold load of `/partners` or a speaker page never downloads three.js.
 - Readability never depends on the canvas: sections carry their own scrims (`scrim-*`, `hero-scrim`, `theme-scrim`, … in `globals.css`).
+
+### Still frames (`src/components/SceneStills.tsx`, `public/stills/`)
+
+Visitors who never get the live canvas (no JavaScript, reduced motion, Save-Data, no WebGL, a software renderer) see still frames of the same shots instead: hero microphone, engraved macro, the rug in its spotlight, the schedule orbit, the room of seats. They are server-rendered `<picture>` elements (AVIF + WebP, landscape and portrait), driven by CSS only:
+
+- **Default**: one fixed stack under the sections' scrims. Each section's still cross-fades in as the section reaches mid-viewport (scroll-driven animations on named view timelines, set in the "Scene stills" block of `globals.css`). A still below the hero stays `display: none`, so its lazy image is not requested, until its section enters the viewport.
+- **Reduced motion**, and browsers without scroll-driven animations when motion is off: no stack; each section carries its still as a background plate (`::before`, top of the section, fading out). Without scroll-driven animations and with motion on, only the hero still shows.
+- **Live scene**: `SceneGate` sets `html.scene-pending` as soon as it knows the scene will load (the other stills are then never requested) and `html.scene-live` once the canvas has drawn, finished its fade-in and its exposure has settled; the stack then fades out (400 ms) and is removed. Context loss brings the stills back.
+- Save-Data (with JavaScript): the hero still only (`html.save-data`). Print: hidden. Home page only.
+
+**Regenerate them whenever the scene changes** (`src/scene/**`: shots, materials, lighting, engraving) and commit the images; the build itself never needs a GPU:
+
+```bash
+npm run build
+PW_CHROMIUM_PATH=/path/to/chromium npm run stills     # starts `next start` on :3121 if nothing answers there
+```
+
+`scripts/capture-stills.mjs` opens `/?quality=high&perf=off&scene-debug=1&snap=1` (landscape 1600x900, high tier) and `/?quality=low&…` (portrait, 390x780 at DPR 2 = 780x1560, low tier) in one headless Chromium, hides all DOM, scrolls to each shot's journey position (`SHOTS` at the top of the script, J as in `choreography.ts`), waits until the frame has settled and is not black (SwiftShader is slow: several minutes in all), then encodes with `sharp` (bundled with Next.js) at the highest quality under the per-file budget. Options: `STILLS_ONLY=theme,portrait`, `STILLS_RAW=<dir>` + `STILLS_RESUME=1` to keep captures already made, `STILLS_ENCODE_ONLY=1` to re-encode, a `darken` factor per shot if text contrast over a frame needs it, `STILLS_URL` for a server you started yourself. If a shot moves to another J, update `SHOTS`; if the output size changes, update `SceneStills.tsx`.
 
 ### Motion engine (`src/motion/`)
 
@@ -104,7 +123,7 @@ Build and environment switches: `ANALYZE=1 npm run build` emits browser source m
 
 ## Testing
 
-`tests/e2e` holds a Playwright suite (Chromium) that runs against a production build (`npm run build && npm run start` on port 3100, configured in `playwright.config.ts`). It covers: every public route (status 200, exactly one `h1`, a title and description, no console errors or failed requests), the no-JavaScript home page (full event name, date, venue, Tickets link, the TEDx license sentence), no sponsor logos on the home page, anchors that resolve, the mobile menu (focus trap, Escape), reduced motion, the `?quality=` overrides (the canvas mounts with `?quality=low`), scroll restoration across a page transition, the FAQ by keyboard, horizontal overflow at 320/390/768/1440 px, robots.txt, the sitemap, noindex on unannounced speakers, the Keystatic shell, the "Watch live" livestream link (`livestream.spec.ts` renders the component with a sample URL, so no livestream URL is ever committed for testing, and checks the built home page against `content/contact.yaml`), and axe-core accessibility checks on `/`, `/partners` and a speaker page. Record a known bug as a `test.fixme` that describes the correct behaviour, and remove the marker with the fix.
+`tests/e2e` holds a Playwright suite (Chromium) that runs against a production build (`npm run build && npm run start` on port 3100, configured in `playwright.config.ts`). It covers: every public route (status 200, exactly one `h1`, a title and description, no console errors or failed requests), the no-JavaScript home page (full event name, date, venue, Tickets link, the TEDx license sentence), no sponsor logos on the home page, anchors that resolve, the mobile menu (focus trap, Escape), reduced motion, the `?quality=` overrides (the canvas mounts with `?quality=low`), scroll restoration across a page transition, the FAQ by keyboard, horizontal overflow at 320/390/768/1440 px, robots.txt, the sitemap, noindex on unannounced speakers, the admin being switched off (404 on `/keystatic` and the Keystatic API, since the suite's build has no GitHub variables), the "Watch live" livestream link (`livestream.spec.ts` renders the component with a sample URL, so no livestream URL is ever committed for testing, and checks the built home page against `content/contact.yaml`), and axe-core accessibility checks on `/`, `/partners` and a speaker page. Record a known bug as a `test.fixme` that describes the correct behaviour, and remove the marker with the fix.
 
 ```bash
 npm run test:e2e                                         # builds, serves, tests
@@ -113,6 +132,8 @@ PW_CHROMIUM_PATH=/path/to/chromium npm run test:e2e      # use a Chromium alread
 npx playwright install chromium                          # or download the matching browser once
 npm run test:e2e:report                                  # open the last HTML report
 ```
+
+The working admin is not covered by the suite (it would need a second, `next dev` server). Check it by hand after touching `keystatic.config.ts`, `src/lib/admin.ts` or `src/app/keystatic`: run `npm run dev`, open `http://localhost:3000/keystatic`, and check that the sidebar lists **Event basics** and that an entry opens.
 
 CI (`.github/workflows/ci.yml`) runs lint, typecheck and build in one job, and the e2e suite in a second job (`npx playwright install --with-deps chromium`); the HTML report is uploaded as an artifact when it fails.
 

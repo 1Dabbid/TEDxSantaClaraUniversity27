@@ -41,7 +41,7 @@ Search the codebase for `Fine Print`, `fine print`, `2027`, `04.23`, `Locatelli`
 | File | What is theme-specific |
 | --- | --- |
 | `src/scene/engraving.ts` | the text etched on the 3D microphone: `THEME = 'FINE PRINT'`, `DATE_LINE = 'FRIDAY · APRIL 23 · 2027'`, `VENUE_LINE = 'LOCATELLI STUDENT ACTIVITY CENTER'`, `SEATS_LINE`, and the nine legal-style `CLAUSES`. Hard-coded, not read from content: **must** be edited by hand. |
-| `src/scene/choreography.ts`, `src/scene/*.tsx` | the scene itself (a microphone on a red rug, 100 seats). Theme-neutral for a TEDx talk, but the camera shots are tuned to this page's sections. |
+| `src/scene/choreography.ts`, `src/scene/*.tsx` | the scene itself (a microphone on a red rug, 100 seats). Theme-neutral for a TEDx talk, but the camera shots are tuned to this page's sections. After any change here, regenerate the still frames shown to visitors without the live scene: `npm run build && npm run stills`, then commit `public/stills/` (see the README, "Still frames"). |
 | `src/lib/site.ts` | `SITE_URL` (`https://fineprint.tedxscu.com`), the canonical domain. The share-image alt text is built from content by `ogAlt()` (event name, theme name, long date, venue and campus), so it needs no edit. |
 | `src/app/opengraph-image.tsx` | the share image: the theme name, tagline, date and venue come from content, but the seat count is the **Seat capacity** field; the layout copy "§ 01 · The theme" and "fineprint.tedxscu.com" are hard-coded. |
 | `src/components/sections/Hero.tsx` | the footnote marker and note "1. Terms and conditions apply. They are the whole point."; "Scroll to read the fine print". (Venue campus and seat count come from content.) |

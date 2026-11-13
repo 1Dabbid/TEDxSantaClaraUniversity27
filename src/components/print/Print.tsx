@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 /**
  * Small typographic building blocks for the "fine print" motif, shared by the
- * Venue, Tickets, Team, FAQ, Newsletter, Partners and Speaker pages.
+ * Venue, Tickets, Partners and Speaker pages.
  * All server components, no client JS.
  */
 
@@ -18,17 +18,6 @@ export function ClauseNo({ children, className = '' }: { children: ReactNode; cl
   return (
     <span aria-hidden="true" className={`fine-print whitespace-nowrap text-white tabular-nums ${className}`}>
       §&nbsp;{children}
-    </span>
-  );
-}
-
-/** Solid redaction bars standing in for withheld text. Pair with a visible or sr-only explanation. */
-export function Redaction({ widths, className = '', bar = 'h-[0.9em]' }: { widths: string[]; className?: string; bar?: string }) {
-  return (
-    <span aria-hidden="true" className={`flex flex-col gap-[0.35em] ${className}`}>
-      {widths.map((w, i) => (
-        <span key={i} className={`block ${bar} bg-white/[0.16]`} style={{ width: w }} />
-      ))}
     </span>
   );
 }

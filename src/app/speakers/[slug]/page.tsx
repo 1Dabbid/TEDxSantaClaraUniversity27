@@ -9,7 +9,7 @@ import { clip, SITE_NAME } from '@/lib/site';
 import { ticketCta } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
 import { keepTedxCase } from '@/components/ui/KeepCase';
-import { Arrow, ClauseNo, JsonLd, Redaction } from '@/components/print/Print';
+import { Arrow, ClauseNo, JsonLd } from '@/components/print/Print';
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -26,11 +26,14 @@ async function load(slug: string) {
   const speakers = await getSpeakers();
   const index = speakers.findIndex((s) => s.slug === slug);
   if (index === -1) return null;
+  // Previous / next only step between announced speakers: a placeholder has nothing to read.
+  const announced = speakers.map((s, i) => ({ s, i })).filter((x) => x.s.announced);
+  const at = announced.findIndex((x) => x.i === index);
   return {
     speaker: speakers[index],
     index,
-    prev: index > 0 ? { s: speakers[index - 1], i: index - 1 } : null,
-    next: index < speakers.length - 1 ? { s: speakers[index + 1], i: index + 1 } : null,
+    prev: at > 0 ? announced[at - 1] : null,
+    next: at >= 0 && at < announced.length - 1 ? announced[at + 1] : null,
   };
 }
 
@@ -71,7 +74,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; next: { s: Speaker; i: number } | null }) {
-  const label = (s: Speaker) => (s.announced ? s.name : 'To be announced');
+  const label = (s: Speaker) => s.name;
   return (
     <nav aria-label="More speakers" className="shell pb-28 sm:pb-36">
       <div className="grid border-t border-white/15 sm:grid-cols-[1fr_auto_1fr]">
@@ -250,71 +253,38 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
   );
 }
 
+/**
+ * Placeholder page. The home page and /speakers never link here; the route
+ * exists so an old or guessed link never 404s, and it is noindexed.
+ */
 function Unannounced({ index, settings }: { index: number; settings: Settings }) {
   return (
     <>
       <div className="shell pt-12 sm:pt-16">
         <Breadcrumb index={index} />
       </div>
-      <div className="shell grid gap-16 py-16 sm:py-24 md:grid-cols-12 md:items-end md:gap-10">
-        <div className="min-w-0 md:col-span-7">
-          <p className="fine-print text-mute">
-            Speaker {num(index)} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
-          </p>
-          <h1
-            id="speaker-title"
-            data-reveal="lines"
-            className="mt-6 text-[clamp(3.25rem,9.6vw,8.75rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance"
-          >
-            <span className="sr-only">Speaker {index + 1}: </span>
-            To be announced.
-          </h1>
-          <p data-reveal="fade" className="mt-8 max-w-lg text-lg text-mute sm:text-xl">
-            This speaker has not been announced yet. Their name, talk and story are withheld until the lineup is
-            revealed. The mailing list hears first.
-          </p>
-          <div className="mt-10 flex flex-wrap gap-3">
-            <Button href={settings.newsletterUrl || '/#newsletter'} size="lg">
-              Get notified
-            </Button>
-            <Button href="/speakers" variant="ghost" size="lg">
-              All speakers
-            </Button>
-          </div>
-        </div>
-
-        {/* The dossier, redacted. */}
-        <div className="border border-white/15 bg-black/85 p-6 sm:p-8 md:col-span-5">
-          <div className="flex items-baseline justify-between">
-            <span className="fine-print text-white">Dossier {num(index)}</span>
-            <span className="fine-print border border-accent px-2 py-0.5 text-white">Withheld</span>
-          </div>
-          <dl className="mt-8 space-y-7">
-            <div>
-              <dt className="fine-print text-mute">Name</dt>
-              <dd className="mt-3">
-                <span className="sr-only">Withheld until announcement</span>
-                <Redaction widths={['82%']} bar="h-9" />
-              </dd>
-            </div>
-            <div>
-              <dt className="fine-print text-mute">Talk</dt>
-              <dd className="mt-3">
-                <span className="sr-only">Withheld until announcement</span>
-                <Redaction widths={['95%', '60%']} bar="h-4" />
-              </dd>
-            </div>
-            <div>
-              <dt className="fine-print text-mute">About</dt>
-              <dd className="mt-3">
-                <span className="sr-only">Withheld until announcement</span>
-                <Redaction widths={['100%', '92%', '97%', '45%']} bar="h-2.5" />
-              </dd>
-            </div>
-          </dl>
-          <p data-cursor="loupe" className="fine-print mt-10 border-t border-white/10 pt-4 text-mute">
-            Redacted pursuant to § 2 (Speakers). To be released on announcement.
-          </p>
+      <div className="shell pb-28 pt-16 sm:pb-36 sm:pt-24">
+        <p className="fine-print text-mute">
+          Speaker {num(index)} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
+        </p>
+        <h1
+          id="speaker-title"
+          data-reveal="lines"
+          className="mt-6 text-[clamp(3.25rem,9.6vw,8.75rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance"
+        >
+          <span className="sr-only">Speaker {index + 1}: </span>
+          To be announced.
+        </h1>
+        <p data-reveal="fade" className="mt-8 max-w-lg text-lg text-mute sm:text-xl">
+          This speaker has not been announced yet. The lineup is announced on the site and to the mailing list first.
+        </p>
+        <div className="mt-10 flex flex-wrap gap-3">
+          <Button href={settings.newsletterUrl || '/#newsletter'} size="lg">
+            Join the mailing list
+          </Button>
+          <Button href="/" variant="ghost" size="lg">
+            Back to the event
+          </Button>
         </div>
       </div>
     </>
@@ -331,11 +301,13 @@ export default async function SpeakerPage({ params }: Props) {
     <article aria-labelledby="speaker-title" className="relative isolate">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-black/85" />
       {speaker.announced ? (
-        <Announced speaker={speaker} index={index} settings={settings} />
+        <>
+          <Announced speaker={speaker} index={index} settings={settings} />
+          <SpeakerNav prev={prev} next={next} />
+        </>
       ) : (
         <Unannounced index={index} settings={settings} />
       )}
-      <SpeakerNav prev={prev} next={next} />
     </article>
   );
 }
