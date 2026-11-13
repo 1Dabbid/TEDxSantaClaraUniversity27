@@ -1,13 +1,18 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { useEffect, useRef, useState } from 'react';
-import SceneLoader from '@/scene/SceneLoader';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { useSceneEnabled } from '@/lib/quality';
+
+// Not even the loader is in the first-load bundle: it (and next/dynamic) is fetched only when the
+// scene may actually run on this route and device.
+const SceneLoader = lazy(() => import('@/scene/SceneLoader'));
 
 /**
  * Decides whether the WebGL scene exists at all on the current route.
  *
- * - `/`: mounted (SceneLoader still waits for load + idle and checks quality).
+ * - `/`: mounted when `useSceneEnabled()` (quality not `static`, WebGL not a software
+ *   rasterizer); SceneLoader then still waits for load + idle.
  * - `/partners`, `/speakers/*`, 404: not mounted, unless the home page was already
  *   shown in this browsing session (this document). Then the live canvas is kept,
  *   hidden and paused, so coming back home is instant, and nothing is torn down.
@@ -46,6 +51,7 @@ export default function SceneGate() {
   if (onHome && !seen) setSeen(true);
   const ref = useRef<HTMLDivElement>(null);
   const saved = useRef('always');
+  const sceneOk = useSceneEnabled();
 
   useEffect(() => {
     if (!onHome) return;
@@ -66,12 +72,14 @@ export default function SceneGate() {
     const mo = new MutationObserver(() => void setPaused(el, true, saved));
     mo.observe(el, { childList: true, subtree: true });
     return () => mo.disconnect();
-  }, [onHome, seen]);
+  }, [onHome, seen, sceneOk]);
 
-  if (!seen) return null;
+  if (!seen || !sceneOk) return null;
   return (
     <div ref={ref} className="scene-gate" data-hidden={onHome ? undefined : ''} aria-hidden="true">
-      <SceneLoader />
+      <Suspense fallback={null}>
+        <SceneLoader />
+      </Suspense>
     </div>
   );
 }
