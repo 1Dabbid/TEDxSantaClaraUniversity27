@@ -6,10 +6,10 @@ Steps marked **(verify on first deploy)** depend on Vercel, GitHub or DNS-provid
 
 ## 0. Before you start: name the production branch `main`
 
-The repo's default branch is currently `claude/keen-tesla-m8scyh`. Vercel uses the default branch as production, and the online admin (Keystatic) saves to the default branch too, so make it a plain `main` first:
+The repo's default branch is currently the working branch the site was built on (its name is shown at the top of the repo's GitHub page). Vercel uses the default branch as production, and the online admin (Keystatic) saves to the default branch too, so make it a plain `main` first:
 
 1. GitHub > the repo > **Settings > General > Default branch** > the pencil/rename button > rename to `main` **(verify on first deploy)**. Renaming keeps all history and redirects old links.
-2. Everyone with a local copy then runs `git fetch origin && git branch -m claude/keen-tesla-m8scyh main && git branch -u origin/main main` (or simply clones again).
+2. Everyone with a local copy then runs `git fetch origin && git branch -m <old-branch-name> main && git branch -u origin/main main` (or simply clones again).
 
 ## a. Import the repo into Vercel
 
