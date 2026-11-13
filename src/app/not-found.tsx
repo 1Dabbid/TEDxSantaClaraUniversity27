@@ -3,7 +3,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
 
 export const metadata: Metadata = {
-  title: 'Clause not found',
+  // Plain wording for the tab and history; the visible page keeps the clause conceit.
+  title: 'Page not found (404)',
   description: 'This page does not exist.',
   robots: { index: false, follow: true },
 };
@@ -22,8 +23,8 @@ export default function NotFound() {
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-black/85" />
       <div className="shell flex min-h-[calc(100svh-var(--header-h))] flex-col justify-between gap-16 py-16 sm:py-24">
         <div className="flex items-baseline justify-between gap-6">
-          <p className="fine-print">Error 404 · Clause not found</p>
-          <p className="fine-print hidden sm:block">Void where prohibited</p>
+          <p className="fine-print text-mute">Error 404 · Clause not found</p>
+          <p className="fine-print hidden sm:block text-mute">Void where prohibited</p>
         </div>
 
         <div>
@@ -57,13 +58,16 @@ export default function NotFound() {
         </div>
 
         <div className="grid gap-6 border-t border-white/15 pt-6 sm:grid-cols-[1fr_auto]">
-          <p className="fine-print max-w-md">
-            <span className="text-accent">*</span> See instead, in order of appearance:
+          <p className="fine-print max-w-md text-mute">
+            <span aria-hidden="true" className="text-accent">
+              *
+            </span>{' '}
+            See instead, in order of appearance:
           </p>
-          <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
+          <ul className="-my-1 flex flex-wrap gap-x-6 text-sm">
             {LINKS.map((l) => (
               <li key={l.href}>
-                <Link href={l.href} className="text-mute underline-offset-4 hover:text-white hover:underline">
+                <Link href={l.href} className="inline-block py-1 text-mute underline-offset-4 hover:text-white hover:underline">
                   {l.label}
                 </Link>
               </li>

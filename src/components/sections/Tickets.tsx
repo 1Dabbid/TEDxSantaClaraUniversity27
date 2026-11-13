@@ -96,7 +96,7 @@ function TicketEmbed({ src, eventName }: { src: string; eventName: string }) {
     <figure className="mt-16 sm:mt-24">
       <figcaption className="flex flex-wrap items-baseline justify-between gap-3 border-t border-white/15 pt-4">
         <span className="fine-print text-white">Schedule A · Checkout</span>
-        <span className="fine-print">Provided by the ticketing service. Opens in this page.</span>
+        <span className="fine-print text-mute">Provided by the ticketing service. Opens in this page.</span>
       </figcaption>
       <div
         className="relative mt-4 h-[44rem] overflow-hidden border border-white/15 bg-panel sm:h-[38rem]"
@@ -104,7 +104,7 @@ function TicketEmbed({ src, eventName }: { src: string; eventName: string }) {
       >
         <div aria-hidden="true" className="absolute inset-0 flex flex-col items-center justify-center gap-3 p-8 text-center">
           <span className="block h-px w-16 bg-white/30" />
-          <span className="fine-print">Loading checkout</span>
+          <span className="fine-print text-mute">Loading checkout</span>
         </div>
         <iframe
           src={src}
@@ -128,7 +128,7 @@ function SpeakerApplications({ settings }: { settings: Settings }) {
         ? 'Applications are closed for this event. Thank you to everyone who applied.'
         : 'Applications have not opened yet. The mailing list hears first.';
   return (
-    <div aria-labelledby="apply-title" role="group" className="mt-20 border border-white/15 bg-black/80 p-6 sm:mt-28 sm:p-10">
+    <div aria-labelledby="apply-title" role="group" className="mt-20 border border-white/15 bg-black/80 p-5 sm:mt-28 sm:p-10">
       <div className="grid gap-8 md:grid-cols-12 md:items-end">
         <div className="md:col-span-7">
           <h3 id="apply-title" className="flex items-baseline gap-4 text-2xl font-semibold tracking-tight sm:text-3xl">
@@ -145,7 +145,11 @@ function SpeakerApplications({ settings }: { settings: Settings }) {
           {state === 'open' && settings.speakerApplicationsUrl ? (
             <Button href={settings.speakerApplicationsUrl}>Apply to speak</Button>
           ) : state === 'coming-soon' ? (
-            <Button href={settings.newsletterUrl || '#newsletter'} variant="ghost">
+            <Button
+              href={settings.newsletterUrl || '#newsletter'}
+              variant="ghost"
+              className="h-auto! min-h-11 py-2.5 text-center whitespace-normal!"
+            >
               Get notified when applications open
             </Button>
           ) : null}
@@ -184,9 +188,10 @@ export function Tickets({ settings }: { settings: Settings }) {
           <div className="mt-6 sm:mt-8">
             <SeatStrip filled={state === 'sold-out'} />
           </div>
-          <div className="mt-3 flex justify-between">
-            <span className="fine-print">Seat 001</span>
-            <span data-cursor="loupe" className="fine-print">
+          {/* Captions for the decorative strip; the heading and clause 5.1 carry the capacity. */}
+          <div aria-hidden="true" className="mt-3 flex justify-between gap-4">
+            <span className="fine-print text-mute">Seat 001</span>
+            <span data-cursor="loupe" className="fine-print text-right text-mute">
               Seat 100.<span className="hidden sm:inline"> That is the whole room.</span>
             </span>
           </div>
@@ -197,7 +202,7 @@ export function Tickets({ settings }: { settings: Settings }) {
             <SectionTitle id="tickets">
               <span data-reveal="lines" className="block">
                 {copy.title}
-              </span>
+              </span>{' '}
               <span data-reveal="lines" data-reveal-delay="0.15" className="block text-mute">
                 {copy.subtitle}
               </span>

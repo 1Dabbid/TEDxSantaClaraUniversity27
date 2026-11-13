@@ -16,7 +16,8 @@ const SOCIAL_LABELS: Record<keyof Settings['socials'], string> = {
 };
 
 const ext = { target: '_blank', rel: 'noopener noreferrer' } as const;
-const linkCls = 'text-mute underline-offset-4 transition-colors hover:text-white hover:underline';
+// inline-block + py-1 gives every footer link a target at least 24px tall (WCAG 2.5.8).
+const linkCls = 'inline-block py-1 text-mute underline-offset-4 transition-colors hover:text-white hover:underline';
 const NewTab = () => <span className="sr-only"> (opens in a new tab)</span>;
 
 /** "2027-04-23" -> ["04", "23", "27"] */
@@ -41,7 +42,7 @@ export function Footer({ settings }: { settings: Settings }) {
           <Link href="/" aria-label="TEDxSantaClaraUniversity, home" className="-m-3 inline-block p-3">
             <Logo className="h-14 sm:h-16" />
           </Link>
-          <p className="fine-print text-right">
+          <p className="fine-print text-right text-mute">
             End of document
             <br />
             Signed and dated
@@ -83,7 +84,7 @@ export function Footer({ settings }: { settings: Settings }) {
             <p data-cursor="loupe" className="mt-4 max-w-xl text-sm leading-relaxed text-mute">
               {WHAT_IS_TEDX}
             </p>
-            <p className="mt-4 text-sm">
+            <p className="mt-3 text-sm">
               <a href={TEDX_PROGRAM_URL} className={linkCls} {...ext}>
                 Learn about the TEDx program
                 <NewTab />
@@ -95,7 +96,7 @@ export function Footer({ settings }: { settings: Settings }) {
             <h2 id="footer-site" className="fine-print text-white">
               <span aria-hidden="true">§ B · </span>Site
             </h2>
-            <ul className="mt-4 space-y-2 text-sm">
+            <ul className="mt-3 text-sm">
               {NAV_ITEMS.map((i) => (
                 <li key={i.href}>
                   <Link href={i.href} className={linkCls}>
@@ -115,7 +116,7 @@ export function Footer({ settings }: { settings: Settings }) {
             <h2 className="fine-print text-white">
               <span aria-hidden="true">§ C · </span>Elsewhere
             </h2>
-            <ul className="mt-4 space-y-2 text-sm">
+            <ul className="mt-3 text-sm">
               <li>
                 <a href={CLUB_URL} className={linkCls} {...ext}>
                   tedxscu.com
@@ -145,17 +146,17 @@ export function Footer({ settings }: { settings: Settings }) {
             <h2 className="fine-print text-white">
               <span aria-hidden="true">§ D · </span>Contact
             </h2>
-            <ul className="mt-4 space-y-3 text-sm">
+            <ul className="mt-4 space-y-2 text-sm">
               {settings.contactEmail ? (
                 <li>
-                  <span className="fine-print block">General</span>
+                  <span className="fine-print block text-mute">General</span>
                   <a href={`mailto:${settings.contactEmail}`} className={`${linkCls} break-all`}>
                     {settings.contactEmail}
                   </a>
                 </li>
               ) : null}
               <li>
-                <span className="fine-print block">Partnerships</span>
+                <span className="fine-print block text-mute">Partnerships</span>
                 {partner.kind === 'email' ? (
                   <a href={partner.href} className={`${linkCls} break-all`}>
                     {partner.display}
@@ -174,7 +175,7 @@ export function Footer({ settings }: { settings: Settings }) {
       <div className="border-t border-white/10">
         <div className="shell flex flex-col gap-3 py-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-white">This independent TEDx event is operated under license from TED.</p>
-          <p className="fine-print">
+          <p className="fine-print text-mute">
             © {new Date().getFullYear()}&nbsp;<span className="tracking-normal normal-case">TEDxSantaClaraUniversity</span>
           </p>
         </div>

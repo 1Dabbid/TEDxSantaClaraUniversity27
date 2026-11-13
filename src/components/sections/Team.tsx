@@ -11,7 +11,7 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
     <li className="flex flex-col">
       <div className="flex items-baseline justify-between">
         <ClauseNo>6.{index + 1}</ClauseNo>
-        <span className="fine-print hidden sm:inline">Signatory</span>
+        <span className="fine-print hidden sm:inline text-mute">Signatory</span>
       </div>
       {/* Signature space */}
       <div className={`relative mt-6 flex items-end gap-4 pb-3 ${member.name ? 'h-20 sm:h-28' : 'h-12 sm:h-20'}`}>
@@ -36,7 +36,7 @@ function SignatureBlock({ member, index }: { member: TeamMember; index: number }
       </div>
       <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/40" />
       <p className="mt-3 text-sm leading-snug font-medium text-white sm:text-base">{member.role}</p>
-      <p className="fine-print mt-1">
+      <p className="fine-print mt-1 text-mute">
         {member.name ? 'For TEDxSantaClaraUniversity' : 'Name to be announced'}
       </p>
     </li>
@@ -67,7 +67,7 @@ export async function Team({ team }: { team: TeamMember[] }) {
           </p>
         </div>
 
-        <p data-reveal="fade" className="fine-print mt-20 max-w-xl sm:mt-28">
+        <p data-reveal="fade" className="fine-print mt-20 max-w-xl sm:mt-28 text-mute">
           In witness whereof, the board below has agreed to organize {settings.eventName} on{' '}
           <time dateTime={settings.dateISO}>{settings.dateLong}</time>, and to read every clause.
         </p>

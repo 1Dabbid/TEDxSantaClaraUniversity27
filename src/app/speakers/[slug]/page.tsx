@@ -38,7 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const data = await load(slug);
   if (!data) return {};
   const { speaker, index } = data;
-  const title = speaker.announced ? speaker.name : `Speaker ${num(index)}: to be announced`;
+  // Plain digits in the title: screen readers spell out "Nº" letter by letter.
+  const title = speaker.announced ? speaker.name : `Speaker ${String(index + 1).padStart(2, '0')}: to be announced`;
   const description = speaker.announced
     ? speaker.shortBio || `${speaker.name} speaks at ${SITE_NAME}.`
     : `This ${SITE_NAME} speaker has not been announced yet.`;
@@ -68,25 +69,29 @@ function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; ne
         <div className={prev ? 'border-b border-white/15 sm:border-b-0' : 'hidden sm:block'}>
           {prev ? (
             <Link href={`/speakers/${prev.s.slug}`} data-cursor="link" className="group block py-8 sm:pr-8">
-              <span className="fine-print">← Previous · {num(prev.i)}</span>
+              <span aria-hidden="true" className="fine-print text-mute">
+                ← Previous · {num(prev.i)}
+              </span>
               <span className="mt-3 block text-2xl font-semibold tracking-tight group-hover:text-mute sm:text-3xl">
-                <span className="sr-only">Previous speaker: </span>
+                <span className="sr-only">Previous speaker, number {prev.i + 1}: </span>
                 {label(prev.s)}
               </span>
             </Link>
           ) : null}
         </div>
         <div className="flex items-center border-b border-white/15 py-6 sm:border-x sm:border-b-0 sm:px-8">
-          <Link href="/#speakers" className="fine-print text-white underline-offset-4 hover:underline">
+          <Link href="/#speakers" className="fine-print inline-block py-1.5 text-white underline-offset-4 hover:underline">
             All speakers
           </Link>
         </div>
         <div>
           {next ? (
             <Link href={`/speakers/${next.s.slug}`} data-cursor="link" className="group block py-8 text-right sm:pl-8">
-              <span className="fine-print">{num(next.i)} · Next →</span>
+              <span aria-hidden="true" className="fine-print text-mute">
+                {num(next.i)} · Next →
+              </span>
               <span className="mt-3 block text-2xl font-semibold tracking-tight group-hover:text-mute sm:text-3xl">
-                <span className="sr-only">Next speaker: </span>
+                <span className="sr-only">Next speaker, number {next.i + 1}: </span>
                 {label(next.s)}
               </span>
             </Link>
@@ -99,22 +104,23 @@ function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; ne
 
 function Breadcrumb({ index }: { index: number }) {
   return (
-    <nav aria-label="Breadcrumb" className="fine-print">
-      <ol className="flex flex-wrap gap-2">
+    <nav aria-label="Breadcrumb" className="fine-print text-mute">
+      <ol className="-my-1.5 flex flex-wrap items-center gap-x-2">
         <li>
-          <Link href="/" className="hover:text-white">
+          <Link href="/" className="inline-block py-1.5 hover:text-white">
             Home
           </Link>
         </li>
         <li aria-hidden="true">/</li>
         <li>
-          <Link href="/#speakers" className="hover:text-white">
+          <Link href="/#speakers" className="inline-block py-1.5 hover:text-white">
             Speakers
           </Link>
         </li>
         <li aria-hidden="true">/</li>
         <li aria-current="page" className="text-white">
-          {num(index)}
+          <span aria-hidden="true">{num(index)}</span>
+          <span className="sr-only">Speaker {index + 1}</span>
         </li>
       </ol>
     </nav>
@@ -130,7 +136,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
       <JsonLd json={jsonLdString(speakerJsonLd(speaker, settings))} />
       <div className="shell pt-12 sm:pt-16">
         <Breadcrumb index={index} />
-        <p data-reveal="fade" className="fine-print mt-16 sm:mt-24">
+        <p data-reveal="fade" className="fine-print mt-16 sm:mt-24 text-mute">
           Speaker {num(index)} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
         </p>
         <h1
@@ -161,7 +167,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
               />
             ) : (
               <div aria-hidden="true" className="absolute inset-0 flex items-end p-6">
-                <span className="fine-print">Portrait to follow</span>
+                <span className="fine-print text-mute">Portrait to follow</span>
               </div>
             )}
             {/* Vignette + hairline frame: the "plate" treatment. */}
@@ -171,7 +177,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
             />
             <div aria-hidden="true" className="pointer-events-none absolute inset-3 border border-white/15" />
           </div>
-          <figcaption data-cursor="loupe" className="fine-print mt-3 flex justify-between gap-4">
+          <figcaption data-cursor="loupe" className="fine-print mt-3 flex justify-between gap-4 text-mute">
             <span>Fig. {String(index + 1).padStart(2, '0')}</span>
             <span className="text-right">{speaker.name}</span>
           </figcaption>
@@ -180,7 +186,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
         <div className="md:col-span-7 md:pl-6 lg:pl-12">
           {speaker.talkTitle ? (
             <section aria-labelledby="talk-title" className="border-t border-white/15 pt-6">
-              <h2 id="talk-title" className="fine-print">
+              <h2 id="talk-title" className="fine-print text-mute">
                 <ClauseNo>1</ClauseNo> <span className="ml-2">The talk</span>
               </h2>
               <p data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight text-balance">
@@ -189,7 +195,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
             </section>
           ) : null}
           <section aria-labelledby="bio-title" className={`border-t border-white/15 pt-6 ${speaker.talkTitle ? 'mt-14' : ''}`}>
-            <h2 id="bio-title" className="fine-print">
+            <h2 id="bio-title" className="fine-print text-mute">
               <ClauseNo>2</ClauseNo> <span className="ml-2">About</span>
             </h2>
             <div data-reveal="lines" className="mt-6 max-w-2xl space-y-5 text-lg leading-relaxed text-mute">
@@ -212,7 +218,12 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
           </section>
 
           <div className="mt-14 flex flex-wrap gap-3">
-            <Button href={cta.href} aria-label={cta.ariaLabel} size="lg">
+            {/* An aria-label replaces the button's own "(opens in a new tab)" text, so restate it. */}
+            <Button
+              href={cta.href}
+              aria-label={/^https?:/.test(cta.href) ? `${cta.ariaLabel} (opens in a new tab)` : cta.ariaLabel}
+              size="lg"
+            >
               Tickets
             </Button>
             <Button href="/#speakers" variant="ghost" size="lg">
@@ -233,7 +244,7 @@ function Unannounced({ index, settings }: { index: number; settings: Settings })
       </div>
       <div className="shell grid gap-16 py-16 sm:py-24 md:grid-cols-12 md:items-end">
         <div className="md:col-span-7">
-          <p className="fine-print">
+          <p className="fine-print text-mute">
             Speaker {num(index)} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
           </p>
           <h1
@@ -241,6 +252,7 @@ function Unannounced({ index, settings }: { index: number; settings: Settings })
             data-reveal="lines"
             className="mt-6 text-[clamp(3.25rem,11vw,10rem)] leading-[0.86] font-semibold tracking-[-0.06em]"
           >
+            <span className="sr-only">Speaker {index + 1}: </span>
             To be announced.
           </h1>
           <p data-reveal="fade" className="mt-8 max-w-lg text-lg text-mute sm:text-xl">
@@ -265,28 +277,28 @@ function Unannounced({ index, settings }: { index: number; settings: Settings })
           </div>
           <dl className="mt-8 space-y-7">
             <div>
-              <dt className="fine-print">Name</dt>
+              <dt className="fine-print text-mute">Name</dt>
               <dd className="mt-3">
                 <span className="sr-only">Withheld until announcement</span>
                 <Redaction widths={['82%']} bar="h-9" />
               </dd>
             </div>
             <div>
-              <dt className="fine-print">Talk</dt>
+              <dt className="fine-print text-mute">Talk</dt>
               <dd className="mt-3">
                 <span className="sr-only">Withheld until announcement</span>
                 <Redaction widths={['95%', '60%']} bar="h-4" />
               </dd>
             </div>
             <div>
-              <dt className="fine-print">About</dt>
+              <dt className="fine-print text-mute">About</dt>
               <dd className="mt-3">
                 <span className="sr-only">Withheld until announcement</span>
                 <Redaction widths={['100%', '92%', '97%', '45%']} bar="h-2.5" />
               </dd>
             </div>
           </dl>
-          <p data-cursor="loupe" className="fine-print mt-10 border-t border-white/10 pt-4">
+          <p data-cursor="loupe" className="fine-print mt-10 border-t border-white/10 pt-4 text-mute">
             Redacted pursuant to § 2 (Speakers). To be released on announcement.
           </p>
         </div>

@@ -26,7 +26,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
             Don’t miss the fine print.
             <a
               href="#newsletter-note"
-              className="ml-[0.08em] align-super font-mono text-[0.22em] font-normal tracking-normal text-accent no-underline hover:text-white"
+              className="relative ml-[0.08em] align-super font-mono text-[0.22em] font-normal tracking-normal text-accent no-underline after:absolute after:-inset-3 after:content-[''] hover:text-white"
             >
               <span aria-hidden="true">1</span>
               <span className="sr-only"> (see note 1)</span>
@@ -50,7 +50,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
                 </p>
               </div>
               <div data-reveal="rule" aria-hidden="true" className="h-px bg-white/50" />
-              <p className="fine-print mt-3">
+              <p className="fine-print mt-3 text-mute">
                 {open ? 'Sign up · one form, no account' : 'Mailing list · not yet open'}
               </p>
             </div>
@@ -80,21 +80,21 @@ export function Newsletter({ settings }: { settings: Settings }) {
         </div>
 
         <div className="mt-20 grid gap-8 border-t border-white/15 pt-6 sm:grid-cols-2 sm:mt-28">
-          <p id="newsletter-note" data-cursor="loupe" className="fine-print max-w-md">
+          <p id="newsletter-note" data-cursor="loupe" className="fine-print max-w-md text-mute">
             <span className="text-accent">1.</span> The list is only used for TEDxSantaClaraUniversity event news. You can
             unsubscribe at any time.
           </p>
-          <ul className="fine-print flex flex-wrap gap-x-6 gap-y-2 sm:justify-end">
+          <ul className="fine-print -my-1.5 flex flex-wrap gap-x-6 sm:justify-end text-mute">
             {ig ? (
               <li>
-                <a href={ig} target="_blank" rel="noopener noreferrer" className="text-white hover:text-mute">
+                <a href={ig} target="_blank" rel="noopener noreferrer" className="inline-block py-1.5 text-white hover:text-mute">
                   Instagram {handle ? <span className="tracking-normal normal-case">{handle}</span> : null}
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </li>
             ) : null}
             <li>
-              <Link href="/partners" className="text-white hover:text-mute">
+              <Link href="/partners" className="inline-block py-1.5 text-white hover:text-mute">
                 Organizations: partner with us
               </Link>
             </li>

@@ -79,8 +79,8 @@ export function Venue({ settings }: { settings: Settings }) {
             className="relative mx-auto w-full max-w-sm border border-white/10 bg-black/85 p-6 md:col-span-5 md:mx-0 md:ml-auto lg:col-span-4"
           >
             <div className="flex items-start justify-between gap-4">
-              <span className="fine-print">Fig. 4</span>
-              <span className="fine-print text-right">Site plan, not to scale</span>
+              <span className="fine-print text-mute">Fig. 4</span>
+              <span className="fine-print text-right text-mute">Site plan, not to scale</span>
             </div>
             <div className="mx-auto mt-4 aspect-square w-full max-w-[16rem]">
               <Reticle />
@@ -94,7 +94,7 @@ export function Venue({ settings }: { settings: Settings }) {
                     {formatCoordinate(coords.lng, 'lng')}
                   </p>
                   {coords.note ? (
-                    <p data-cursor="loupe" className="fine-print mt-2">
+                    <p data-cursor="loupe" className="fine-print mt-2 text-mute">
                       {coords.note}
                     </p>
                   ) : null}
@@ -106,65 +106,65 @@ export function Venue({ settings }: { settings: Settings }) {
           </figure>
         </div>
 
-        {/* Particulars */}
+        {/* Particulars. Clause numbers sit inside each <dt> (hidden from assistive tech) so the list stays valid. */}
         <div data-reveal="rule" className="mt-20 h-px bg-white/15 sm:mt-28" aria-hidden="true" />
         <dl data-reveal="stagger" className="grid gap-10 pt-8 sm:grid-cols-3 sm:gap-8">
-          <div className="grid grid-cols-[3.5rem_1fr] gap-2">
-            <ClauseNo>4.1</ClauseNo>
-            <div>
-              <dt className="fine-print">Where</dt>
-              <dd className="mt-3">
-                {settings.venueAddressLabel ? (
-                  <span data-cursor="loupe" className="fine-print mb-2 block text-mute">
-                    {settings.venueAddressLabel}
-                  </span>
-                ) : null}
-                <address className="not-italic leading-relaxed text-white">
-                  {settings.venueName}
-                  {settings.venueCampus ? (
-                    <>
-                      <br />
-                      {settings.venueCampus}
-                    </>
-                  ) : null}
-                  {a.street ? (
-                    <>
-                      <br />
-                      {a.street}
-                    </>
-                  ) : null}
-                  {cityLine ? (
-                    <>
-                      <br />
-                      {cityLine}
-                    </>
-                  ) : null}
-                </address>
-              </dd>
-            </div>
-          </div>
-          <div className="grid grid-cols-[3.5rem_1fr] gap-2">
-            <ClauseNo>4.2</ClauseNo>
-            <div>
-              <dt className="fine-print">When</dt>
-              <dd className="mt-3 leading-relaxed text-white">
-                <time dateTime={settings.dateISO}>{settings.dateLong}</time>
-                <span className="mt-1 block text-mute">
-                  Doors: {settings.doorsTime ? settings.doorsTime : <Tba />}
+          <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">
+            <dt className="col-span-2 grid grid-cols-subgrid">
+              <ClauseNo>4.1</ClauseNo>
+              <span className="fine-print text-mute">Where</span>
+            </dt>
+            <dd className="col-start-2 mt-3">
+              {settings.venueAddressLabel ? (
+                <span data-cursor="loupe" className="fine-print mb-2 block text-mute">
+                  {settings.venueAddressLabel}
                 </span>
-                {settings.endTime ? <span className="block text-mute">Ends: {settings.endTime}</span> : null}
-              </dd>
-            </div>
+              ) : null}
+              <address className="not-italic leading-relaxed text-white">
+                {settings.venueName}
+                {settings.venueCampus ? (
+                  <>
+                    <br />
+                    {settings.venueCampus}
+                  </>
+                ) : null}
+                {a.street ? (
+                  <>
+                    <br />
+                    {a.street}
+                  </>
+                ) : null}
+                {cityLine ? (
+                  <>
+                    <br />
+                    {cityLine}
+                  </>
+                ) : null}
+              </address>
+            </dd>
           </div>
-          <div className="grid grid-cols-[3.5rem_1fr] gap-2">
-            <ClauseNo>4.3</ClauseNo>
-            <div>
-              <dt className="fine-print">Capacity</dt>
-              <dd className="mt-3 leading-relaxed text-white">
-                100 seats
-                <span className="block text-mute">One room, one evening.</span>
-              </dd>
-            </div>
+          <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">
+            <dt className="col-span-2 grid grid-cols-subgrid">
+              <ClauseNo>4.2</ClauseNo>
+              <span className="fine-print text-mute">When</span>
+            </dt>
+            <dd className="col-start-2 mt-3 leading-relaxed text-white">
+              <time dateTime={settings.dateISO}>{settings.dateLong}</time>
+              <span className="mt-1 block text-mute">
+                Doors: {settings.doorsTime ? settings.doorsTime : <Tba />}
+              </span>
+              {settings.endTime ? <span className="block text-mute">Ends: {settings.endTime}</span> : null}
+            </dd>
+          </div>
+          <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">
+            <dt className="col-span-2 grid grid-cols-subgrid">
+              <ClauseNo>4.3</ClauseNo>
+              <span className="fine-print text-mute">Capacity</span>
+            </dt>
+            <dd className="col-start-2 mt-3 leading-relaxed text-white">
+              100 seats
+              <span className="block text-mute">One room, one evening.</span>
+            </dd>
           </div>
         </dl>
 
@@ -206,7 +206,7 @@ export function Venue({ settings }: { settings: Settings }) {
                     ) : (
                       <p>
                         <Tba />
-                        <span className="mt-2 block text-sm text-subtle">Details will be published here before the event.</span>
+                        <span className="mt-2 block text-sm text-mute">Details will be published here before the event.</span>
                       </p>
                     )}
                   </div>
