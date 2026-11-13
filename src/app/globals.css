@@ -737,7 +737,7 @@ html:not(.motion) .reading-progress {
 html:not(.motion) .speakers-scrim {
   background:
     radial-gradient(ellipse 66% 58% at 16% 20%, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0) 100%),
-    linear-gradient(to bottom, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0.45) 45%, rgb(0 0 0 / 0) 90%);
+    linear-gradient(to bottom, rgb(0 0 0 / 0.62), rgb(0 0 0 / 0.52) 45%, rgb(0 0 0 / 0) 90%);
 }
 
 /* Stage moment. Static / no JS: normal flow (none of this applies).
