@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useMemo } from 'react';
-import { useThree } from '@react-three/fiber';
+import { useEffect, useMemo, useRef } from 'react';
+import { useFrame, useThree } from '@react-three/fiber';
 import {
   CatmullRomCurve3,
   CylinderGeometry,
@@ -341,6 +341,8 @@ function cableGeometry(high: boolean) {
 export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
   const high = quality === 'high';
   const gl = useThree((s) => s.gl);
+  const fade = useRef(0);
+  const maskOn = useRef<{ value: number } | null>(null);
 
   const geo = useMemo(() => {
     const seg = high ? 160 : 72;
@@ -394,6 +396,8 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
         return;
       }
       tex.anisotropy = Math.min(high ? 16 : 4, gl.capabilities.getMaxAnisotropy());
+      maskOn.current = mats.body.uniforms.uMaskOn;
+      fade.current = 0.0001;
       tex.needsUpdate = true;
       const u = mats.body.uniforms;
       u.uMask.value = tex;
@@ -418,6 +422,14 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
     },
     [geo, mats],
   );
+
+  // Fade the engraving in (about 1.2 s) once the mask is ready.
+  useFrame((_, dt) => {
+    if (fade.current <= 0 || fade.current >= 1 || !maskOn.current) return;
+    fade.current = Math.min(1, fade.current + dt / 1.2);
+    const f = fade.current;
+    maskOn.current.value = f * f * (3 - 2 * f);
+  });
 
   const sx = STAND_BASE.x;
   const sz = STAND_BASE.z;

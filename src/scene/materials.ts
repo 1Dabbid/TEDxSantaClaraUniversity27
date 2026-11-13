@@ -87,7 +87,7 @@ float rimTerm(vec3 nView, float width) {
 float keyGlint(vec3 nW, float sharp) {
   vec3 L = normalize(uKeyPos - vWorld);
   vec3 V = normalize(cameraPosition - vWorld);
-  vec3 H = normalize(L + V);
+  vec3 H = normalize(L + V + vec3(1e-5));
   return pow(max(dot(nW, H), 0.0), sharp) * step(0.0, dot(nW, L));
 }
 // Level-of-detail glitter: cells about 1.5 px wide, each a tiny randomly tilted mirror.
@@ -112,6 +112,12 @@ type Patch = {
   alphaBody?: string;
   /** Runs after normal_fragment_maps: may edit diffuseColor, roughnessFactor, metalnessFactor, normal, totalEmissiveRadiance, ccMul. */
   fragmentBody: string;
+  /**
+   * Drop image-based lighting entirely. Needed because three replaces a
+   * material's envMapIntensity with scene.environmentIntensity whenever the
+   * scene environment is used, so a per-material 0 would be ignored.
+   */
+  noEnv?: boolean;
 };
 
 function patch(material: MeshStandardMaterial, key: string, p: Patch) {
@@ -132,8 +138,10 @@ function patch(material: MeshStandardMaterial, key: string, p: Patch) {
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\nfloat ccMul = 1.0;\nfloat sheenMul = 1.0;\n{\n${p.fragmentBody}\n}`)
       .replace('material.clearcoat = clearcoat;', 'material.clearcoat = clearcoat * ccMul;')
       .replace('material.sheenColor = sheenColor;', 'material.sheenColor = sheenColor * sheenMul;');
+    if (p.noEnv) shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_maps>', '');
   };
   material.customProgramCacheKey = () => key;
+  material.userData.patchUniforms = p.uniforms;
 }
 
 const lin = (hex: string) => new Color(hex); // Color() converts sRGB hex to linear working space
@@ -159,6 +167,8 @@ export function createBodyMaterial(cheap: boolean) {
     uKnurlN: { value: 72 },
     uDepth: { value: 9e-5 },
     uEtch: { value: lin('#b9bbbf') },
+    /** 0..1: fades the engraving in once its mask has been built. */
+    uMaskOn: { value: 0 },
   };
   const params = { color: lin('#2b2c31'), metalness: 1, roughness: 0.3, envMapIntensity: 1.25 };
   const m = cheap
@@ -180,7 +190,7 @@ export function createBodyMaterial(cheap: boolean) {
     fragmentHead: `
       varying vec3 vTanV; varying vec3 vBitV;
       uniform sampler2D uMask; uniform vec2 uMaskTexel; uniform vec2 uBand; uniform vec3 uKnurl;
-      uniform float uKnurlN; uniform float uDepth; uniform vec3 uEtch;`,
+      uniform float uKnurlN; uniform float uDepth; uniform vec3 uEtch; uniform float uMaskOn;`,
     fragmentBody: `
       float r = length(vObj.xz);
       float phi = atan(vObj.x, vObj.z);
@@ -233,7 +243,9 @@ export function createBodyMaterial(cheap: boolean) {
         float fwm = fwidth(mr);
         float mSharp = smoothstep(0.5 - fwm * 0.7 - 0.02, 0.5 + fwm * 0.7 + 0.02, mr);
         float m = mix(mr, mSharp, resolved);
-        float wall = 4.0 * mr * (1.0 - mr) * resolved;
+        float wall = 4.0 * mr * (1.0 - mr) * resolved * uMaskOn;
+        m *= uMaskOn;
+        grad *= uMaskOn;
         normal = normalize(normal + uDepth * (grad.x * T + grad.y * B) * mix(0.35, 1.0, resolved));
         // Etched floor: frosted bare aluminium. Walls: bright polished bevel.
         float kf = 1.0 - smoothstep(0.3, 1.0, fy * 60000.0);
@@ -449,6 +461,7 @@ export function createCableMaterial() {
 export function createFloorMaterial(cheap: boolean) {
   const m = new MeshStandardMaterial({ color: lin('#080808'), metalness: 0, roughness: 0.45, envMapIntensity: 0 });
   patch(m, `floor-${cheap ? 1 : 0}`, {
+    noEnv: true,
     uniforms: {
       uRugR: { value: RUG_RADIUS },
       uStand: { value: [STAND_BASE.x, STAND_BASE.z] },
@@ -481,6 +494,9 @@ export function createFloorMaterial(cheap: boolean) {
       float wear = 0.8 + 0.3 * vnoise(p * 300.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.09, 0.09, 0.085) * wear, tape);
       roughnessFactor = mix(roughnessFactor, 0.75, tape);
+      // Soft white spill from the spot's outer field: the stage floor is just readable around the pool.
+      float spill = exp(-max(rr - uRugR, 0.0) / 1.4) * (0.35 + 0.65 * exp(-rr * rr / 30.0));
+      totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.95, 0.9) * spill * uSpot * 2.2;
       // Red bounce spilling off the rug.
       float outside = smoothstep(uRugR - 0.02, uRugR + 0.02, rr);
       totalEmissiveRadiance += vec3(0.8, 0.015, 0.04) * exp(-max(rr - uRugR, 0.0) / 0.32) * outside * uSpot * 0.05;
@@ -517,6 +533,7 @@ export function createRugMaterial(cheap: boolean) {
     : new MeshPhysicalMaterial({ ...params, specularIntensity: 0.2, sheen: 0.8, sheenRoughness: 0.45, sheenColor: lin('#ff4a5c') });
   m.alphaToCoverage = true;
   patch(m, `rug-${cheap ? 1 : 0}`, {
+    noEnv: true,
     uniforms: { uR: { value: RUG_RADIUS } },
     fragmentHead: 'uniform float uR;',
     alphaBody: `
@@ -538,7 +555,7 @@ export function createRugMaterial(cheap: boolean) {
       vec2 nap = vec2(cos(na), sin(na));
       float patchy = vnoise(p * 5.0 + 9.0) * 0.6 + vnoise(p * 13.0) * 0.4;
       vec3 napV = normalize((viewMatrix * vec4(nap.x, 0.0, nap.y, 0.0)).xyz);
-      normal = normalize(normal + napV * (0.06 + 0.14 * patchy));
+      normal = normalize(normal + napV * (0.04 + 0.09 * patchy));
       ${cheap ? '' : 'normal = bumpNormal(normal, -vViewPosition, fib, 0.006);'}
       float edge = smoothstep(uR - 0.08, uR, rr);
       float hot = 0.5 + 1.0 * exp(-rr * rr / 0.8);
@@ -566,6 +583,7 @@ export function createCurtainMaterial() {
   const folds = /* glsl */ `
     float foldPhase(float x) { return x * 5.2 + vnoise(vec2(x * 0.9, 1.0)) * 5.0; }`;
   patch(m, 'curtain', {
+    noEnv: true,
     uniforms: {},
     vertexHead: `${GLSL_NOISE}\n${folds}`,
     vertexBody: `
@@ -581,7 +599,7 @@ export function createCurtainMaterial() {
       float lam = clamp(dot(Nw, normalize(vec3(0.35, 0.25, 1.0))), 0.0, 1.0);
       float pool = exp(-pow(vWorld.x / 3.6, 2.0)) * smoothstep(0.0, 1.0, vWorld.y) * (1.0 - smoothstep(1.8, 5.5, vWorld.y));
       float sheen = pow(1.0 - clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0), 3.0);
-      totalEmissiveRadiance += vec3(1.0, 0.8, 0.78) * (lam * lam * 0.02 + sheen * 0.01) * pool * uSpot;
+      totalEmissiveRadiance += vec3(1.0, 0.82, 0.78) * (lam * lam * 0.055 + sheen * 0.025) * pool * uSpot;
       diffuseColor.rgb *= 0.6 + 0.4 * lam;`,
   });
   return m;

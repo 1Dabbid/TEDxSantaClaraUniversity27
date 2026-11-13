@@ -26,6 +26,8 @@ export const look = {
   shade: 0,
   /** Left / centre darkening 0..1 behind headline type. */
   scrim: 0,
+  /** Top / bottom edge darkening 0..1. */
+  scrimEdge: 0,
   /** Highlight bloom multiplier. */
   bloom: 1,
   /** Vignette strength 0..1. */

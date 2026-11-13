@@ -83,6 +83,7 @@ function createRig() {
     focusX: new Damped(0.5),
     focusY: new Damped(0.5),
     scrim: new Damped(0),
+    scrimEdge: new Damped(0),
     bloom: new Damped(1),
     env: new Damped(1),
     roll: new Damped(0),
@@ -167,6 +168,23 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
       env.dispose();
     };
   }, [get]);
+
+  // Compile every program up front, including objects that are hidden until
+  // later in the journey (beam, dust, haze, motes), so no shader compiles
+  // mid-scroll. Shader error checks (a sync driver round trip) stay dev-only.
+  useEffect(() => {
+    const { gl, scene, camera } = get();
+    gl.debug.checkShaderErrors = process.env.NODE_ENV !== 'production';
+    const hidden: Object3D[] = [];
+    scene.traverse((o) => {
+      if (!o.visible) {
+        hidden.push(o);
+        o.visible = true;
+      }
+    });
+    gl.compileAsync(scene, camera).catch(() => {});
+    for (const o of hidden) o.visible = false;
+  }, [get, tier]);
 
   // Section metrics.
   useEffect(() => {
@@ -312,6 +330,7 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
       rig.focusX.snap(s.focusX);
       rig.focusY.snap(s.focusY);
       rig.scrim.snap(s.scrim);
+      rig.scrimEdge.snap(s.scrimEdge);
       rig.bloom.snap(s.bloom);
       rig.env.snap(s.env);
       rig.keyDir.snap(s.keyDir);
@@ -336,6 +355,7 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
     look.focusX = rig.focusX.step(s.focusX, 0.6, dt);
     look.focusY = rig.focusY.step(s.focusY, 0.6, dt);
     look.scrim = Math.max(0, rig.scrim.step(s.scrim, 0.6, dt));
+    look.scrimEdge = Math.max(0, rig.scrimEdge.step(s.scrimEdge, 0.6, dt));
     look.bloom = rig.bloom.step(s.bloom, 0.6, dt);
     const rimAng = rig.rimAng.step(s.rimAng, 0.6, dt);
     const keyDir = rig.keyDir.step(s.keyDir, 0.8, dt, rig.tmpD);
