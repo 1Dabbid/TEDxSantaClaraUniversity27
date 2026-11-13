@@ -9,10 +9,13 @@ const KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', other: 'Progr
 // Draft skeleton widths (no draft content is ever shown before publishing).
 const DRAFT = [38, 62, 29, 55, 44];
 
-const rowGrid = 'grid grid-cols-[1.25rem_1fr] gap-x-4 sm:grid-cols-[1.25rem_8rem_1fr_auto] sm:items-baseline sm:gap-x-8';
+const rowGrid =
+  'grid grid-cols-[1.25rem_1fr] gap-x-4 sm:grid-cols-[1.25rem_8rem_1fr_auto] sm:items-baseline sm:gap-x-8 lg:grid-cols-[1.25rem_5rem_1fr_auto] lg:gap-x-6';
 
 /**
- * § 03 · Schedule. A timeline whose hairline draws as you scroll (ScheduleMotion)
+ * § 03 · Schedule. Over the slow orbit of the rug: on desktop the timeline is a
+ * column on the left (scrim behind that column only), the rest of the frame is
+ * left to the stage. A timeline whose hairline draws as you scroll (ScheduleMotion)
  * and whose rows rise from masks one after another (global data-reveal). Before
  * the running order is published it shows a designed draft: clause-numbered rows
  * with redacted entries and a draft stamp, never the unpublished content itself.
@@ -20,7 +23,8 @@ const rowGrid = 'grid grid-cols-[1.25rem_1fr] gap-x-4 sm:grid-cols-[1.25rem_8rem
 export function Schedule({ schedule, settings }: { schedule: ScheduleData; settings: Settings }) {
   const published = schedule.published && schedule.items.length > 0;
   return (
-    <SectionShell id="schedule" className="py-24 sm:py-44">
+    <SectionShell id="schedule" scrim="none" className="py-28 sm:py-48">
+      <div aria-hidden="true" className="schedule-scrim pointer-events-none absolute inset-0 -z-10" />
       <div className="shell">
         <SectionLabel index={3}>Schedule</SectionLabel>
         <SectionTitle id="schedule">One evening.</SectionTitle>
@@ -30,7 +34,7 @@ export function Schedule({ schedule, settings }: { schedule: ScheduleData; setti
           {settings.endTime ? <> · Ends {settings.endTime}</> : null}
         </p>
 
-        <div className="relative mt-16" data-timeline>
+        <div className="relative mt-16 lg:mt-20 lg:max-w-[32rem]" data-timeline>
           {/* The hairline: drawn top to bottom by scroll. */}
           <span
             aria-hidden="true"
@@ -77,7 +81,7 @@ export function Schedule({ schedule, settings }: { schedule: ScheduleData; setti
                 <span aria-hidden="true" />
                 <span
                   data-reveal="lines"
-                  className="max-w-3xl text-title font-semibold tracking-tight text-balance sm:col-span-3"
+                  className="max-w-3xl text-title font-semibold tracking-tight text-balance sm:col-span-3 lg:text-[2.25rem]"
                 >
                   The running order is still in draft. The details are being decided.
                 </span>

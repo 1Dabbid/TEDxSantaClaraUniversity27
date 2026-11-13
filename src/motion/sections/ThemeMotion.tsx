@@ -22,7 +22,8 @@ function textRect(el: HTMLElement): DOMRect {
  *
  * md+: the section is a tall runway with a sticky stage (CSS, globals.css), so it
  * works with Lenis and needs no pin spacer. One scrubbed timeline maps the runway:
- *   1. the heading lifts away and a scrim settles in over the 3D push-in,
+ *   1. the heading lifts away and the contract recedes: for a beat the engraved
+ *      type on the 3D push-in (right of frame) is the only fine print on screen,
  *   2. each phrase of the definitions clause lights up in the 9px contract text
  *      (a defined term, set in the sans), then lifts off: a take-off copy in the
  *      same family, weight, tracking and text is laid exactly over it (FLIP from
@@ -31,8 +32,8 @@ function textRect(el: HTMLElement): DOMRect {
  *      It grows until it fills the width and on the way settles into display
  *      weight and tight tracking (opacity crossfade to the display copy, done
  *      while it is still small, so no double image is visible at full size),
- *   3. earlier phrases dim while the next one grows; at the end all settle at
- *      full strength and the small print returns, its terms marked in accent,
+ *   3. grown phrases stay white and stack into the finished sentence; at the
+ *      end the small print returns, its terms underlined in accent,
  *   4. a clause counter ticks: § 1.0 → § 1.4(a) → (b) → (c).
  * Measurements are functions re-evaluated on every ScrollTrigger refresh.
  *
@@ -47,6 +48,7 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const fineList = fine?.querySelector<HTMLElement>('ol') ?? null;
   const foot = root.querySelector<HTMLElement>('[data-theme-foot]');
   const scrim = root.querySelector<HTMLElement>('[data-theme-scrim]');
+  const fig = root.querySelector<HTMLElement>('[data-theme-fig]');
   const clauseEl = root.querySelector<HTMLElement>('[data-theme-clause]');
   const stepEl = root.querySelector<HTMLElement>('[data-theme-step]');
   const lines = Array.from(root.querySelectorAll<HTMLElement>('[data-theme-line]'));
@@ -104,8 +106,16 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       return v;
     };
 
-    const t0 = 0.14;
-    const span = 0.72 / n;
+    // Beats (timeline 0..1 over the runway):
+    //   0.02-0.13  the heading lifts away, the contract recedes;
+    //   0.13-0.33  the engraving on the 3D microphone is the only fine print on
+    //              screen (a figure caption points at it);
+    //   0.31-0.37  the contract returns, its defined terms light up;
+    //   0.37-0.87  the phrases lift off and grow, one after another; lines that
+    //              have grown stay white and stack into the sentence;
+    //   0.87-1     settled: the sentence, the contract at full strength.
+    const t0 = 0.37;
+    const span = 0.5 / n;
     const grow = span * 0.9;
     let step = -1;
 
@@ -119,6 +129,7 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
 
     gsap.set(inners, { opacity: 0 });
     gsap.set(texts, { opacity: 0 });
+    if (fig) gsap.set(fig, { opacity: 0 });
 
     const tl = gsap.timeline({
       defaults: { ease: 'none' },
@@ -137,8 +148,16 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       },
     });
 
-    tl.to(titleWrap, { opacity: 0, y: -48, duration: 0.12, ease: 'power2.in' }, 0.02);
-    if (scrim) tl.to(scrim, { opacity: 1, duration: 0.2 }, 0.04);
+    const contract = fineList ?? fine;
+    tl.to(titleWrap, { opacity: 0, y: -48, duration: 0.11, ease: 'power2.in' }, 0.02);
+    // The engraving beat: DOM fine print recedes, the 3D type carries the frame.
+    tl.to(contract, { opacity: 0.12, duration: 0.08, ease: 'power1.inOut' }, 0.05);
+    if (fig) {
+      tl.fromTo(fig, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.05, ease: 'power2.out', immediateRender: false }, 0.15);
+      tl.to(fig, { opacity: 0, duration: 0.04, ease: 'power1.in' }, 0.31);
+    }
+    tl.to(contract, { opacity: 1, duration: 0.05, ease: 'power1.out' }, 0.31);
+    if (scrim) tl.to(scrim, { opacity: 1, duration: 0.12 }, t0 - 0.02);
 
     inners.forEach((inner, i) => {
       const at = t0 + i * span;
@@ -157,15 +176,15 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       const settleAt = at + grow * 0.16;
       tl.fromTo(ghosts[i], { opacity: 1 }, { opacity: 0, duration: grow * 0.28, ease: 'power1.inOut', immediateRender: false }, settleAt);
       tl.fromTo(texts[i], { opacity: 0 }, { opacity: 1, duration: grow * 0.28, ease: 'power1.inOut', immediateRender: false }, settleAt);
-      if (i > 0) tl.to(lines.slice(0, i), { opacity: 0.22, duration: grow * 0.6, ease: 'power1.inOut' }, at);
-      if (i === 0) tl.to(fineList ?? fine, { opacity: 0.35, duration: grow * 0.6 }, at + grow * 0.4);
+      // While the big type grows the contract steps back (it returns at the end).
+      if (i === 0) tl.to(contract, { opacity: 0.12, duration: grow * 0.5 }, at + grow * 0.4);
     });
 
-    // Settle: everything at full strength, the small print returns with its terms marked.
+    // Settle: the finished sentence stays white; the contract returns at full
+    // strength with its defined terms underlined in accent.
     const end = t0 + n * span;
-    tl.to(lines, { opacity: 1, duration: 0.08, ease: 'power2.out' }, end);
-    tl.to(fineList ?? fine, { opacity: 0.8, duration: 0.08 }, end);
-    tl.set(phrases, { color: accent }, end);
+    tl.to(contract, { opacity: 1, duration: 0.07 }, end);
+    tl.set(phrases, { textDecorationColor: accent }, end);
     tl.to(phrases, { opacity: 1, duration: 0.06 }, end);
     if (foot) tl.fromTo(foot, { opacity: 0 }, { opacity: 1, duration: 0.06, immediateRender: true }, end + 0.02);
     tl.to({}, { duration: 0.001 }, 1);

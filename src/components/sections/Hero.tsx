@@ -36,7 +36,9 @@ function wordEm(word: string): number {
  * run and keeps its kerning), the footnote marker pops last, and the facts and
  * buttons settle (readable from the first frame). HeroMotion adds the scroll-out.
  *
- * Phones: one word per line, sized to fill the column (see wordEm), bold.
+ * Phones: one word per line, sized to fill the column (see wordEm), bold. The
+ * facts stack in a narrow left column so the lower right stays open for the
+ * mic, with a local scrim behind the text only.
  */
 export function Hero({ settings }: { settings: Settings }) {
   const cta = ticketCta(settings);
@@ -46,7 +48,10 @@ export function Hero({ settings }: { settings: Settings }) {
   const center = (words.length - 1) / 2;
 
   return (
-    <SectionShell id="hero" scrim="left" className="flex min-h-[calc(100svh-var(--header-h))] flex-col">
+    <SectionShell id="hero" scrim="none" className="flex min-h-[calc(100svh-var(--header-h))] flex-col">
+      {/* Local scrim behind the text column only; the mic (right third on
+          desktop, lower right on phones) is left clean. */}
+      <div aria-hidden="true" className="hero-scrim pointer-events-none absolute inset-0 -z-10" />
       <div
         aria-hidden="true"
         className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-black via-black/70 to-transparent"
@@ -94,21 +99,21 @@ export function Hero({ settings }: { settings: Settings }) {
           <p
             data-hero-seq
             style={seq(0)}
-            className="mt-6 max-w-xl text-lg text-balance text-mute sm:text-2xl sm:leading-snug"
+            className="mt-6 max-w-[17rem] text-lg text-balance text-mute sm:max-w-xl sm:text-2xl sm:leading-snug"
           >
             {settings.themeTagline}
           </p>
 
-          <div className="relative mt-8 max-w-4xl sm:mt-12">
+          <div className="hero-facts relative mt-7 max-w-[15.5rem] sm:mt-12 sm:max-w-[min(54rem,56vw)]">
             <span aria-hidden="true" className="hero-rule absolute inset-x-0 top-0 h-px origin-left bg-white/15" />
-            <dl data-hero-seq style={seq(1)} className="grid grid-cols-2 gap-x-6 gap-y-5 pt-5 sm:grid-cols-3 sm:gap-6 sm:pt-6">
+            <dl data-hero-seq style={seq(1)} className="grid grid-cols-1 gap-y-3.5 pt-5 sm:grid-cols-3 sm:gap-6 sm:pt-6">
               <div>
                 <dt className="fine-print">Date</dt>
                 <dd className="mt-1.5 text-white">
                   <time dateTime={settings.dateISO}>{settings.dateLong}</time>
                 </dd>
               </div>
-              <div className="order-last col-span-2 sm:order-none sm:col-span-1">
+              <div>
                 <dt className="fine-print">Venue</dt>
                 <dd className="mt-1.5 text-white">
                   {settings.venueName}
@@ -125,7 +130,7 @@ export function Hero({ settings }: { settings: Settings }) {
             </dl>
           </div>
 
-          <div data-hero-seq style={seq(2)} className="mt-8 flex flex-wrap items-center gap-3 sm:mt-10">
+          <div data-hero-seq style={seq(2)} className="mt-7 flex flex-wrap items-center gap-3 sm:mt-10">
             <Button href={cta.href} size="lg" aria-label={cta.ariaLabel}>
               Tickets
             </Button>
