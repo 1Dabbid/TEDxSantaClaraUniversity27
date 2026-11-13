@@ -220,7 +220,11 @@ html.lenis body {
    failsafe animation shows everything if the motion bundle never arrives. */
 /* Only the outermost reveal hides: nested ones are animated by it (and a split
    re-creates them, so they could never be armed reliably). */
-html.motion [data-reveal]:not([data-reveal-armed]):not([data-reveal] [data-reveal]) {
+/* Only after the engine's first scan ([data-reveals] on <html>): the cold-load
+   HTML paints fully visible so LCP never waits for the motion bundle. The first
+   scan leaves what is already on screen as it is and arms the rest off screen;
+   pages rendered later (client navigations) are hidden from their first paint. */
+html.motion[data-reveals] [data-reveal]:not([data-reveal-armed]):not([data-reveal] [data-reveal]) {
   opacity: 0;
   animation: reveal-failsafe 0.01s linear 3s forwards;
 }

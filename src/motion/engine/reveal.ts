@@ -227,8 +227,9 @@ function revealRule(el: HTMLElement): Rec {
   return { el, kill: () => tween.revert(), now: () => finishTween(tween) };
 }
 
-function revealStagger(el: HTMLElement): Rec {
-  const children = Array.from(el.children) as HTMLElement[];
+function revealStagger(el: HTMLElement, onScreen: ((c: Element) => boolean) | null): Rec {
+  // Cold load: children already painted on screen stay as they are (see scanReveals).
+  const children = (Array.from(el.children) as HTMLElement[]).filter((c) => !onScreen?.(c));
   const wipe = el.dataset.revealVariant === 'wipe';
   const delay = delayOf(el);
   // transition:none so CSS hover transitions on the children never smear the reveal.
@@ -271,38 +272,71 @@ function revealStagger(el: HTMLElement): Rec {
   };
 }
 
+function create(el: HTMLElement, onScreen: ((c: Element) => boolean) | null): Rec {
+  switch (el.dataset.reveal) {
+    case 'lines':
+      return revealSplit(el, 'lines');
+    case 'chars':
+      return revealSplit(el, 'chars');
+    case 'stagger':
+      return revealStagger(el, onScreen);
+    case 'rule':
+      return revealRule(el);
+    default:
+      return revealFade(el);
+  }
+}
+
+/**
+ * Cold load vs. later scans. The server HTML paints fully visible (the CSS
+ * pre-reveal hide only applies once `html[data-reveals]` is set), so the first
+ * contentful paint is also the largest one and the engine arriving late never
+ * delays LCP. On the first scan, reveals already painted inside the viewport
+ * are left as they are, with no hide-then-animate; everything below the fold
+ * is armed off screen as usual. After that scan the hide applies, so content
+ * rendered later (client navigations under the curtain, back/forward) is hidden
+ * from its first paint until armed, with the 3s failsafe in globals.css.
+ */
+const READY_ATTR = 'data-reveals';
+const onScreenNow = (n: Element) => {
+  const r = n.getBoundingClientRect();
+  return r.bottom > 0 && r.top < window.innerHeight && r.width > 0 && r.height > 0;
+};
+
 /** Arms every not-yet-armed [data-reveal] element under `root`. */
 export function scanReveals(root: ParentNode = document) {
   tune();
+  const html = document.documentElement;
+  const onScreen = html.hasAttribute(READY_ATTR) ? null : onScreenNow;
   const els = Array.from(root.querySelectorAll<HTMLElement>('[data-reveal]:not([data-reveal-armed])'));
   // Nested reveals: the outermost one owns the animation. Arm them all first,
   // before any outer split re-creates them.
   const own: HTMLElement[] = [];
   for (const el of els) {
     if (el.parentElement?.closest('[data-reveal]') || done.has(el)) arm(el);
-    else own.push(el);
+    else if (onScreen && el.dataset.reveal !== 'stagger' && onScreen(el)) {
+      done.add(el);
+      arm(el);
+    } else own.push(el);
   }
   for (const el of own) {
-    let rec: Rec | null = null;
-    switch (el.dataset.reveal) {
-      case 'lines':
-        rec = revealSplit(el, 'lines');
-        break;
-      case 'chars':
-        rec = revealSplit(el, 'chars');
-        break;
-      case 'stagger':
-        rec = revealStagger(el);
-        break;
-      case 'rule':
-        rec = revealRule(el);
-        break;
-      default:
-        rec = revealFade(el);
-    }
+    // Everything a reveal creates (tweens, ScrollTriggers, batch delayedCalls, the
+    // split) is recorded by its context, so kill() can let go of all of it.
+    let r!: Rec;
+    const ctx = gsap.context(() => {
+      r = create(el, onScreen);
+    });
     arm(el);
-    records.push(rec);
+    records.push({
+      el,
+      now: r.now,
+      kill: () => {
+        r.kill();
+        ctx.revert();
+      },
+    });
   }
+  html.setAttribute(READY_ATTR, '');
 }
 
 /** Kills reveals whose elements left the document (route change). */
@@ -322,6 +356,8 @@ export function killReveals() {
     r.el.removeAttribute('data-reveal-armed');
   }
   records.length = 0;
+  // A later scan (quality back up) starts from whatever is painted, like a cold load.
+  document.documentElement.removeAttribute(READY_ATTR);
 }
 
 /** Keyboard focus must never land on something still hidden: finish its reveal now. */
