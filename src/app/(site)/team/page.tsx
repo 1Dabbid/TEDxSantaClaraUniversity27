@@ -95,7 +95,6 @@ export default async function TeamPage() {
             { k: 'Organizer', v: 'Student-run' },
             { k: 'Board', v: `${team.length} ${team.length === 1 ? 'role' : 'roles'}` },
             { k: 'Campus', v: campus },
-            ...(settings.contactEmail ? [{ k: 'Contact', v: <a href={mail}>{settings.contactEmail}</a> }] : []),
           ]}
         />
       </section>

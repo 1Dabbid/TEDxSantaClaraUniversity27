@@ -60,7 +60,6 @@ export default async function FaqPage() {
             { k: 'Questions', v: String(items.length) },
             { k: 'Date', v: <time dateTime={settings.dateISO}>{settings.dateLong}</time> },
             { k: 'Venue', v: venueLine(settings) },
-            ...(settings.contactEmail ? [{ k: 'Contact', v: <a href={mail}>{settings.contactEmail}</a> }] : []),
           ]}
         />
       </section>
