@@ -41,22 +41,27 @@ const csp = (directives: Record<string, string[]>) =>
     .map(([k, v]) => (v.length ? `${k} ${v.join(' ')}` : k))
     .join('; ');
 
+// Vercel preview deployments inject the Vercel Toolbar (comments, share) from vercel.live.
+const preview = process.env.VERCEL_ENV === 'preview';
+const toolbar = (...extra: string[]) => (preview ? ['https://vercel.live', ...extra] : []);
+
 /**
  * Public site. Every page is statically generated, so per-request nonces are not
  * possible: Next's inline RSC payload scripts and the motion boot script need
  * 'unsafe-inline'. Everything else is same-origin only; the site makes no
- * third-party requests (self-hosted fonts, no analytics).
+ * third-party requests (self-hosted fonts, no analytics). Preview deployments
+ * additionally allow the Vercel Toolbar.
  */
 const siteCsp = csp({
   'default-src': ["'self'"],
-  'script-src': ["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : [])],
-  'style-src': ["'self'", "'unsafe-inline'"],
-  'img-src': ["'self'", 'data:', 'blob:'],
-  'font-src': ["'self'", 'data:'],
-  'connect-src': ["'self'", ...(isDev ? ['ws:'] : [])],
+  'script-src': ["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : []), ...toolbar()],
+  'style-src': ["'self'", "'unsafe-inline'", ...toolbar()],
+  'img-src': ["'self'", 'data:', 'blob:', ...toolbar('https://vercel.com')],
+  'font-src': ["'self'", 'data:', ...toolbar('https://assets.vercel.com')],
+  'connect-src': ["'self'", ...(isDev ? ['ws:'] : []), ...toolbar('wss://ws-us3.pusher.com')],
   'worker-src': ["'self'", 'blob:'],
   'media-src': ["'self'"],
-  'frame-src': frames.length ? ["'self'", ...frames] : ["'none'"],
+  'frame-src': frames.length || preview ? ["'self'", ...frames, ...toolbar()] : ["'none'"],
   'object-src': ["'none'"],
   'base-uri': ["'self'"],
   'form-action': ["'self'"],
