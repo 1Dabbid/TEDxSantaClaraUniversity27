@@ -50,7 +50,7 @@ Doors and end time for the whole evening are in **The event > Event basics**: **
 1. **The event > Tickets & speaker applications**.
 2. **Ticket link**: the ticketing page (must start with `https://`).
 3. Optional: **Ticket checkout embed link (optional)**, only if the ticketing service gives you an "embed" link. Leave blank if unsure. If the embedded checkout stays blank on the live site, tell the web team: some services need one more allowed address (`CSP_FRAME_SRC` on Vercel).
-4. **Price note**: one short sentence. TEDx rules cap tickets at **$100**.
+4. **Price note**: one short sentence, e.g. "Tickets will cost no more than $100." Our cap is **$100**; confirm the limit for our licence tier with the licence holder. Do not call it a TED rule on the site.
 5. Set **Ticket status** to **On sale** and **Save**. Every Tickets button on the site updates. ("On sale" only shows the buy button when a ticket link is filled in.)
 6. Later: switch to **Sold out** or **Closed (sales have ended)**.
 
@@ -92,12 +92,12 @@ The whole section can be hidden in **Contact & site > Show / hide sections > Sho
 - **Newsletter sign-up link (SendFox)**: while blank, the site shows "list opening soon".
 - **Contact email**: shown in the footer and FAQ.
 - **Partnerships email**: used by every "Become a partner" button (falls back to tedxscu.com while blank).
-- **Social links**: **Instagram**, **LinkedIn**, **YouTube**, **TikTok** (full links; blank ones are hidden).
+- **Social links**: **Instagram**, **LinkedIn**, **YouTube**, **TikTok** (full links; blank ones are hidden). **YouTube**: club channel only. Full TEDx talks may only be published through TED's uploader, never on this channel.
 - **Livestream link (optional)**: see "Add the livestream link" below.
 
 ### Add the livestream link
 
-Only if the event is streamed.
+Only if the event is streamed. **The stream must be free. Do not stream if any TED Talk videos are shown in the programme; confirm with the licence holder first.**
 
 1. **Contact & site > Contact, newsletter & socials > Livestream link (optional)**: paste the full link to the stream page (e.g. the YouTube live page; it must start with `https://`).
 2. **Save**. A small **Watch live** link (with a red dot) appears in two places: next to the buttons at the top of the home page, and next to the main button in the Tickets section. It opens the stream in a new tab.
@@ -140,5 +140,5 @@ Use plain file names without spaces (e.g. `jane-doe.jpg`). The site resizes and 
 - Keep the line **"This independent TEDx event is operated under license from TED."** (it is in the footer; do not ask for it to be removed).
 - Partners never speak from the stage and have no say over the programme; do not list such benefits.
 - No prohibited sponsors (TED's rules exclude, among others, tobacco, firearms, political parties and religious organizations as sponsors). The current list is in TED's TEDx sponsorship rules; when in doubt, ask the license holder before publishing.
-- Tickets may not cost more than $100.
+- Tickets: our cap is $100; confirm the limit for our licence tier with the licence holder.
 - Do not put unconfirmed facts on the site. Leave the field blank instead.

@@ -179,8 +179,8 @@ export default config({
         ),
         ticketPriceNote: fields.text({
           label: 'Price note',
-          description: 'One short sentence about price. TEDx rules cap tickets at $100.',
-          defaultValue: 'Tickets will be priced at no more than $100, in line with TEDx guidelines.',
+          description: 'One short sentence about price. Our cap is $100; confirm the limit for our licence tier with the licence holder.',
+          defaultValue: 'Tickets will cost no more than $100.',
         }),
         speakerApplicationsState: fields.select({
           label: 'Speaker applications',
@@ -217,13 +217,16 @@ export default config({
         ),
         livestreamUrl: urlField(
           'Livestream link (optional)',
-          'Only if the event is streamed, e.g. the YouTube live page. When filled in, a “Watch live” link appears in the hero and the Tickets section (it opens in a new tab). Leave blank to show nothing.',
+          'Only if the event is streamed, e.g. the YouTube live page. When filled in, a “Watch live” link appears in the hero and the Tickets section (it opens in a new tab). Leave blank to show nothing. The stream must be free. Do not stream if any TED Talk videos are shown in the programme; confirm with the licence holder first.',
         ),
         socials: fields.object(
           {
             instagram: urlField('Instagram', 'Full link, e.g. https://www.instagram.com/…'),
             linkedin: urlField('LinkedIn', 'Full link to the page.'),
-            youtube: urlField('YouTube', 'Full link to the channel.'),
+            youtube: urlField(
+              'YouTube',
+              'Full link to the channel. Club channel only. Full TEDx talks may only be published through TED’s uploader, never on this channel.',
+            ),
             tiktok: urlField('TikTok', 'Full link to the profile.'),
           },
           { label: 'Social links', description: 'Only filled-in links are shown.' },
