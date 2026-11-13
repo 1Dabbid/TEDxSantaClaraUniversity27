@@ -135,7 +135,7 @@ function drawTracked(ctx: CanvasRenderingContext2D, s: string, x: number, y: num
 /** Cheap separable 3-tap blur (two passes ≈ 5-tap), wraps horizontally. */
 function blurRows(a: Uint8Array, w: number, h: number) {
   const tmp = new Uint8Array(a.length);
-  for (let pass = 0; pass < 2; pass++) {
+  for (let pass = 0; pass < 1; pass++) {
     for (let y = 0; y < h; y++) {
       const o = y * w;
       for (let x = 0; x < w; x++) {

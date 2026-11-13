@@ -1,15 +1,26 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { BoxGeometry, Color, Matrix4, Quaternion, Vector3, type InstancedMesh } from 'three';
+import { BoxGeometry, BufferGeometry, Color, Matrix4, Quaternion, Shape, Vector3, type InstancedMesh } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { roundedBox } from './geometry';
+import { bevelledExtrude, roundedBox } from './geometry';
 import { SEATING } from './layout';
 import { createSeatMaterial } from './materials';
 
 /** One upholstered auditorium seat, facing -Z, origin on the floor. */
 function seatGeometry(detail: number) {
-  const back = roundedBox(0.5, 0.56, 0.07, 0.024, detail);
+  // Seat back: arched top, slight waist, bevelled so the top edge catches a thin highlight.
+  const w = 0.25;
+  const shape = new Shape();
+  shape.moveTo(-w + 0.02, -0.28);
+  shape.lineTo(w - 0.02, -0.28);
+  shape.quadraticCurveTo(w + 0.004, -0.27, w, -0.22);
+  shape.lineTo(w - 0.008, 0.16);
+  shape.bezierCurveTo(w - 0.02, 0.29, 0.1, 0.33, 0, 0.33);
+  shape.bezierCurveTo(-0.1, 0.33, -w + 0.02, 0.29, -w + 0.008, 0.16);
+  shape.lineTo(-w, -0.22);
+  shape.quadraticCurveTo(-w - 0.004, -0.27, -w + 0.02, -0.28);
+  const back = bevelledExtrude(shape, 0.075, 0.018, detail * 3);
   back.rotateX(0.16);
   back.translate(0, 0.74, 0.21);
   const cushion = roundedBox(0.48, 0.09, 0.45, 0.03, detail);
@@ -18,7 +29,7 @@ function seatGeometry(detail: number) {
   armL.translate(-0.275, 0.31, 0.0);
   const armR = armL.clone();
   armR.translate(0.55, 0, 0);
-  const strip = (g: ReturnType<typeof roundedBox>) => {
+  const strip = (g: BufferGeometry) => {
     const out = g.index ? g.toNonIndexed() : g;
     for (const k of Object.keys(out.attributes)) if (k !== 'position' && k !== 'normal') out.deleteAttribute(k);
     return out;
