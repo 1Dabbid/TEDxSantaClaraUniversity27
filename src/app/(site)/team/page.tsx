@@ -55,7 +55,8 @@ export default async function TeamPage() {
   // An empty team counts as switched off (same rule as the header, footer and sitemap: nav.ts, sitemap.ts).
   if (!settings.sections.showTeam || team.length === 0) notFound();
   const named = team.filter((m) => m.name).length;
-  const campus = settings.venueCampus || 'Santa Clara University';
+  // From content only: a blank Campus field leaves the campus out rather than guessing it.
+  const campus = settings.venueCampus;
   const mail = settings.contactEmail
     ? `mailto:${settings.contactEmail}?subject=${encodeURIComponent(`Question · ${settings.eventName}`)}`
     : '';
@@ -78,14 +79,14 @@ export default async function TeamPage() {
           title="Organized by students."
           intro={
             <>
-              {settings.eventName} is planned and run by a student board at {campus}.
+              {settings.eventName} is planned and run by a student board{campus ? ` at ${campus}` : ''}.
               {named < team.length ? ' Names appear here as each member agrees to be listed.' : null}
             </>
           }
           facts={[
             { k: 'Organizer', v: 'Student-run' },
             { k: 'Board', v: `${team.length} ${team.length === 1 ? 'role' : 'roles'}` },
-            { k: 'Campus', v: campus },
+            ...(campus ? [{ k: 'Campus', v: campus }] : []),
           ]}
         />
       </section>
