@@ -148,7 +148,9 @@ function TicketEmbed({ src, eventName }: { src: string; eventName: string }) {
           title={`Ticket checkout for ${eventName}`}
           loading="lazy"
           referrerPolicy="strict-origin-when-cross-origin"
-          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"
+          // No top navigation: the embed can never replace this page. Payment steps that need a
+          // full window (3-D Secure, PayPal and the like) open as popups or a new tab instead.
+          sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
           className="relative size-full border-0 bg-transparent"
         />
       </div>

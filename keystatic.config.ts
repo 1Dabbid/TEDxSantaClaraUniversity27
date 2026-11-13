@@ -1,5 +1,5 @@
 import { collection, config, fields, singleton } from '@keystatic/core';
-import { TEDX_MAX_CAPACITY } from './src/lib/site';
+import { EMAIL_PATTERN, TEDX_MAX_CAPACITY } from './src/lib/site';
 
 /**
  * Keystatic content model: what student editors see at /keystatic.
@@ -8,15 +8,20 @@ import { TEDX_MAX_CAPACITY } from './src/lib/site';
  * the code. Each save writes a YAML file under /content (or an image under
  * public/images/...). Pages read content only through src/lib/content.ts.
  *
- * Storage: local files by default. When the Keystatic GitHub App env vars are
- * present (NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG is the one visible to the
- * browser), storage switches to GitHub so editors on the deployed site commit
- * straight to the repo. See README.md.
+ * Storage: local files by default, which only ever run under `npm run dev`
+ * (src/lib/admin.ts switches the admin off everywhere else). GitHub storage is
+ * used only when all four Keystatic variables are set at build time
+ * (KEYSTATIC_GITHUB_CLIENT_ID, KEYSTATIC_GITHUB_CLIENT_SECRET, KEYSTATIC_SECRET,
+ * NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG); editors on the deployed site then sign
+ * in with GitHub and commit straight to the repo. The secrets are not visible to
+ * the browser, so next.config.ts turns "all four present" into the build-time
+ * flag KEYSTATIC_GITHUB_MODE, which both the server and the admin UI read. A
+ * slug on its own keeps local storage, except under `npm run dev`, where it opens
+ * Keystatic's GitHub App setup flow (/keystatic/setup). See docs/DEPLOY.md.
  */
-const useGithub = Boolean(process.env.NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG);
+const useGithub = process.env.KEYSTATIC_GITHUB_MODE === '1';
 
 const LEAVE_BLANK = 'Leave blank until it is confirmed. The site shows “to be announced” instead.';
-const EMAIL = /^$|^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const TIME = /^$|^\d{1,2}:\d{2}\s?(AM|PM)$/i;
 
 const urlField = (label: string, description: string) => fields.url({ label, description });
@@ -25,7 +30,7 @@ const emailField = (label: string, description: string) =>
   fields.text({
     label,
     description,
-    validation: { pattern: { regex: EMAIL, message: 'Use a full email address, like name@example.com, or leave it blank.' } },
+    validation: { pattern: { regex: EMAIL_PATTERN, message: 'Use a full email address, like name@example.com, or leave it blank.' } },
   });
 
 const timeField = (label: string) =>
@@ -408,7 +413,8 @@ export default config({
         }),
         photo: fields.image({
           label: 'Portrait',
-          description: 'A portrait photo, ideally 1200×1500 px or larger (4:5). It is shown in black and white.',
+          description:
+            'A portrait photo (JPG, PNG or WebP; not SVG), ideally 1200×1500 px or larger (4:5). It is shown in black and white.',
           directory: 'public/images/speakers',
           publicPath: '/images/speakers/',
         }),
@@ -446,7 +452,7 @@ export default config({
         }),
         photo: fields.image({
           label: 'Photo (optional)',
-          description: 'Square headshot. Only shown together with the name.',
+          description: 'Square headshot (JPG, PNG or WebP; not SVG). Only shown together with the name.',
           directory: 'public/images/team',
           publicPath: '/images/team/',
         }),
