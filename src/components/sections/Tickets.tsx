@@ -125,7 +125,7 @@ function TicketEmbed({ src, eventName }: { src: string; eventName: string }) {
   return (
     <figure className="mt-16 sm:mt-24">
       <figcaption className="flex flex-wrap items-baseline justify-between gap-3 border-t border-white/15 pt-4">
-        <span className="fine-print text-white">Schedule A · Checkout</span>
+        <span className="fine-print text-white">Checkout</span>
         <span className="fine-print text-mute">Provided by the ticketing service. Opens in this page.</span>
       </figcaption>
       <div

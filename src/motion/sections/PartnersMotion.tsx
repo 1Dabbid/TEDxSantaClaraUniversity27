@@ -18,12 +18,12 @@ function hairline(row: HTMLElement, side: Side, color: string) {
  * /partners. The hero headline rises line by line with a shear on load (the
  * global reveal, `data-reveal-variant="shear"`). Then:
  *
- * - The tier ledger (§ 02) is ruled row by row: as each schedule enters, the
+ * - The tier ledger is ruled row by row: as each tier row enters, the
  *   hairline above it is drawn left to right over the space where the border
  *   sits (the real border is hidden meanwhile, then restored and the drawn rule
  *   removed), and the row's three columns settle in after the pen. The last
  *   row also rules its own foot. Keyboard focus inside a pending row finishes it.
- * - The giant address (§ 06) is set character by character from masks, scrubbed
+ * - The giant address (Contact) is set character by character from masks, scrubbed
  *   to scroll on mouse / trackpad (md+), played once on touch. The link's
  *   accessible name comes from an sr-only copy; break opportunities are kept
  *   after every character so it still wraps anywhere at 320px.
