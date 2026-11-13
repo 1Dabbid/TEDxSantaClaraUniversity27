@@ -221,9 +221,12 @@ export function Venue({ settings }: { settings: Settings }) {
                 </li>
               ))}
             </ol>
+            {/* Under the notes column, as the end of that list. */}
+            <MoreLink href="/venue" label="Venue details" className="-mt-4 md:col-span-8 md:col-start-5" />
           </div>
-        ) : null}
-        <MoreLink href="/venue" label="Venue details" />
+        ) : (
+          <MoreLink href="/venue" label="Venue details" />
+        )}
       </div>
     </SectionShell>
   );
