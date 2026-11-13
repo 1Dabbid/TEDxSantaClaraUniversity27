@@ -13,7 +13,7 @@
  * and {campus}, filled in from Event basics and Venue like FAQ answers.
  */
 export const THEME_COPY_DEFAULTS = {
-  /** Hero footnote (after the red "1."). Blank: no footnote marker in the hero or the share image. */
+  /** Hero caption, small capitals at the bottom of the first screen. Blank: left out. */
   heroFootnote: 'Terms and conditions apply. They are the whole point.',
   /** Hero scroll cue, bottom right on desktop. */
   heroScrollCue: 'Scroll to read the fine print',
@@ -46,8 +46,7 @@ export const THEME_COPY_DEFAULTS = {
   /** /partners, first "What your support makes possible" card. Blank title: the card is left out. Body: placeholders. */
   partnersEditionFigure: '1st',
   partnersEditionTitle: 'The first mainstage.',
-  partnersEditionBody:
-    'This is the first {eventName} mainstage event. Partners who join now are part of it from the start.',
+  partnersEditionBody: 'Partners who join now are part of it from the start.',
   /** 404 page. */
   notFoundHeading: 'This page does not exist.',
   notFoundBody: 'The link may be out of date, or the page may have moved.',

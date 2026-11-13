@@ -11,16 +11,17 @@ import { publicRoutes, settle } from './helpers';
 const TEXT_SPACING =
   '*:not(.sr-only){line-height:1.5!important;letter-spacing:0.12em!important;word-spacing:0.16em!important}p{margin-bottom:2em!important}';
 
-test('keyboard focus survives tabbing into a heading that is still revealing (newsletter note link)', async ({ page }) => {
+test('keyboard focus survives tabbing into a section that is still revealing (mailing list)', async ({ page }) => {
   await page.goto('/');
   await settle(page, 600);
-  // The last FAQ question: the next Tab stop is the note link inside the newsletter heading, whose reveal has not run yet.
+  // The last FAQ question: the next Tab stop is the first link of the closing section, whose reveals have not run yet.
   await page.locator('[data-section="faq"] summary').last().focus();
   await page.keyboard.press('Tab');
-  await expect(page.locator('a[href="#newsletter-note"]')).toBeFocused();
-  // Still focused once the reveal has finished.
+  const next = page.locator('[data-section="newsletter"] a').first();
+  await expect(next).toBeFocused();
+  // Still focused once the reveals have finished.
   await page.waitForTimeout(2000);
-  await expect(page.locator('a[href="#newsletter-note"]')).toBeFocused();
+  await expect(next).toBeFocused();
 });
 
 test('no link says "(opens in a new tab)" twice', async ({ page }) => {

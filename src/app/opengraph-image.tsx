@@ -58,23 +58,6 @@ export default async function OpenGraphImage() {
             }}
           >
             {themeName}
-            {/* The hero's footnote marker; gone when Theme copy > hero footnote is blank. */}
-            {s.copy.heroFootnote ? (
-            <div
-              style={{
-                display: 'flex',
-                fontFamily: 'Inter',
-                fontWeight: 400,
-                fontSize: themeSize * 0.22,
-                color: '#fff',
-                marginLeft: 8,
-                marginTop: themeSize * 0.08,
-                letterSpacing: 0,
-              }}
-            >
-              1
-            </div>
-            ) : null}
           </div>
           {/* Two lines, so both stay inside the square centre crop. */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: 34, lineHeight: 1.25, marginTop: 36 }}>
@@ -84,7 +67,7 @@ export default async function OpenGraphImage() {
         </div>
 
         <div style={{ display: 'flex', fontSize: 17, color: grey }}>
-          Independently organized TEDx event, operated under license from TED
+          This independent TEDx event is operated under license from TED.
         </div>
       </div>
     ),

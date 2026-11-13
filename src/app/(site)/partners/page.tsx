@@ -93,12 +93,12 @@ const RULES = [
     body: 'Partners cannot speak or present from the stage, and have no say over the program or the speakers.',
   },
   {
-    title: 'Thanks, on one slide.',
-    body: 'Partner logos appear on stage only on the thank-you slide, never during talks.',
+    title: 'Thanks, never mid-talk.',
+    body: 'Partners are thanked outside the talks, never during them, as TEDx rules require.',
   },
   {
     title: 'Recognition stays in its place.',
-    body: 'Logos appear on this page and on the thank-you slide, always smaller than the event’s own mark.',
+    body: 'Partner logos appear on this page only, never on the home page, and always smaller than the event’s own mark.',
   },
   {
     title: 'The list is for event news.',

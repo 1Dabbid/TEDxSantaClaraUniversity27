@@ -1,7 +1,7 @@
 items:
   - question: What is TEDx?
     answer: |-
-      {eventName} is an independently organized TEDx event, operated under license from TED. TED's official description of the TEDx program and of TED is printed under “About TEDx” and “About TED” at the bottom of every page.
+      {eventName} is an independently organized TEDx event, operated under license from TED. TED's description of the TEDx program and of TED is printed under “About TEDx” and “About TED” at the bottom of every page.
   - question: Who organizes it?
     answer: |-
       A team of Santa Clara University students. It is the first {eventName} mainstage event.
@@ -19,7 +19,7 @@ items:
       The talks are recorded and submitted for publication on the TEDx Talks YouTube channel.
   - question: How can I apply to speak?
     answer: |-
-      Speaker applications are coming soon. When they open, the link will appear on this site and go out to the mailing list.
+      Speaker applications are not open yet. When they open, the link will appear on this site and go out to the mailing list.
   - question: How can my organization become a partner?
     answer: |-
       We are inviting a small number of partners to support the event. The Partners page explains what partnership means under TEDx rules and how to get in touch.

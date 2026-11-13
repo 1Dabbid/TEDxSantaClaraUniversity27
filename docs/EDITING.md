@@ -158,9 +158,9 @@ Only the Director of Compliance (or the licence holder) should change these. The
 
 ### Change the theme's headings and short lines (Theme copy)
 
-**The event > Theme copy (headings and short lines)** holds the short lines that belong to this year's theme rather than to the facts: the footnote and scroll hint on the first screen, the Theme section heading and its footnote, the caption of the engraved microphone, the "to be announced" lines for Speakers and Schedule, the closing mailing-list heading, the partner invitation on the home page, the Partners page heading, introduction, description and first card, the 404 page, the footer sign-off and the word shown while a page changes. Each field says where it appears.
+**The event > Theme copy (headings and short lines)** holds the short lines that belong to this year's theme rather than to the facts: the caption and scroll hint on the first screen, the Theme section heading and its footnote, the caption of the engraved microphone, the "to be announced" lines for Speakers and Schedule, the closing mailing-list heading, the partner invitation on the home page, the Partners page heading, introduction, description and first card, the 404 page, the footer sign-off and the word shown while a page changes. Each field says where it appears.
 
-- Every field starts with this year's wording. Leave a field **blank** to go back to that wording, except the two footnotes and the Partners page's first card, which a blank **hides**.
+- Every field starts with this year's wording. Leave a field **blank** to go back to that wording, except the hero caption, the theme footnote and the Partners page's first card, which a blank **hides**.
 - In the partner texts you can write `{eventName}`, `{capacity}`, `{date}`, `{venue}` and `{campus}`, as in FAQ answers.
 - Write the name as **TEDxSantaClaraUniversity** (or `{eventName}`), never shortened. Keep lines short: they are headings and captions, not paragraphs.
 

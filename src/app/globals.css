@@ -281,8 +281,8 @@ html:not(.motion) .reading-progress {
   transform-origin: 0% 100%;
 }
 /* Phones: one word per line, sized server-side to fill the column (--hero-em is
-   the widest word in em, see Hero.tsx). Bold, and capped so a one-word theme
-   never towers over the fold. */
+   the widest word in em, see Hero.tsx). Bold, and capped at 18svh so name,
+   theme, date, venue and both actions still fit a 360x740 first screen. */
 @media (max-width: 639.98px) {
   .hero-title {
     font-size: min(
@@ -290,7 +290,7 @@ html:not(.motion) .reading-progress {
         (100vw - 2 * max(1.25rem, 4vw) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) /
           var(--hero-em, 4) * 0.985
       ),
-      30svh
+      18svh
     );
   }
   /* The fit assumes the font's own spacing. With user text-spacing overrides
@@ -361,11 +361,6 @@ html:not(.motion) .reading-progress {
     animation: hero-rise 1.15s var(--ease-cinema) both;
     animation-delay: calc(var(--w, 0) * 0.09s);
   }
-  html.motion .hero-mark {
-    display: inline-block;
-    animation: mark-pop 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both;
-    animation-delay: calc(0.35s + var(--n, 2) * 0.09s);
-  }
   html.motion [data-hero-seq] {
     animation: settle 0.9s var(--ease-cinema) both;
     animation-delay: calc(0.25s + var(--seq) * 0.07s);
@@ -399,16 +394,6 @@ html:not(.motion) .reading-progress {
     transform: translate3d(0, 104%, 0) skewY(7deg);
   }
   to {
-    transform: none;
-  }
-}
-@keyframes mark-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.3) translate3d(0, 40%, 0);
-  }
-  to {
-    opacity: 1;
     transform: none;
   }
 }
@@ -1340,7 +1325,7 @@ html.has-cursor [contenteditable] {
  * the fixed stack follows publish named view timelines, visible to the stack
  * through timeline-scope on <main>. --fp-plate is each section's still.     */
 #main:has(> [data-scene-stills]) {
-  timeline-scope: --fp-still-theme, --fp-still-speakers, --fp-still-schedule, --fp-still-venue, --fp-still-team;
+  timeline-scope: --fp-still-theme, --fp-still-speakers, --fp-still-schedule, --fp-still-venue, --fp-still-end;
 }
 #main:has(> [data-scene-stills]) > [data-section='hero'] {
   --fp-plate: image-set(url('/stills/hero-landscape.avif') type('image/avif'), url('/stills/hero-landscape.webp') type('image/webp'));
@@ -1361,8 +1346,9 @@ html.has-cursor [contenteditable] {
   view-timeline-name: --fp-still-venue;
   --fp-plate: image-set(url('/stills/venue-landscape.avif') type('image/avif'), url('/stills/venue-landscape.webp') type('image/webp'));
 }
-#main:has(> [data-scene-stills]) > [data-section='team'] {
-  view-timeline-name: --fp-still-team;
+/* The partner band (always rendered, right after Tickets) fades the room to black. */
+#main:has(> [data-scene-stills]) > [data-still-end] {
+  view-timeline-name: --fp-still-end;
 }
 @media (max-aspect-ratio: 9/10) {
   #main:has(> [data-scene-stills]) > [data-section='hero'] {
@@ -1426,4 +1412,18 @@ html.save-data #main:has(> [data-scene-stills]) > [data-section]:not([data-secti
   #main:has(> [data-scene-stills]) > [data-section]::before {
     display: none;
   }
+}
+
+/* Section scrims meet at section edges with different strengths (a strong
+   left-hand column over a weak right-hand side, say), which drew hard
+   horizontal seams across the stills and the live scene. Feathered to nothing
+   over the outer 5rem, inside every section's 6rem padding, so neighbouring
+   scrims hand over through the bare frame instead of a step. */
+.scrim-y,
+.scrim-left,
+.schedule-scrim {
+  mask-image: linear-gradient(to bottom, transparent, #000 5rem, #000 calc(100% - 5rem), transparent);
+}
+.speakers-scrim {
+  mask-image: linear-gradient(to top, transparent, #000 5rem);
 }

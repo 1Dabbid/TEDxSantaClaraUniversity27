@@ -68,7 +68,7 @@
       animation-timeline: --fp-still-venue;
     }
     .end {
-      animation-timeline: --fp-still-team;
+      animation-timeline: --fp-still-end;
     }
   }
 }
@@ -116,8 +116,23 @@
   display: none;
 }
 
-/* The live scene is coming: never request the other stills (the hero stays
-   until the canvas has drawn). Save-Data: the hero only. Both set by SceneGate. */
+/* The live scene is likely (boot script, before first paint) or known to be
+   coming (SceneGate): no still at all, not even the hero (an upscaled, soft
+   frame); the page stays black until the canvas fades in. If the scene turns
+   out not to run, the class goes and the stack fades in (@starting-style).
+   The hero image is lazy, so a hidden stack never requests it. */
+:global(html.scene-likely) .stack,
+:global(html.scene-pending) .stack {
+  opacity: 0;
+  display: none;
+}
+@starting-style {
+  .stack {
+    opacity: 0;
+  }
+}
+/* Never request the other stills while the scene is coming. Save-Data: the
+   hero only. Both set by SceneGate. */
 :global(html.scene-pending) .layer:not(.hero),
 :global(html.save-data) .layer:not(.hero) {
   display: none !important;

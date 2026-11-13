@@ -39,9 +39,9 @@ All of these are in the admin; each field explains itself. See `docs/EDITING.md`
 
 ## 3. Content: the theme wording (admin, no code)
 
-**The event > Theme copy (headings and short lines)** holds every theme-specific line that sits in the page layout. Rewrite each for the new theme (or leave a field blank to keep 2027's wording; a blank footnote or blank Partners first-card title hides it):
+**The event > Theme copy (headings and short lines)** holds every theme-specific line that sits in the page layout. Rewrite each for the new theme (or leave a field blank to keep 2027's wording; a blank hero caption, theme footnote or Partners first-card title hides it):
 
-- Home: footnote under the hero (also the small "1" after the theme name and on the share image), scroll hint, theme section heading, caption of the engraved microphone, footnote under the theme story, closing mailing-list heading, partner invitation heading and text.
+- Home: caption under the hero, scroll hint, theme section heading, caption of the engraved microphone, footnote under the theme story, closing mailing-list heading, partner invitation heading and text.
 - Speakers heading and Schedule lines shown while nothing is announced.
 - Partners page: heading, introduction, search description, first card ("1st / The first mainstage." in 2027: it is not the first mainstage any more).
 - 404 page heading and text, footer sign-off ("End of document / Signed and dated"), page-change caption ("§ continuing…").

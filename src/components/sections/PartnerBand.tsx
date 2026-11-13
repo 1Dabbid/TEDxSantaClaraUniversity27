@@ -9,8 +9,10 @@ import { Arrow } from '@/components/print/Print';
  * logos or names on the home page, ever (tests/e2e/home-html.spec.ts). It
  * invites; the pitch itself lives on /partners.
  *
- * Not a scene section (no data-section): it sits on solid black after Tickets,
- * where the 3D journey is already fading out, so the camera simply holds.
+ * Not a scene section (no data-section): it sits on black after Tickets, where
+ * the 3D journey is already fading out, so the camera simply holds. Its ground
+ * fades in over the first 6rem (no hard edge under the room above), and it
+ * drives the still frames' fade to black (data-still-end, globals.css).
  */
 export function PartnerBand({ settings }: { settings: Settings }) {
   const cta = partnerCta(settings);
@@ -19,7 +21,11 @@ export function PartnerBand({ settings }: { settings: Settings }) {
       ? `mailto:${settings.partnershipsEmail}?subject=${encodeURIComponent(`Partnering with ${settings.eventName}`)}`
       : null;
   return (
-    <section aria-labelledby="partner-band-title" className="relative isolate bg-black py-24 sm:py-32">
+    <section
+      aria-labelledby="partner-band-title"
+      data-still-end
+      className="relative isolate bg-[linear-gradient(to_bottom,rgb(0_0_0/0),#000_6rem)] py-24 sm:py-32"
+    >
       <div className="shell">
         <div className="grid gap-10 border-y border-white/15 py-12 sm:py-16 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">

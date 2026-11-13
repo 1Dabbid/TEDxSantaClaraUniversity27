@@ -1,10 +1,10 @@
 import type { Settings } from '@/lib/content';
 import { formatCoordinate } from '@/lib/links';
 import { seatsLabel } from '@/lib/site';
-import { Button } from '@/components/ui/Button';
+import { TextLink } from '@/components/ui/TextLink';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { keepTedxCase } from '@/components/ui/KeepCase';
-import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
+import { ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { VenueMotion } from '@/motion/sections/VenueMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
@@ -42,7 +42,7 @@ function Reticle() {
           centred on their axis, and knock the crosshair out behind them with a
           black stroke painted under the fill. */}
       <g
-        className="fill-white/60"
+        className="fill-white/75"
         stroke="#000"
         strokeWidth="5"
         paintOrder="stroke"
@@ -67,6 +67,11 @@ export function Venue({ settings }: { settings: Settings }) {
   const anyNote = notes.some((n) => n.body);
   const a = settings.venuePostalAddress;
   const cityLine = [a.city, [a.region, a.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const mapLink = settings.mapUrl ? (
+    <TextLink href={settings.mapUrl} className="mt-2">
+      Open in Maps<span className="sr-only">: {settings.venueName}</span>
+    </TextLink>
+  ) : null;
 
   return (
     <SectionShell id="venue" scrim="left" className="py-24 sm:py-36">
@@ -126,7 +131,7 @@ export function Venue({ settings }: { settings: Settings }) {
 
         {/* Particulars. Clause numbers sit inside each <dt> (hidden from assistive tech) so the list stays valid. */}
         <div data-reveal="rule" className="mt-16 h-px bg-white/15 sm:mt-20" aria-hidden="true" />
-        <dl data-reveal="stagger" className="grid gap-10 pt-8 sm:grid-cols-3 sm:gap-8">
+        <dl data-reveal="stagger" className={`grid gap-10 pt-8 sm:gap-8 ${anyNote ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
           <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">
             <dt className="col-span-2 grid grid-cols-subgrid">
               <ClauseNo>4.1</ClauseNo>
@@ -170,32 +175,35 @@ export function Venue({ settings }: { settings: Settings }) {
               <span className="block text-xl tracking-tight tabular-nums">{seatsLabel(settings.capacity)}</span>
             </dd>
           </div>
+          {/* Until the notes are written, "Getting there" is one more particular (the
+              map link and a line saying what will follow), not a block of its own. */}
+          {anyNote ? null : (
+            <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">
+              <dt className="col-span-2 grid grid-cols-subgrid">
+                <ClauseNo>4.4</ClauseNo>
+                <span className="fine-print text-mute">Getting there</span>
+              </dt>
+              <dd className="col-start-2 mt-3 leading-relaxed text-mute">
+                <span className="block">Directions, parking and accessibility notes to follow.</span>
+                {mapLink}
+              </dd>
+            </div>
+          )}
         </dl>
 
-        {/* Getting there */}
-        <div className="mt-16 grid gap-10 md:mt-20 md:grid-cols-12">
-          <div className="md:col-span-4">
-            <h3 data-reveal="fade" className="flex items-baseline gap-4 text-2xl font-semibold tracking-tight sm:text-3xl">
-              <ClauseNo>4.4</ClauseNo>
-              Getting there
-            </h3>
-            <p data-reveal="fade" className="mt-4 max-w-xs text-mute">
-              {anyNote
-                ? 'Directions, parking and access, in that order.'
-                : 'Directions, parking and access details are published here before the event.'}
-            </p>
-            {settings.mapUrl ? (
-              <div className="mt-8">
-                <Button href={settings.mapUrl} variant="ghost">
-                  Open in Maps
-                  <span className="sr-only">: {settings.venueName}</span>
-                  <Arrow dir="up-right" className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                </Button>
-              </div>
-            ) : null}
-          </div>
-
-          {anyNote ? (
+        {/* Getting there, once the notes are written: directions, parking, access. */}
+        {anyNote ? (
+          <div className="mt-16 grid gap-10 md:mt-20 md:grid-cols-12">
+            <div className="md:col-span-4">
+              <h3 data-reveal="fade" className="flex items-baseline gap-4 text-2xl font-semibold tracking-tight sm:text-3xl">
+                <ClauseNo>4.4</ClauseNo>
+                Getting there
+              </h3>
+              <p data-reveal="fade" className="mt-4 max-w-xs text-mute">
+                Directions, parking and access, in that order.
+              </p>
+              {mapLink ? <div className="mt-6">{mapLink}</div> : null}
+            </div>
             <ol data-reveal="stagger" className="border-t border-white/15 md:col-span-8">
               {notes.map((n, i) => (
                 <li
@@ -212,8 +220,8 @@ export function Venue({ settings }: { settings: Settings }) {
                 </li>
               ))}
             </ol>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     </SectionShell>
   );

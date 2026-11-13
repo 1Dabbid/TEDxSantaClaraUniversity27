@@ -94,11 +94,13 @@ export async function Footer({ settings }: { settings: Settings }) {
         </p>
 
         <div className="grid grid-cols-2 gap-x-6 gap-y-12 py-14 lg:grid-cols-12 lg:gap-10">
-          {/* TED's required language, verbatim from content/ted-language.yaml (Contact & site > Required TED language). */}
-          <div className="col-span-2 space-y-10 lg:col-span-5">
+          {/* TED's required language, verbatim from content/ted-language.yaml (Contact & site > Required TED language).
+              Left column on desktop; on phones and tablets it follows the links and contacts, so the
+              sign-off reads date, where to go, who to write to, then the licence texts. */}
+          <div className="col-span-2 space-y-10 max-lg:order-last lg:col-span-5">
             <section aria-labelledby="footer-tedx">
               <h2 id="footer-tedx" className="fine-print text-white">
-                <span aria-hidden="true">§ A · </span>About <Tedx />
+                About <Tedx />
               </h2>
               {paragraphs(ted.aboutTedx).map((p, i) => (
                 <p key={i} data-cursor="loupe" className="mt-4 max-w-xl text-sm leading-relaxed text-mute">
@@ -132,7 +134,7 @@ export async function Footer({ settings }: { settings: Settings }) {
 
           <nav aria-labelledby="footer-site" className="lg:col-span-2 lg:col-start-7">
             <h2 id="footer-site" className="fine-print text-white">
-              <span aria-hidden="true">§ B · </span>Site
+              Site
             </h2>
             <ul className="mt-3 text-sm">
               {nav.map((i) => (
@@ -152,7 +154,7 @@ export async function Footer({ settings }: { settings: Settings }) {
 
           <div className="col-span-2 sm:col-span-1 lg:col-span-2">
             <h2 className="fine-print text-white">
-              <span aria-hidden="true">§ C · </span>Elsewhere
+              Elsewhere
             </h2>
             <ul className="mt-3 text-sm">
               <li>
@@ -182,7 +184,7 @@ export async function Footer({ settings }: { settings: Settings }) {
 
           <div className="col-span-2 sm:col-span-1 lg:col-span-2">
             <h2 className="fine-print text-white">
-              <span aria-hidden="true">§ D · </span>Contact
+              Contact
             </h2>
             <ul className="mt-4 space-y-2 text-sm">
               {settings.contactEmail ? (

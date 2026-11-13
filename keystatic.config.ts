@@ -143,7 +143,7 @@ export default config({
       label: 'Theme copy (headings and short lines)',
       path: 'content/theme-copy',
       schema: {
-        heroFootnote: copyField('heroFootnote', 'Home: footnote under the hero', `Shown after a small red “1.” at the bottom of the first screen; the theme name carries a matching “1”. ${BLANK_HIDES} (Removes the “1” from the theme name and the share image too.)`),
+        heroFootnote: copyField('heroFootnote', 'Home: caption under the hero', `A short line in small capitals at the bottom of the first screen. ${BLANK_HIDES}`),
         heroScrollCue: copyField('heroScrollCue', 'Home: scroll hint', `Small text bottom right of the first screen on computers. ${BLANK_RESTORES}`),
         themeHeading: copyField('themeHeading', 'Home: theme section heading', `The big heading above the Theme story. Keep it short (two to five words). ${BLANK_RESTORES}`),
         themeFigureCaption: copyField('themeFigureCaption', 'Home: caption of the engraved microphone', `Shown after “Fig. 1” while the 3D microphone is on screen (only with animations on). ${BLANK_RESTORES}`),

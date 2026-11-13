@@ -279,7 +279,7 @@ function revealStagger(el: HTMLElement, onScreen: ((c: Element) => boolean) | nu
 }
 
 /*
- * Never split an element that holds something focusable (a footnote link in a
+ * Never split an element that holds something focusable (a link in a
  * heading, say): a split is undone by replacing the element's markup, so keyboard
  * focus on that link would drop to <body> when the reveal finishes (or when Tab
  * lands there and finishes it early). Such elements get the fade instead.
