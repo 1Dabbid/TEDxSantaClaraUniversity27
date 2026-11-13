@@ -50,8 +50,10 @@ export default async function SchedulePage() {
           title={published ? 'The evening, in order.' : 'One evening.'}
           intro={
             <>
-              Live talks at the {settings.venueName} on <time dateTime={settings.dateISO}>{settings.dateLong}</time>: doors,
-              talks and breaks, in order.
+              Live talks at the {settings.venueName} on <time dateTime={settings.dateISO}>{settings.dateLong}</time>
+              {published
+                ? ': doors, talks and breaks, in order.'
+                : '. The running order is published here once the speakers are confirmed.'}
             </>
           }
           facts={[
@@ -79,10 +81,6 @@ export default async function SchedulePage() {
               <div className="border-t border-white/15 pt-8">
                 <p className="text-title font-semibold tracking-tight text-balance">{settings.copy.scheduleEmptyHeading}</p>
                 <p className="mt-4 max-w-xl text-lg text-mute">{settings.copy.scheduleEmptyNote}</p>
-                <p className="mt-4 max-w-xl text-mute">
-                  When it is published, this page lists each moment of the evening with its time, what happens, and whether it
-                  is a talk or a break.
-                </p>
                 <div className="mt-10">
                   <p className="fine-print text-mute">Hear it first</p>
                   <div className="mt-4">
