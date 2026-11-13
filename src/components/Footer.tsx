@@ -175,7 +175,7 @@ export function Footer({ settings }: { settings: Settings }) {
         <div className="shell flex flex-col gap-3 py-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-white">This independent TEDx event is operated under license from TED.</p>
           <p className="fine-print">
-            © {new Date().getFullYear()}<span className="tracking-normal normal-case">TEDxSantaClaraUniversity</span>
+            © {new Date().getFullYear()}&nbsp;<span className="tracking-normal normal-case">TEDxSantaClaraUniversity</span>
           </p>
         </div>
       </div>

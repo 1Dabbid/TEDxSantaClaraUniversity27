@@ -1,7 +1,8 @@
 import { ImageResponse } from 'next/og';
 import { getSettings } from '@/lib/content';
+import { OG_ALT } from '@/lib/site';
 
-export const alt = 'TEDxSantaClaraUniversity: Fine Print. Friday, April 23, 2027, Locatelli Student Activity Center, Santa Clara University.';
+export const alt = OG_ALT;
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -31,7 +32,7 @@ export default async function OpenGraphImage() {
       >
         <div style={{ display: 'flex', justifyContent: 'space-between', ...mono }}>
           <div style={{ display: 'flex' }}>§ 01 · The theme</div>
-          <div style={{ display: 'flex' }}>100 seats</div>
+          <div style={{ display: 'flex' }}>fineprint.tedxscu.com</div>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -55,7 +56,7 @@ export default async function OpenGraphImage() {
                 {`${s.dateLong} · ${s.venueName}, ${s.venueCampus || 'Santa Clara University'}`}
               </div>
             </div>
-            <div style={{ display: 'flex', ...mono, fontSize: 14 }}>fineprint.tedxscu.com</div>
+            <div style={{ display: 'flex', ...mono, fontSize: 16 }}>100 seats</div>
           </div>
         </div>
       </div>

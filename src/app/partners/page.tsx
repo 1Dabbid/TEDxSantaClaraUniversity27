@@ -3,7 +3,7 @@ import Image from 'next/image';
 import type { PartnerBenefit, Sponsor, Tier } from '@/lib/content';
 import { getPartnerBenefits, getSettings, getSponsors, getTiers } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
-import { SITE_NAME } from '@/lib/site';
+import { OG_ALT, SITE_NAME } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { ClauseNo, Tba } from '@/components/print/Print';
@@ -22,6 +22,7 @@ export const metadata: Metadata = {
     description: DESCRIPTION,
     url: '/partners',
     locale: 'en_US',
+    images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: OG_ALT }],
   },
   twitter: { card: 'summary_large_image', title: `Partners · ${SITE_NAME}`, description: DESCRIPTION },
 };

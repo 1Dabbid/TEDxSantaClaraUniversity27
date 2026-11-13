@@ -5,7 +5,7 @@ import { notFound } from 'next/navigation';
 import type { Settings, Speaker } from '@/lib/content';
 import { getSettings, getSpeakers, paragraphs } from '@/lib/content';
 import { jsonLdString, speakerJsonLd } from '@/lib/jsonld';
-import { SITE_NAME } from '@/lib/site';
+import { OG_ALT, SITE_NAME } from '@/lib/site';
 import { ticketCta } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
 import { ClauseNo, JsonLd, Redaction } from '@/components/print/Print';
@@ -53,6 +53,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: `/speakers/${slug}`,
       locale: 'en_US',
+      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: OG_ALT }],
     },
     // Placeholder pages exist so links never 404, but should not be indexed.
     robots: speaker.announced ? undefined : { index: false, follow: true },
