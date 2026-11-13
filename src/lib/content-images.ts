@@ -1,5 +1,5 @@
 import { closeSync, openSync, readSync, statSync } from 'node:fs';
-import { join, normalize } from 'node:path';
+import { join } from 'node:path';
 import { contentWarning } from './content-checks';
 
 /**
@@ -67,7 +67,7 @@ export function checkImage(
     return null;
   };
 
-  if (!p.startsWith('/') || p.includes('\\') || normalize(p).split('/').includes('..')) {
+  if (!p.startsWith('/') || p.includes('\\') || p.split('/').includes('..')) {
     return drop(`"${p}" is not an uploaded image path.`);
   }
   const ext = p.split('.').pop()?.toLowerCase() ?? '';

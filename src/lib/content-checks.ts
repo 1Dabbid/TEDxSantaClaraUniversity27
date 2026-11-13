@@ -173,7 +173,8 @@ export function fillPlaceholders(text: string, values: Record<FaqPlaceholder, st
  */
 export function stripEmoji(text: string): string {
   return text
-    .replace(/\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|[‍︎️⃣]|[\u{E0020}-\u{E007F}]/gu, '')
+    // ©, ® and ™ are ordinary characters in the share-image font, so they stay.
+    .replace(/(?![\u00A9\u00AE\u2122])\p{Extended_Pictographic}|\p{Regional_Indicator}|\p{Emoji_Modifier}|[\u200D\uFE0E\uFE0F\u20E3]|[\u{E0020}-\u{E007F}]/gu, '')
     .replace(/[ \t]{2,}/g, ' ')
     .trim();
 }
