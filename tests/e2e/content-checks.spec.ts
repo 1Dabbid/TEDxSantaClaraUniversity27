@@ -10,10 +10,13 @@ import {
   isValidSlug,
   normalizeLink,
   requiredText,
+  resolveThemeCopy,
   stripEmoji,
   TIME_PATTERN,
 } from '../../src/lib/content-checks';
 import { checkImage, sniffImage } from '../../src/lib/content-images';
+import { DEFAULT_SITE_URL, engravingLines, siteUrlFrom } from '../../src/lib/site';
+import { THEME_COPY_DEFAULTS } from '../../src/lib/theme-copy';
 
 /**
  * The loader's defensive normalisation (src/lib/content-checks.ts,
@@ -95,6 +98,39 @@ test('FAQ placeholders are filled in; unknown ones are reported', () => {
   const r = fillPlaceholders('{eventName}: {date}, at the {venue} on the {campus} campus, {capacity} seats. {price}', values);
   expect(r.text).toBe('TEDxSantaClaraUniversity: Friday, April 23, 2027, at the Locatelli Student Activity Center on the Santa Clara University campus, 100 seats. {price}');
   expect(r.unknown).toEqual(['{price}']);
+});
+
+test('Theme copy: blanks fall back to the defaults, optional lines can be hidden, placeholders are filled', () => {
+  const values = { capacity: '80', date: 'Saturday, April 15, 2028', venue: 'Example Hall', campus: 'Santa Clara University', eventName: 'TEDxSantaClaraUniversity' };
+  // No file at all: every default.
+  expect(resolveThemeCopy(null, values).heroFootnote).toBe(THEME_COPY_DEFAULTS.heroFootnote);
+  const c = resolveThemeCopy(
+    { themeHeading: '  Take it from the top.  ', newsletterHeading: '', heroFootnote: '', partnersEditionTitle: '', partnersIntro: 'Up to {capacity} guests at the {venue}. {typo}' },
+    values,
+  );
+  expect(c.themeHeading).toBe('Take it from the top.');
+  expect(c.newsletterHeading).toBe(THEME_COPY_DEFAULTS.newsletterHeading);
+  expect(c.heroFootnote).toBe('');
+  expect(c.partnersEditionTitle).toBe('');
+  expect(c.partnersIntro).toBe('Up to 80 guests at the Example Hall. {typo}');
+  expect(c.partnerBandBody).toContain('TEDxSantaClaraUniversity is student-run');
+  expect(c.partnerBandBody).toContain('80 seats');
+  expect(contentWarnings().some((w) => w.file === 'content/theme-copy.yaml' && w.message.includes('{typo}'))).toBe(true);
+});
+
+test('SITE_URL: an https origin from the environment, else the default', () => {
+  expect(siteUrlFrom(undefined)).toBe(DEFAULT_SITE_URL);
+  expect(siteUrlFrom('')).toBe(DEFAULT_SITE_URL);
+  expect(siteUrlFrom('https://seconddraft.tedxscu.com/')).toBe('https://seconddraft.tedxscu.com');
+  expect(siteUrlFrom('http://seconddraft.tedxscu.com')).toBe(DEFAULT_SITE_URL);
+  expect(siteUrlFrom('seconddraft.tedxscu.com')).toBe(DEFAULT_SITE_URL);
+  expect(siteUrlFrom('https://seconddraft.tedxscu.com/path')).toBe(DEFAULT_SITE_URL);
+});
+
+test('engraving lines built from content match the engraving style', () => {
+  expect(
+    engravingLines({ themeName: 'Fine Print', dateLong: 'Friday, April 23, 2027', venueName: 'Locatelli Student Activity Center', capacity: 100 }),
+  ).toEqual({ theme: 'FINE PRINT', dateLine: 'FRIDAY · APRIL 23 · 2027', venueLine: 'LOCATELLI STUDENT ACTIVITY CENTER', seatsLine: '100 SEATS' });
 });
 
 test('share-image text has no emoji', () => {

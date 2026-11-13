@@ -58,6 +58,8 @@ export default async function OpenGraphImage() {
             }}
           >
             {themeName}
+            {/* The hero's footnote marker; gone when Theme copy > hero footnote is blank. */}
+            {s.copy.heroFootnote ? (
             <div
               style={{
                 display: 'flex',
@@ -72,6 +74,7 @@ export default async function OpenGraphImage() {
             >
               1
             </div>
+            ) : null}
           </div>
           {/* Two lines, so both stay inside the square centre crop. */}
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', fontSize: 34, lineHeight: 1.25, marginTop: 36 }}>

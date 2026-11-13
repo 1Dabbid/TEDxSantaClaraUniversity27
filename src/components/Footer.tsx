@@ -47,9 +47,12 @@ export async function Footer({ settings }: { settings: Settings }) {
             <Logo className="h-14 sm:h-16" />
           </Link>
           <p className="fine-print text-right text-mute">
-            End of document
-            <br />
-            Signed and dated
+            {settings.copy.footerSignoff.split('\n').map((line, i) => (
+              <span key={i}>
+                {i > 0 ? <br /> : null}
+                {line}
+              </span>
+            ))}
           </p>
         </div>
 

@@ -1,6 +1,7 @@
 import { collection, config, fields, singleton } from '@keystatic/core';
 import { HTTPS_URL_MESSAGE, HTTPS_URL_PATTERN, SLUG_MESSAGE, SLUG_PATTERN, TIME_PATTERN } from './src/lib/content-checks';
 import { EMAIL_PATTERN, SCHEDULE_KIND_LABEL, SITE_NAME, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './src/lib/site';
+import { THEME_COPY_DEFAULTS as COPY } from './src/lib/theme-copy';
 
 /**
  * Keystatic content model: what student editors see at /keystatic.
@@ -58,6 +59,20 @@ const emailField = (label: string, description: string) =>
     validation: { pattern: { regex: EMAIL_PATTERN, message: 'Use a full email address, like name@example.com, or leave it blank.' } },
   });
 
+const PLACEHOLDERS = `You can write {eventName} (always shown as ${SITE_NAME}), {capacity}, {date}, {venue} and {campus}; the site fills them in from Event basics and Venue.`;
+const BLANK_RESTORES = 'Leave it blank to go back to the original wording.';
+const BLANK_HIDES = 'Leave it blank to hide it.';
+
+/** One "Theme copy" line: a short plain-text field whose default is the built-in wording. */
+const copyField = (key: keyof typeof COPY, label: string, description: string, opts: { multiline?: boolean } = {}) =>
+  fields.text({
+    label,
+    description,
+    defaultValue: COPY[key],
+    multiline: opts.multiline,
+    validation: { length: { max: 400 } },
+  });
+
 const timeField = (label: string) =>
   fields.text({
     label,
@@ -72,7 +87,7 @@ export default config({
   ui: {
     brand: { name: 'TEDxSantaClaraUniversity' },
     navigation: {
-      'The event': ['settings', 'venue', 'tickets', 'schedule', 'faq'],
+      'The event': ['settings', 'themeCopy', 'venue', 'tickets', 'schedule', 'faq'],
       People: ['speakers', 'team'],
       Partners: ['tiers', 'benefits', 'sponsors'],
       'Contact & site': ['contact', 'sections', 'tedLanguage'],
@@ -121,6 +136,34 @@ export default config({
           defaultValue: '#EB0028',
           validation: { pattern: { regex: /^#[0-9a-fA-F]{6}$/, message: 'Use a 6-digit hex colour like #EB0028.' } },
         }),
+      },
+    }),
+
+    themeCopy: singleton({
+      label: 'Theme copy (headings and short lines)',
+      path: 'content/theme-copy',
+      schema: {
+        heroFootnote: copyField('heroFootnote', 'Home: footnote under the hero', `Shown after a small red “1.” at the bottom of the first screen; the theme name carries a matching “1”. ${BLANK_HIDES} (Removes the “1” from the theme name and the share image too.)`),
+        heroScrollCue: copyField('heroScrollCue', 'Home: scroll hint', `Small text bottom right of the first screen on computers. ${BLANK_RESTORES}`),
+        themeHeading: copyField('themeHeading', 'Home: theme section heading', `The big heading above the Theme story. Keep it short (two to five words). ${BLANK_RESTORES}`),
+        themeFigureCaption: copyField('themeFigureCaption', 'Home: caption of the engraved microphone', `Shown after “Fig. 1” while the 3D microphone is on screen (only with animations on). ${BLANK_RESTORES}`),
+        themeFootnote: copyField('themeFootnote', 'Home: footnote under the theme story', `Shown after a small red “*”. ${BLANK_HIDES}`),
+        speakersEmptyHeading: copyField('speakersEmptyHeading', 'Speakers heading while none is announced', `Home page and /speakers. Once a speaker is announced the heading becomes “Meet the speakers.” ${BLANK_RESTORES}`),
+        scheduleEmptyHeading: copyField('scheduleEmptyHeading', 'Schedule: line while the running order is hidden', BLANK_RESTORES),
+        scheduleEmptyNote: copyField('scheduleEmptyNote', 'Schedule: note while the running order is hidden', BLANK_RESTORES, { multiline: true }),
+        newsletterHeading: copyField('newsletterHeading', 'Home: closing mailing-list heading', `The huge heading at the bottom of the home page. ${BLANK_RESTORES}`),
+        partnerBandHeading: copyField('partnerBandHeading', 'Home: partner invitation heading', `The “For organizations” block near the bottom of the home page. ${BLANK_RESTORES}`),
+        partnerBandBody: copyField('partnerBandBody', 'Home: partner invitation text', `${PLACEHOLDERS} ${BLANK_RESTORES}`, { multiline: true }),
+        partnersHeading: copyField('partnersHeading', 'Partners page: heading', BLANK_RESTORES),
+        partnersIntro: copyField('partnersIntro', 'Partners page: introduction', `Follows “Become a partner of ${SITE_NAME}.” ${PLACEHOLDERS} ${BLANK_RESTORES}`, { multiline: true }),
+        partnersDescription: copyField('partnersDescription', 'Partners page: search and link-preview description', `About 160 characters. ${PLACEHOLDERS} ${BLANK_RESTORES}`, { multiline: true }),
+        partnersEditionFigure: copyField('partnersEditionFigure', 'Partners page: first card, big figure', 'e.g. 1st, 2nd. Only shown with a card title.'),
+        partnersEditionTitle: copyField('partnersEditionTitle', 'Partners page: first card, title', `The first card under “What your support makes possible”, e.g. “The first mainstage.” ${BLANK_HIDES}`),
+        partnersEditionBody: copyField('partnersEditionBody', 'Partners page: first card, text', PLACEHOLDERS, { multiline: true }),
+        notFoundHeading: copyField('notFoundHeading', 'Page not found (404): heading', BLANK_RESTORES),
+        notFoundBody: copyField('notFoundBody', 'Page not found (404): text', BLANK_RESTORES),
+        footerSignoff: copyField('footerSignoff', 'Footer: sign-off (top right)', `One or two short lines. ${BLANK_RESTORES}`, { multiline: true }),
+        transitionCaption: copyField('transitionCaption', 'Page change: caption', `One word shown between “§” and “…” while the page changes (only with animations on). ${BLANK_RESTORES}`),
       },
     }),
 

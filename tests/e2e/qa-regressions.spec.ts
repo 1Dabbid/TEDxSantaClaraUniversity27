@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { settle } from './helpers';
+import { eventFacts, settle } from './helpers';
 
 /*
  * Regressions found in the pre-launch QA pass. Each test states the behaviour
@@ -28,7 +28,7 @@ test.describe('first screen on a small phone', () => {
       expect(box, `hero action ${i}`).not.toBeNull();
       expect(box!.y + box!.height, `hero action ${i} bottom`).toBeLessThanOrEqual(740);
     }
-    await expect(hero.getByText('Locatelli Student Activity Center')).toBeInViewport();
+    await expect(hero.getByText(eventFacts().venueName)).toBeInViewport();
   });
 });
 
