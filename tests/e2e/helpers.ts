@@ -31,7 +31,7 @@ export const publishedSpeakers = () => speakerFiles().filter((s) => s.published)
 
 /** Every public, statically generated page. */
 export function publicRoutes(): string[] {
-  return ['/', '/partners', ...publishedSpeakers().map((s) => `/speakers/${s.slug}`)];
+  return ['/', '/partners', '/speakers', ...publishedSpeakers().map((s) => `/speakers/${s.slug}`)];
 }
 
 export type Problems = { console: string[]; failed: string[] };
