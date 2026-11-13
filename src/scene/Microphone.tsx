@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   CatmullRomCurve3,
@@ -11,6 +11,8 @@ import {
   TubeGeometry,
   Vector3,
   type BufferGeometry,
+  type Group,
+  type Texture,
 } from 'three';
 import { bevelledExtrude, machinedLathe, mergeParts, roundedBox, threadProfile, type ProfilePoint } from './geometry';
 import {
@@ -31,7 +33,9 @@ import {
   createNickelMaterial,
   createPolishedMaterial,
 } from './materials';
-import { createEngravingMask } from './textures';
+import { REFLECT_LAYER } from './reflection';
+import { engravingRows, type EngravingFacts } from './engraving';
+import { EMPTY_MASK, createEngravingMask } from './textures';
 
 /** Body profile: tail, knurled grip, tapered barrel with two seam lines, neck under the band ring. */
 function bodyProfile(taperSteps: number): ProfilePoint[] {
@@ -338,10 +342,14 @@ function cableGeometry(high: boolean) {
   return new TubeGeometry(curve, high ? 520 : 220, 0.0034, high ? 8 : 5, false);
 }
 
-export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
+export default function Microphone({ quality, engraving }: { quality: 'high' | 'low'; engraving?: Partial<EngravingFacts> }) {
   const high = quality === 'high';
   const gl = useThree((s) => s.gl);
   const fade = useRef(0);
+  const root = useRef<Group>(null);
+  // Rebuild the mask only when the engraved facts actually change.
+  const engravingKey = JSON.stringify(engraving ?? {});
+  const rows = useMemo(() => engravingRows(JSON.parse(engravingKey) as Partial<EngravingFacts>), [engravingKey]);
   const maskOn = useRef<{ value: number } | null>(null);
 
   const geo = useMemo(() => {
@@ -390,23 +398,38 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
     let cancelled = false;
     const w = high ? 4096 : 3072;
     const h = high ? 2048 : 1536;
-    createEngravingMask(w, h).then((tex) => {
-      if (cancelled) {
-        tex.dispose();
-        return;
-      }
-      tex.anisotropy = Math.min(high ? 16 : 4, gl.capabilities.getMaxAnisotropy());
-      maskOn.current = mats.body.uniforms.uMaskOn;
-      fade.current = 0.0001;
-      tex.needsUpdate = true;
-      const u = mats.body.uniforms;
-      u.uMask.value = tex;
-      u.uMaskTexel.value = [1 / w, 1 / h];
-    });
+    let made: Texture | null = null;
+    createEngravingMask(w, h, rows)
+      .then((tex) => {
+        if (tex === EMPTY_MASK) return;
+        if (cancelled) {
+          tex.dispose();
+          return;
+        }
+        made = tex;
+        tex.anisotropy = Math.min(high ? 16 : 4, gl.capabilities.getMaxAnisotropy());
+        maskOn.current = mats.body.uniforms.uMaskOn;
+        fade.current = 0.0001;
+        tex.needsUpdate = true;
+        const u = mats.body.uniforms;
+        u.uMask.value = tex;
+        u.uMaskTexel.value = [1 / w, 1 / h];
+      })
+      .catch(() => {
+        /* no engraving rather than no scene */
+      });
     return () => {
       cancelled = true;
+      if (made) {
+        const u = mats.body.uniforms;
+        if (u.uMask.value === made) {
+          u.uMask.value = EMPTY_MASK;
+          u.uMaskOn.value = 0;
+        }
+        made.dispose();
+      }
     };
-  }, [gl, high, mats]);
+  }, [gl, high, mats, rows]);
 
   useEffect(
     () => () => {
@@ -417,8 +440,6 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
       mats.nickel.dispose();
       mats.hardware.dispose();
       mats.cable.dispose();
-      const t = mats.body.uniforms.uMask.value;
-      if (t.image && (t.image as { width: number }).width > 1) t.dispose();
     },
     [geo, mats],
   );
@@ -431,11 +452,16 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
     maskOn.current.value = f * f * (3 - 2 * f);
   });
 
+  // The microphone and stand show in the floor reflection.
+  useLayoutEffect(() => {
+    root.current?.traverse((o) => o.layers.enable(REFLECT_LAYER));
+  }, [geo, mats]);
+
   const sx = STAND_BASE.x;
   const sz = STAND_BASE.z;
 
   return (
-    <group>
+    <group ref={root}>
       {/* The microphone, in its own (tilted) frame */}
       <group position={MIC_POSITION} quaternion={MIC_QUATERNION}>
         <mesh geometry={geo.body} material={mats.body.material} />

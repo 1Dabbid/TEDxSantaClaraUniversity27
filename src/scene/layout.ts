@@ -82,3 +82,8 @@ export const SEATING = {
   pitch: 0.58,
   aisle: 1.15,
 };
+
+/** Front edge of the raised stage (z), the audience floor below it, and each seating row's tread height (raked). */
+export const STAGE_EDGE_Z = 5.0;
+export const AUDIENCE_FLOOR_Y = -0.55;
+export const rowHeight = (row: number) => AUDIENCE_FLOOR_Y + row * 0.13;

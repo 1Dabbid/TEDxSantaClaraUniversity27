@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { BoxGeometry, BufferGeometry, Color, Matrix4, Quaternion, Shape, Vector3, type InstancedMesh } from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bevelledExtrude, roundedBox } from './geometry';
-import { SEATING } from './layout';
+import { SEATING, rowHeight } from './layout';
 import { createSeatMaterial } from './materials';
 
 /** One upholstered auditorium seat, facing -Z, origin on the floor. */
@@ -63,7 +63,7 @@ export default function Seats({ quality }: { quality: 'high' | 'low' }) {
         for (let k = 0; k < half; k++) {
           const s = SEATING.aisle / 2 + SEATING.pitch * (k + 0.5);
           const a = (side * s) / R;
-          p.set(SEATING.centre.x + Math.sin(a) * R, 0, SEATING.centre.z + Math.cos(a) * R);
+          p.set(SEATING.centre.x + Math.sin(a) * R, rowHeight(row), SEATING.centre.z + Math.cos(a) * R);
           q.setFromAxisAngle(up, a);
           m.compose(p, q, one);
           mesh.setMatrixAt(i, m);
