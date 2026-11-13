@@ -8,6 +8,7 @@ import { Header } from '@/components/Header';
 import { SkipLink } from '@/components/SkipLink';
 import { getSettings } from '@/lib/content';
 import { SITE_NAME, SITE_URL } from '@/lib/site';
+import MotionRoot from '@/motion/MotionRoot';
 import SmoothScroll from '@/motion/SmoothScroll';
 import SceneLoader from '@/scene/SceneLoader';
 
@@ -42,6 +43,14 @@ export async function generateMetadata(): Promise<Metadata> {
   };
 }
 
+/**
+ * Runs before first paint. Adds `html.motion` only when JS runs, the visitor has
+ * no reduced-motion preference and no Save-Data. Without it (no JS, reduced
+ * motion) the server HTML is the complete, fully visible design. MotionRoot
+ * removes the class again if the quality tier resolves to `static`.
+ */
+const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection;if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData)&&location.pathname.indexOf('/keystatic')!==0)d.classList.add('motion')}catch(e){}`;
+
 export const viewport: Viewport = {
   themeColor: '#000000',
   colorScheme: 'dark',
@@ -50,7 +59,15 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: ReactNode }) {
   const settings = await getSettings();
   return (
-    <html lang="en" className={inter.variable} style={{ '--accent': settings.accentColor } as CSSProperties}>
+    <html
+      lang="en"
+      className={inter.variable}
+      style={{ '--accent': settings.accentColor } as CSSProperties}
+      suppressHydrationWarning
+    >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: MOTION_BOOT }} />
+      </head>
       <body>
         <ChromeGate>
           <SkipLink />
@@ -67,6 +84,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
             </ChromeGate>
           </div>
         </SmoothScroll>
+        <MotionRoot />
       </body>
     </html>
   );

@@ -36,10 +36,27 @@ export function SectionShell({
   );
 }
 
-/** Large section heading with consistent sizing. */
-export function SectionTitle({ id, children, className = '' }: { id: SectionId; children: ReactNode; className?: string }) {
+/**
+ * Large section heading with consistent sizing. Reveals line by line (masked)
+ * through the global `data-reveal` system unless `reveal={false}`.
+ */
+export function SectionTitle({
+  id,
+  children,
+  className = '',
+  reveal = true,
+}: {
+  id: SectionId;
+  children: ReactNode;
+  className?: string;
+  reveal?: boolean;
+}) {
   return (
-    <h2 id={`${id}-title`} className={`mt-6 text-headline font-semibold tracking-[-0.045em] text-balance ${className}`}>
+    <h2
+      id={`${id}-title`}
+      data-reveal={reveal ? 'lines' : undefined}
+      className={`mt-6 text-headline font-semibold tracking-[-0.045em] text-balance ${className}`}
+    >
       {children}
     </h2>
   );
