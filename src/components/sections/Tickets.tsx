@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from 'react';
 import type { Settings, TicketState } from '@/lib/content';
 import { getFaq } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
+import { TextLink } from '@/components/ui/TextLink';
 import { WatchLive } from '@/components/ui/WatchLive';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { ClauseNo, StatusRegister } from '@/components/print/Print';
@@ -90,11 +91,12 @@ function SeatStrip({ seats, filled }: { seats: number; filled: boolean }) {
   );
 }
 
-function NewsletterButton({ settings, variant = 'primary' }: { settings: Settings; variant?: 'primary' | 'ghost' }) {
+/** The mailing list, as a text link: the hero and the closing section carry it as a button. */
+function NewsletterLink({ settings, label }: { settings: Settings; label: string }) {
   return (
-    <Button href={settings.newsletterUrl || '#newsletter'} size="lg" variant={variant}>
-      Join the mailing list
-    </Button>
+    <TextLink href={settings.newsletterUrl || '#newsletter'} className="text-lg">
+      {label}
+    </TextLink>
   );
 }
 
@@ -109,8 +111,9 @@ function TicketAction({ settings, showFaq }: { settings: Settings; showFaq: bool
         <p className="fine-print text-white">Ticket link going live shortly.</p>
       );
     case 'coming-soon':
+      return <NewsletterLink settings={settings} label="Get ticket news by email" />;
     case 'sold-out':
-      return <NewsletterButton settings={settings} />;
+      return <NewsletterLink settings={settings} label="Join the mailing list" />;
     case 'closed':
       return showFaq ? (
         <Button href="#faq" size="lg" variant="ghost">

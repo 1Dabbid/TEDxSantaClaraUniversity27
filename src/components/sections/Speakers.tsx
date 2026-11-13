@@ -2,6 +2,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import type { Settings, Speaker } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
+import { TextLink } from '@/components/ui/TextLink';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { EventName, keepTedxCase } from '@/components/ui/KeepCase';
 import { SpeakersMotion } from '@/motion/sections/SpeakersMotion';
@@ -189,9 +190,11 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
                   <p className="mt-2 max-w-md text-[#d0d0d0]">
                     Speaker announcements, the running order and ticket sales go to the mailing list before anywhere else.
                   </p>
-                  <div className="mt-5">
-                    <Button href={listHref}>Join the mailing list</Button>
-                  </div>
+                  {/* A text link, not a button: the hero and the closing section make the
+                      mailing-list ask as buttons; here it is the follow-up. */}
+                  <p className="mt-4">
+                    <TextLink href={listHref}>Join the mailing list</TextLink>
+                  </p>
                 </div>
                 <ApplyToSpeak settings={settings} />
               </div>
