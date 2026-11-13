@@ -27,13 +27,20 @@ import { SECTION_IDS } from './scrollState';
  *   neighbouring shots; the engraving macro is the one exception, where the
  *   barrel slides right to leave the headline clear);
  * - keep `dist` monotonic from the end of the macro to the end of Tickets
- *   (never push back in); a hold is two shots with the same values.
+ *   (never push back in); a hold is two shots with the same values;
+ * - spread a big change of distance over enough scroll, in steps of roughly
+ *   equal ratio (the pull back out of the macro grows about 1.6-2x per step of
+ *   0.0725), and bring light up after the framing has settled, not with it, so
+ *   neighbouring frames always follow from each other. `__sceneSim.metrics()`
+ *   (?scene-debug=1) reports heading change, lateral deviation, anchor drift,
+ *   monotonicity and the largest framing jump: check them after an edit.
  *
  * Journey coordinate `J`: continuous over the home page; section k (in
  * SECTION_IDS order) spans [k, k+1) and the fraction is how far the viewport
  * centre has travelled through it. So J = 0.5 is the hero's middle at the
- * viewport centre, 1.2..1.8 is the pinned part of the 250vh theme section,
- * 2.5 is speakers centred, and so on.
+ * viewport centre; on a 1440x900 screen 1.22..1.78 is the pinned part of the
+ * 225vh theme runway and the speakers stage pins at about 2.25; 2.5 is
+ * speakers centred, and so on.
  *
  * Every channel (track distance, aim point, anchor, roll, light) is
  * interpolated with a monotone cubic (Fritsch-Carlson) through the shots: no
@@ -313,7 +320,8 @@ export const DESKTOP_SHOTS: Shot[] = [
   { at: 1.6, aim: { mic: 0.074 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [1.8, 1.8, 0.3] },
   { at: 1.72, aim: { mic: 0.072 }, dist: 0.067, anchor: ANCHOR_MACRO, ...MACRO, keyDir: [2.0, 1.6, 0.3] },
   // The pull back: straight out along the same line, the distance growing evenly in log space
-  // (about 1.7x per 0.08 of the journey) so every frame follows from the one before. The
+  // (eight steps of 0.0725, eased: about 1.6x at the ends, 2x in the middle) so every frame
+  // follows from the one before, over about 1.2 screens of scroll on a 1440x900 screen. The
   // engraving recedes, the barrel stands back from upright, the whole microphone comes into frame,
   // then its stand, then the rug, and only then does the overhead spot come up.
   { at: 1.7925, aim: { mic: 0.075 }, dist: 0.1054, anchor: [0.785, 0.485], ...MACRO, roll: 0.9, keyDir: [2.0, 1.6, 0.3], dof: 0.7, motes: 0.8, scrim: 0.5 },
