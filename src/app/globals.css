@@ -281,8 +281,8 @@ html:not(.motion) .reading-progress {
   transform-origin: 0% 100%;
 }
 /* Phones: one word per line, sized server-side to fill the column (--hero-em is
-   the widest word in em, see Hero.tsx). Bold, and capped so a one-word theme
-   never towers over the fold. */
+   the widest word in em, see Hero.tsx). Bold, and capped at 18svh so name,
+   theme, date, venue and both actions still fit a 360x740 first screen. */
 @media (max-width: 639.98px) {
   .hero-title {
     font-size: min(
@@ -290,7 +290,7 @@ html:not(.motion) .reading-progress {
         (100vw - 2 * max(1.25rem, 4vw) - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)) /
           var(--hero-em, 4) * 0.985
       ),
-      30svh
+      18svh
     );
   }
   /* The fit assumes the font's own spacing. With user text-spacing overrides
