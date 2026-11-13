@@ -1,0 +1,126 @@
+/*
+ * Scene stills (see SceneStills.tsx). The section view timelines they follow
+ * (--fp-still-*) and the per-section plates for reduced motion are in the
+ * "Scene stills" block of globals.css.
+ */
+
+/* Fixed and full viewport like the canvas, but inside the content layer at
+   z -1: under every section's scrims, over the canvas it stands in for. */
+.stack {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  transition-property: opacity, display;
+  transition-duration: 0.4s;
+  transition-timing-function: ease;
+  transition-behavior: allow-discrete;
+}
+
+.layer {
+  position: absolute;
+  inset: 0;
+  display: block;
+}
+.layer img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* Everything but the hero waits for its section (below), so its image is not requested up front. */
+.layer:not(.hero) {
+  display: none;
+}
+.end {
+  background: #000;
+}
+
+/* Each still fades in over the previous one as its section's top passes the
+   middle of the viewport (between 65% and 35% of its height), and is displayed,
+   so its lazy image starts loading, from the moment the section enters at the
+   bottom. Scrolling back up reverses it. `forwards` only: before the range the
+   base `display: none` applies. */
+@supports (animation-timeline: view()) {
+  @media (prefers-reduced-motion: no-preference) {
+    .layer:not(.hero) {
+      animation-name: still-in;
+      animation-duration: auto;
+      animation-timing-function: linear;
+      animation-fill-mode: forwards;
+      animation-range: cover 0% cover 65vh;
+    }
+    .theme {
+      animation-timeline: --fp-still-theme;
+    }
+    .speakers {
+      animation-timeline: --fp-still-speakers;
+    }
+    .schedule {
+      animation-timeline: --fp-still-schedule;
+    }
+    .venue {
+      animation-timeline: --fp-still-venue;
+    }
+    .end {
+      animation-timeline: --fp-still-team;
+    }
+  }
+}
+
+@keyframes still-in {
+  0% {
+    display: block;
+    opacity: 0;
+  }
+  54% {
+    display: block;
+    opacity: 0;
+  }
+  100% {
+    display: block;
+    opacity: 1;
+  }
+}
+
+/* No scroll-driven animations (and motion on): only the hero still, at the top
+   of the page, scrolling away with it. */
+@supports not (animation-timeline: view()) {
+  .stack {
+    position: absolute;
+    inset: calc(-1 * var(--header-h)) 0 auto;
+    height: 100lvh;
+  }
+  /* Motion off (no JavaScript, Save-Data, static tier): the plates in globals.css. */
+  :global(html:not(.motion)) .stack {
+    display: none;
+  }
+}
+
+/* Reduced motion: the per-section plates in globals.css instead. */
+@media (prefers-reduced-motion: reduce) {
+  .stack {
+    display: none;
+  }
+}
+
+/* The live scene is coming: never request the other stills (the hero stays
+   until the canvas has drawn). Save-Data: the hero only. Both set by SceneGate. */
+:global(html.scene-pending) .layer:not(.hero),
+:global(html.save-data) .layer:not(.hero) {
+  display: none !important;
+}
+
+/* The canvas has drawn and faded up: fade out, then leave the layout. */
+:global(html.scene-live) .stack {
+  opacity: 0;
+  display: none;
+}
+
+@media print {
+  .stack {
+    display: none;
+  }
+}

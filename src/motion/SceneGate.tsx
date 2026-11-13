@@ -28,6 +28,48 @@ const FLAG = 'fp:home-visited';
 
 type FiberRoots = Map<Element, { store: { getState: () => { frameloop: string; setFrameloop: (f: 'always' | 'demand' | 'never') => void } } }>;
 
+type R3FState = { gl: { toneMappingExposure: number; info: { render: { frame: number } } } };
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/**
+ * Resolves true once the live canvas has drawn and faded up, so the still
+ * frames (src/components/SceneStills.tsx) can fade out over an identical live
+ * frame instead of over black: the canvas has rendered frames, its CSS fade-in
+ * has finished, and the tone-mapping exposure (the scene fades up from black)
+ * has stopped rising. Resolves to the canvas, or null if none draws within
+ * `timeout` ms.
+ */
+async function whenLive(container: HTMLElement, cancelled: () => boolean, timeout = 20_000): Promise<HTMLCanvasElement | null> {
+  const t0 = performance.now();
+  let canvas: HTMLCanvasElement | null = null;
+  let state: R3FState | undefined;
+  while (!cancelled() && performance.now() - t0 < timeout) {
+    canvas = container.querySelector('canvas');
+    if (canvas) {
+      const { _roots } = (await import('@react-three/fiber')) as unknown as {
+        _roots: Map<Element, { store: { getState: () => R3FState } }>;
+      };
+      state = _roots.get(canvas)?.store.getState();
+      if (state && state.gl.info.render.frame > 1) break;
+    }
+    await sleep(150);
+  }
+  if (!canvas || !state || cancelled() || performance.now() - t0 >= timeout) return null;
+  const drawnAt = performance.now();
+  const fades = (canvas.closest('.scene-canvas') as HTMLElement | null)?.getAnimations() ?? [];
+  await Promise.race([Promise.all(fades.map((a) => a.finished.catch(() => null))), sleep(3000)]);
+  // Exposure settles within ~2 s; give up waiting after 5 s (e.g. the dark end of the page stays at 0).
+  let prev = -1;
+  while (!cancelled() && performance.now() - drawnAt < 5000) {
+    const e = state.gl.toneMappingExposure;
+    if (e > 0.05 && Math.abs(e - prev) < 0.02 * e) break;
+    prev = e;
+    await sleep(200);
+  }
+  return cancelled() ? null : canvas;
+}
+
 async function setPaused(container: HTMLElement | null, paused: boolean, saved: { current: string }) {
   const canvas = container?.querySelector('canvas');
   if (!canvas) return;
@@ -73,6 +115,44 @@ export default function SceneGate() {
     mo.observe(el, { childList: true, subtree: true });
     return () => mo.disconnect();
   }, [onHome, seen, sceneOk]);
+
+  // Still frames (SceneStills, home page) stand in for the canvas until it is live:
+  // `html.scene-pending` once the scene is known to load (the stills below the hero are
+  // then never requested), `html.scene-live` once it has drawn and faded up (the stills
+  // fade out). The classes outlive route changes, as the canvas does.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!seen || !sceneOk) {
+      root.classList.remove('scene-pending', 'scene-live');
+      return;
+    }
+    if (root.classList.contains('scene-live') || !ref.current) return;
+    root.classList.add('scene-pending');
+    let cancelled = false;
+    let lost: (() => void) | undefined;
+    let drawn: HTMLCanvasElement | null = null;
+    void whenLive(ref.current, () => cancelled).then((canvas) => {
+      if (cancelled) return;
+      root.classList.remove('scene-pending');
+      if (!canvas) return;
+      root.classList.add('scene-live');
+      // If the GPU drops the context, the stills come back.
+      drawn = canvas;
+      lost = () => root.classList.remove('scene-live');
+      canvas.addEventListener('webglcontextlost', lost);
+    });
+    return () => {
+      cancelled = true;
+      if (lost) drawn?.removeEventListener('webglcontextlost', lost);
+    };
+  }, [seen, sceneOk]);
+
+  // Save-Data: only the hero still (CSS cannot see the setting; without JS all stills load lazily).
+  useEffect(() => {
+    if ((navigator as Navigator & { connection?: { saveData?: boolean } }).connection?.saveData) {
+      document.documentElement.classList.add('save-data');
+    }
+  }, []);
 
   if (!seen || !sceneOk) return null;
   return (

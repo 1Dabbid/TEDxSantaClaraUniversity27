@@ -1128,3 +1128,92 @@ html.has-cursor [contenteditable] {
     scroll-behavior: auto !important;
   }
 }
+
+/* --- Scene stills (src/components/SceneStills.tsx) ----------------------- *
+ * Home page only (the stack is a direct child of <main> there). The sections
+ * the fixed stack follows publish named view timelines, visible to the stack
+ * through timeline-scope on <main>. --fp-plate is each section's still.     */
+#main:has(> [data-scene-stills]) {
+  timeline-scope: --fp-still-theme, --fp-still-speakers, --fp-still-schedule, --fp-still-venue, --fp-still-team;
+}
+#main:has(> [data-scene-stills]) > [data-section='hero'] {
+  --fp-plate: image-set(url('/stills/hero-landscape.avif') type('image/avif'), url('/stills/hero-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='theme'] {
+  view-timeline-name: --fp-still-theme;
+  --fp-plate: image-set(url('/stills/theme-landscape.avif') type('image/avif'), url('/stills/theme-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='speakers'] {
+  view-timeline-name: --fp-still-speakers;
+  --fp-plate: image-set(url('/stills/speakers-landscape.avif') type('image/avif'), url('/stills/speakers-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='schedule'] {
+  view-timeline-name: --fp-still-schedule;
+  --fp-plate: image-set(url('/stills/schedule-landscape.avif') type('image/avif'), url('/stills/schedule-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='venue'] {
+  view-timeline-name: --fp-still-venue;
+  --fp-plate: image-set(url('/stills/venue-landscape.avif') type('image/avif'), url('/stills/venue-landscape.webp') type('image/webp'));
+}
+#main:has(> [data-scene-stills]) > [data-section='team'] {
+  view-timeline-name: --fp-still-team;
+}
+@media (max-aspect-ratio: 9/10) {
+  #main:has(> [data-scene-stills]) > [data-section='hero'] {
+    --fp-plate: image-set(url('/stills/hero-portrait.avif') type('image/avif'), url('/stills/hero-portrait.webp') type('image/webp'));
+  }
+  #main:has(> [data-scene-stills]) > [data-section='theme'] {
+    --fp-plate: image-set(url('/stills/theme-portrait.avif') type('image/avif'), url('/stills/theme-portrait.webp') type('image/webp'));
+  }
+  #main:has(> [data-scene-stills]) > [data-section='speakers'] {
+    --fp-plate: image-set(url('/stills/speakers-portrait.avif') type('image/avif'), url('/stills/speakers-portrait.webp') type('image/webp'));
+  }
+  #main:has(> [data-scene-stills]) > [data-section='schedule'] {
+    --fp-plate: image-set(url('/stills/schedule-portrait.avif') type('image/avif'), url('/stills/schedule-portrait.webp') type('image/webp'));
+  }
+  #main:has(> [data-scene-stills]) > [data-section='venue'] {
+    --fp-plate: image-set(url('/stills/venue-portrait.avif') type('image/avif'), url('/stills/venue-portrait.webp') type('image/webp'));
+  }
+}
+/* Plates: with reduced motion (no scroll-linked fades), and in browsers without
+   scroll-driven animations while motion is off, each section carries its still
+   as its own background instead of the fixed stack: the top of the section,
+   fading out, under its scrims. Switched on through --fp-plates. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --fp-plates: block;
+  }
+}
+@supports not (animation-timeline: view()) {
+  html:not(.motion) {
+    --fp-plates: block;
+  }
+}
+#main:has(> [data-scene-stills])
+  > :is([data-section='hero'], [data-section='theme'], [data-section='speakers'], [data-section='schedule'], [data-section='venue'])::before {
+  content: '';
+  display: var(--fp-plates, none);
+  position: absolute;
+  inset-inline: 0;
+  top: 0;
+  height: min(100%, 100svh);
+  z-index: -20;
+  pointer-events: none;
+  background: var(--fp-plate) center / cover no-repeat;
+  mask-image: linear-gradient(to bottom, #000 62%, transparent);
+}
+/* The hero plate lines up with the viewport like the canvas (from under the header). */
+#main:has(> [data-scene-stills]) > [data-section='hero']::before {
+  top: calc(-1 * var(--header-h));
+  height: 100svh;
+  mask-image: none;
+}
+/* Save-Data (set by SceneGate): the hero still only. */
+html.save-data #main:has(> [data-scene-stills]) > [data-section]:not([data-section='hero'])::before {
+  display: none;
+}
+@media print {
+  #main:has(> [data-scene-stills]) > [data-section]::before {
+    display: none;
+  }
+}
