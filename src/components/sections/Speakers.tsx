@@ -17,7 +17,7 @@ const BARS: [number, number][] = [
 ];
 
 const cardBase =
-  'speaker-card group relative flex flex-col border border-white/10 bg-panel/90';
+  'speaker-card group relative flex min-w-0 flex-col border border-white/10 bg-panel/90';
 
 function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
   const clause = `§ 2.${index + 1}`;
@@ -26,13 +26,13 @@ function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
   if (!speaker.announced) {
     const [a, b] = BARS[index % BARS.length];
     return (
-      <li className={`${cardBase} aspect-[4/3] p-6 sm:aspect-[4/5] sm:p-7`} data-cursor="loupe" data-cursor-zoom="2.4">
+      <li className={`${cardBase} p-6 sm:aspect-[4/5] sm:p-7`} data-cursor="loupe" data-cursor-zoom="2.4">
         <div className="flex items-baseline justify-between">
           <span className="fine-print text-white">{clause.replace(' ', ' ')}</span>
           <span className="fine-print">Clause pending</span>
         </div>
 
-        <div aria-hidden="true" className="mt-auto">
+        <div aria-hidden="true" className="mt-8 sm:mt-auto">
           <span className="block font-mono text-[clamp(4.5rem,9vw,7.5rem)] leading-none font-light tracking-[-0.06em] text-white/[0.07] tabular-nums">
             {num}
           </span>
