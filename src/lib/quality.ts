@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY } from './motion-pref';
+import { REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY, SCENE_LIKELY_CLASS } from './motion-pref';
 
 /**
  * Rendering quality tier.
@@ -220,6 +220,33 @@ function recompute() {
     cachedScene = scene;
     listeners.forEach((l) => l());
   }
+  syncSceneLikely();
+}
+
+/**
+ * `html.scene-likely` is the boot script's guess, made before first paint, that
+ * the live scene will run (motion on, home page; SiteShell). The still frames stay
+ * hidden while it is set, so a visitor who gets the scene never sees the soft
+ * hero still first. Cleared here as soon as the scene is known not to run (static
+ * tier, no WebGL or a software rasterizer): the stills then fade in.
+ */
+export { SCENE_LIKELY_CLASS };
+function syncSceneLikely() {
+  if (typeof document === 'undefined') return;
+  const decided = cached === 'static' || gpu !== null || readOverride() !== null;
+  if (decided && !cachedScene) document.documentElement.classList.remove(SCENE_LIKELY_CLASS);
+}
+
+/**
+ * Runs the WebGL probe now instead of at the first idle moment (SceneGate calls it
+ * right after the first paint when the scene is likely), so the scene, or the
+ * still frames, are decided as early as is safe.
+ */
+export function probeNow() {
+  if (typeof window === 'undefined' || gpu) return;
+  getQuality();
+  probeGpu();
+  recompute();
 }
 
 let watching = false;
@@ -250,6 +277,7 @@ export function getQuality(): Quality {
     scheduleProbe();
     cached = compute();
     cachedScene = computeScene(cached);
+    syncSceneLikely();
   }
   return cached;
 }

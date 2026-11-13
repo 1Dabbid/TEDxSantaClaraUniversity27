@@ -42,7 +42,8 @@ test.describe('scene stills', () => {
     await page.goto('/');
     await settle(page, 600);
     await expect(stack(page)).toBeVisible();
-    await expect(page.locator('html')).not.toHaveClass(/scene-(live|pending)/);
+    // The boot script's guess (scene likely) is withdrawn once the probe finds a software rasterizer.
+    await expect(page.locator('html')).not.toHaveClass(/scene-(live|pending|likely)/);
     // Decorative, no layout box of its own, under the content.
     await expect(stack(page)).toHaveAttribute('aria-hidden', 'true');
     expect(await page.locator('[data-scene-stills] img').evaluateAll((imgs) => imgs.every((i) => i.getAttribute('alt') === ''))).toBe(true);
@@ -141,27 +142,31 @@ test.describe('scene stills', () => {
     expect(errors.filter((e) => !/chunk|Loading|fetch/i.test(e))).toEqual([]);
   });
 
-  test('live scene (?quality=high): the stills fade out once the canvas has drawn, the rest are never requested', async ({ page }) => {
+  test('live scene (?quality=high): no still is ever shown or requested, not even the hero', async ({ page }) => {
     test.setTimeout(120_000);
     const requested = stillRequests(page);
-    await page.goto('/?quality=high');
+    await page.goto('/?quality=high', { waitUntil: 'commit' });
+    // Decided before first paint by the boot script: the stack is hidden from the start.
+    await expect(page.locator('html')).toHaveClass(/scene-likely/);
+    expect(await display(page, '[data-scene-stills]')).toBe('none');
     await expect(page.locator('html')).toHaveClass(/scene-pending/, { timeout: 10_000 });
+    expect(await display(page, '[data-scene-stills]')).toBe('none');
     await expect(page.locator('canvas')).toHaveCount(1, { timeout: 30_000 });
     // SwiftShader draws slowly: the hand-over waits for the canvas to fade up.
     await expect(page.locator('html')).toHaveClass(/scene-live/, { timeout: 60_000 });
     await expect(page.locator('html')).not.toHaveClass(/scene-pending/);
-    // Fades out (400 ms), then leaves the layout. A busy software rasterizer can starve the
+    // Stays out of the layout once live. A busy software rasterizer can starve the
     // main thread for seconds per frame, so allow for that.
     await expect
       .poll(() => page.evaluate(() => `${document.documentElement.classList.contains('scene-live')} ${getComputedStyle(document.querySelector('[data-scene-stills]')!).display}`), {
         timeout: 20_000,
       })
       .toBe('true none');
-    // Scroll the whole stack's range: nothing below the hero is fetched.
+    // Scroll the whole stack's range: nothing is fetched.
     for (const id of ['theme', 'speakers', 'schedule', 'venue', 'tickets', 'faq']) {
       await scrollToSection(page, id, 0.2);
       await page.waitForTimeout(200);
     }
-    expect(requested.filter((u) => !u.startsWith('/stills/hero-'))).toEqual([]);
+    expect(requested).toEqual([]);
   });
 });

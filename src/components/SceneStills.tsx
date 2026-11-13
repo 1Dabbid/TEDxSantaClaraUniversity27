@@ -15,9 +15,11 @@ import styles from './SceneStills.module.css';
  * - Reduced motion, or browsers without scroll-driven animations (and no
  *   motion): no fixed stack; each section carries its still as its own
  *   background plate instead (globals.css).
- * - SceneGate sets `html.scene-pending` once it knows the live scene will load
- *   (non-hero stills are then never requested) and `html.scene-live` once the
- *   canvas has drawn and faded up; the stack then fades out and is removed.
+ * - Visitors who get the live scene never see a still: the boot script sets
+ *   `html.scene-likely` before first paint, SceneGate `html.scene-pending` once
+ *   the scene is confirmed and `html.scene-live` once the canvas has drawn; the
+ *   stack stays hidden throughout (black until the canvas fades in). If the
+ *   GPU probe finds no usable WebGL, `scene-likely` goes and the stills fade in.
  *
  * The images are frames of the real scene, captured by `npm run stills`
  * (scripts/capture-stills.mjs) into public/stills. Width and height below must
@@ -34,7 +36,6 @@ export function SceneStills() {
   return (
     <div className={styles.stack} data-scene-stills aria-hidden="true">
       {SHOTS.map((name) => {
-        const hero = name === 'hero';
         return (
           <picture key={name} className={`${styles.layer} ${styles[name]}`} data-still={name}>
             <source media={PORTRAIT} type="image/avif" srcSet={`/stills/${name}-portrait.avif`} {...PORTRAIT_SIZE} />
@@ -45,7 +46,10 @@ export function SceneStills() {
               src={`/stills/${name}-landscape.webp`}
               {...LANDSCAPE_SIZE}
               alt=""
-              loading={hero ? 'eager' : 'lazy'}
+              // Lazy even for the hero: a stack hidden for the live scene (html.scene-likely)
+              // then never requests it. On screen it loads at once; without JavaScript
+              // browsers load it eagerly anyway.
+              loading="lazy"
               decoding="async"
               fetchPriority="low"
             />

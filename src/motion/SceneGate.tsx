@@ -2,7 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
-import { useSceneEnabled } from '@/lib/quality';
+import { probeNow, SCENE_LIKELY_CLASS, useSceneEnabled } from '@/lib/quality';
 import type { EngravingFacts } from '@/scene/engraving';
 
 // Not even the loader is in the first-load bundle: it (and next/dynamic) is fetched only when the
@@ -118,6 +118,30 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
   const [failed, setFailed] = useState(false);
   const sceneOk = useSceneEnabled() && !failed;
 
+  // The boot script guessed the scene will run (html.scene-likely, stills hidden): probe the
+  // GPU right after the first paint instead of at the first idle moment, so the guess is
+  // confirmed (or the stills revealed) early. Hero text paints first either way.
+  useEffect(() => {
+    if (!onHome || !document.documentElement.classList.contains(SCENE_LIKELY_CLASS)) return;
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const raf = requestAnimationFrame(() => (t = setTimeout(probeNow, 0)));
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(t);
+    };
+  }, [onHome]);
+
+  // Once the scene is confirmed, fetch its chunk now: SceneLoader still mounts it only after
+  // load + idle, but the download then overlaps the rest of the page load.
+  useEffect(() => {
+    if (onHome && sceneOk) void import('@/scene/SceneCanvas').catch(() => {});
+  }, [onHome, sceneOk]);
+
+  // The scene failed: show the still frames.
+  useEffect(() => {
+    if (failed) document.documentElement.classList.remove(SCENE_LIKELY_CLASS);
+  }, [failed]);
+
   useEffect(() => {
     if (!onHome) return;
     try {
@@ -154,10 +178,11 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
     };
   }, [onHome, seen, sceneOk]);
 
-  // Still frames (SceneStills, home page) stand in for the canvas until it is live:
-  // `html.scene-pending` once the scene is known to load (the stills below the hero are
-  // then never requested), `html.scene-live` once it has drawn and faded up (the stills
-  // fade out). The classes outlive route changes, as the canvas does.
+  // Still frames (SceneStills, home page) stand in for the canvas only for visitors who do
+  // not get it: `html.scene-likely` (boot script) and `html.scene-pending` (the scene is
+  // known to load) keep them hidden, so the page shows black until the canvas fades in;
+  // `html.scene-live` once it has drawn and faded up. The classes outlive route changes,
+  // as the canvas does.
   useEffect(() => {
     const root = document.documentElement;
     if (!seen || !sceneOk) {
@@ -172,11 +197,14 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
     void whenLive(ref.current, () => cancelled).then((canvas) => {
       if (cancelled) return;
       root.classList.remove('scene-pending');
-      if (!canvas) return;
+      if (!canvas) {
+        root.classList.remove(SCENE_LIKELY_CLASS);
+        return;
+      }
       root.classList.add('scene-live');
       // If the GPU drops the context, the stills come back.
       drawn = canvas;
-      lost = () => root.classList.remove('scene-live');
+      lost = () => root.classList.remove('scene-live', SCENE_LIKELY_CLASS);
       canvas.addEventListener('webglcontextlost', lost);
     });
     return () => {

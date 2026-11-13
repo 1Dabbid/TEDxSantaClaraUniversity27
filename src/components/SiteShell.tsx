@@ -4,7 +4,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { SkipLink } from '@/components/SkipLink';
 import { getSettings } from '@/lib/content';
-import { REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY } from '@/lib/motion-pref';
+import { REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY, SCENE_LIKELY_CLASS } from '@/lib/motion-pref';
 import { engravingLines } from '@/lib/site';
 import MotionRoot from '@/motion/MotionRoot';
 import SmoothScroll from '@/motion/SmoothScroll';
@@ -19,8 +19,14 @@ import SceneGate from '@/motion/SceneGate';
  * CSS treats like the reduced-motion media query. Without `html.motion` (no JS,
  * reduced motion) the server HTML is the complete, fully visible design.
  * MotionRoot removes the class again if the quality tier resolves to `static`.
+ *
+ * On the home page with motion on (and not 2G, not forced colours, not
+ * `?quality=static`) it also adds `html.scene-likely`: the live scene will
+ * probably run, so the still frames stay hidden from the first paint and the
+ * page shows black until the canvas fades in. The GPU probe clears the class if
+ * the scene cannot run (src/lib/quality.ts), and the stills then fade in.
  */
-const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection,u=0;try{u=localStorage.getItem('${REDUCE_MOTION_KEY}')==='1'}catch(e){}if(u)d.classList.add('${REDUCE_MOTION_CLASS}');else if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData))d.classList.add('motion')}catch(e){}`;
+const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection,u=0;try{u=localStorage.getItem('${REDUCE_MOTION_KEY}')==='1'}catch(e){}if(u)d.classList.add('${REDUCE_MOTION_CLASS}');else if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData)){d.classList.add('motion');var e=c&&c.effectiveType;if(location.pathname==='/'&&e!=='2g'&&e!=='slow-2g'&&!matchMedia('(forced-colors: active)').matches&&new URLSearchParams(location.search).get('quality')!=='static')d.classList.add('${SCENE_LIKELY_CLASS}')}}catch(e){}`;
 
 /**
  * The public site's chrome: site CSS, motion boot, skip link, header, the WebGL
