@@ -61,7 +61,7 @@ export function clearance(p: Vector3): [number, string] {
   const stand = Math.hypot(p.x - STAND_BASE.x, p.z - STAND_BASE.z);
   const yIn = Math.min(STAND_TOP_Y, Math.max(0.05, p.y));
   take(Math.hypot(stand - 0.0095 > 0 ? stand - 0.0095 : 0, p.y - yIn), 'stand');
-  take(Math.hypot(Math.max(0, stand - 0.15), Math.max(0, p.y - 0.055)), 'base');
+  take(Math.hypot(Math.max(0, stand - 0.15), Math.max(0, p.y - STAND_BASE.y - 0.055)), 'base');
   // Floors: stage (with the rug) and the audience floor beyond the lip.
   const onStage = p.z < STAGE_EDGE_Z;
   if (onStage) take(p.y - (Math.hypot(p.x, p.z) < 1.52 ? 0.0185 : 0), 'floor');

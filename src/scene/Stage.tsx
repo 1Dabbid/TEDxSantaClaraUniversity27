@@ -65,7 +65,7 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     const cone = new CylinderGeometry(BEAM.r0 * BEAM.pad, BEAM.rBottom * BEAM.pad, SPOT_HEIGHT, high ? 48 : 32, 1, true);
     cone.translate(0, SPOT_HEIGHT / 2, 0);
 
-    const count = high ? 700 : 260;
+    const count = high ? 420 : 160;
     const pos = new Float32Array(count * 3);
     const seed = new Float32Array(count * 4);
     let s = 1337;
@@ -116,11 +116,12 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     }
     if (d) {
       d.uniforms.uTime.value = t;
-      d.uniforms.uIntensity.value = look.cone;
+      // Dust only shows in the light: it fades with the shaft and with the spot itself.
+      d.uniforms.uIntensity.value = look.cone * Math.min(1, look.spot);
       d.uniforms.uScale.value = (state.size.height * state.viewport.dpr * 0.5) / Math.tan((look.fov * Math.PI) / 360);
     }
     if (cone.current) cone.current.visible = look.cone > 0.01;
-    if (dust.current) dust.current.visible = look.cone > 0.01;
+    if (dust.current) dust.current.visible = look.cone * look.spot > 0.01;
     if (spot.current) spot.current.intensity = 260 * look.spot;
   });
 
@@ -141,7 +142,8 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
         color="#fff2e4"
       />
       <mesh ref={cone} geometry={geo.cone} material={mats.cone} renderOrder={5} frustumCulled={false} onUpdate={reflected} />
-      <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} onUpdate={reflected} />
+      {/* Dust lives only in the air inside the beam: never in the floor reflection (it read as speckles on the deck). */}
+      <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} />
     </group>
   );
 }
