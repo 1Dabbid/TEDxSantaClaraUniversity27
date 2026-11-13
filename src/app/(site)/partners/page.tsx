@@ -446,7 +446,7 @@ export default async function PartnersPage() {
 
       {/* TEDx rules: before the tiers, so every tier is read in their light. */}
       <section aria-labelledby="rules-title" className="shell py-20 sm:py-28">
-        <div className="grid gap-12 md:grid-cols-12">
+        <div className="grid grid-cols-1 gap-12 md:grid-cols-12">
           <div className="md:col-span-4">
             <div data-reveal="fade">
               <SectionLabel index={next()}>How it works</SectionLabel>
@@ -463,7 +463,7 @@ export default async function PartnersPage() {
             {RULES.map((r, i) => (
               <li
                 key={r.title}
-                className="grid grid-cols-[3.75rem_1fr] gap-2 border-b border-white/15 py-7 sm:grid-cols-[5rem_1fr]"
+                className="grid grid-cols-[3.75rem_minmax(0,1fr)] gap-2 border-b border-white/15 py-7 sm:grid-cols-[5rem_minmax(0,1fr)]"
               >
                 <ClauseNo>{String(i + 1).padStart(2, '0')}</ClauseNo>
                 <div>

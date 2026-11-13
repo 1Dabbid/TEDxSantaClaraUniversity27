@@ -66,6 +66,10 @@
     min-height: 100svh;
     /* Safety net: never a sideways page scroll (clip, unlike hidden, keeps sticky working). */
     overflow-x: clip;
+    /* A word wider than its line (the 24-letter event name at 320px, or any text
+       under user text-spacing overrides, WCAG 1.4.12) breaks instead of being
+       clipped by the safety net above. Words that fit never break. */
+    overflow-wrap: break-word;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -288,6 +292,16 @@ html:not(.motion) .reading-progress {
       ),
       30svh
     );
+  }
+  /* The fit assumes the font's own spacing. With user text-spacing overrides
+     (WCAG 1.4.12: letter-spacing 0.12em) a word can outgrow the column: let it
+     wrap inside its mask instead of running off the screen. At normal spacing
+     every word fits with 1.5% to spare, so nothing wraps. */
+  .hero-word,
+  .hero-word > span {
+    max-width: 100%;
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 .hero-type {
