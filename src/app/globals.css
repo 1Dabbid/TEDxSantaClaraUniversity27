@@ -293,6 +293,25 @@ html:not(.motion) .reading-progress {
 .hero-type {
   display: inline-block;
 }
+/* Hero scrim: behind the text column only. Desktop: the left ~60%, fading out
+   before the mic on the right third. Phones: behind the narrow text column on
+   the left and the title, leaving the lower right open for the mic. */
+.hero-scrim {
+  background: linear-gradient(
+    to right,
+    rgb(0 0 0 / 0.84),
+    rgb(0 0 0 / 0.66) 38%,
+    rgb(0 0 0 / 0.22) 60%,
+    rgb(0 0 0 / 0) 72%
+  );
+}
+@media (max-width: 639.98px) {
+  .hero-scrim {
+    background:
+      linear-gradient(to bottom, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0) 40%),
+      linear-gradient(to right, rgb(0 0 0 / 0.86), rgb(0 0 0 / 0.74) 52%, rgb(0 0 0 / 0.24) 76%, rgb(0 0 0 / 0) 90%);
+  }
+}
 .scroll-cue-line {
   position: relative;
   display: block;
@@ -456,6 +475,17 @@ html:not(.motion) .reading-progress {
 .theme-counter {
   display: none;
 }
+.theme-fig {
+  display: none;
+}
+/* Readability behind the theme text. Not pinned (phones, short viewports) the
+   text runs the full width, so a moderate wash with a darker head and foot. */
+.theme-scrim {
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.66) 40%, rgb(0 0 0 / 0.72) 75%, rgb(0 0 0 / 0.86));
+}
+.theme-scrim-stack {
+  opacity: 0;
+}
 
 @media (max-width: 767.98px) {
   .theme-stack {
@@ -512,11 +542,61 @@ html:not(.motion) .reading-progress {
   }
   html.motion .theme-fine .theme-phrase {
     color: var(--color-mute);
+    text-decoration: underline 1px transparent;
+    text-underline-offset: 0.25em;
+  }
+  /* Pinned: no blanket. Dark behind the text column (left), darker under the
+     contract (bottom left) and the clause counter (top right); the right ~45%,
+     where the engraving is brightest, stays open. */
+  html.motion .theme-scrim {
+    background:
+      radial-gradient(ellipse 62% 36% at 26% 90%, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.8) 55%, rgb(0 0 0 / 0) 100%),
+      radial-gradient(ellipse 22% 14% at 90% 14%, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0) 100%),
+      linear-gradient(to right, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.5) 32%, rgb(0 0 0 / 0.16) 50%, rgb(0 0 0 / 0) 57%);
+  }
+  /* Settles in behind the growing phrases (ThemeMotion), so the big type never
+     competes with the engraved letters behind it. Left/centre only. */
+  html.motion .theme-scrim-stack {
+    background: radial-gradient(ellipse 46% 42% at 28% 47%, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0) 100%);
+  }
+  /* While the heading is up, the camera is still pushing in past the bright
+     grille: a local scrim behind the heading only (it leaves with it). */
+  html.motion [data-theme-title-wrap] {
+    position: relative;
+    isolation: isolate;
+  }
+  html.motion [data-theme-title-wrap]::before {
+    content: '';
+    position: absolute;
+    top: -8rem;
+    bottom: -6rem;
+    left: -6rem;
+    width: min(76rem, 88vw);
+    z-index: -1;
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.76), rgb(0 0 0 / 0.62) 72%, rgb(0 0 0 / 0));
+    pointer-events: none;
+  }
+  html.motion .theme-fig {
+    display: block;
+    position: absolute;
+    right: clamp(1.25rem, 4vw, 3.5rem);
+    bottom: 2.5rem;
+    max-width: 18rem;
+    text-align: right;
+    color: var(--color-mute);
+    isolation: isolate;
+  }
+  html.motion .theme-fig::before {
+    content: '';
+    position: absolute;
+    inset: -1.5rem -2rem;
+    z-index: -1;
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.6) 60%, rgb(0 0 0 / 0));
   }
   html.motion .theme-stack {
     position: absolute;
     left: clamp(1.25rem, 4vw, 3.5rem);
-    right: clamp(1.25rem, 4vw, 3.5rem);
+    right: 42%;
     top: 46%;
     transform: translateY(-50%);
     margin: 0;
@@ -558,7 +638,7 @@ html:not(.motion) .reading-progress {
   html.motion .speaker-card:focus-within {
     transform: translate3d(0, -8px, 0);
     border-color: rgb(255 255 255 / 0.28);
-    background-color: rgb(14 14 14 / 0.92);
+    background-color: rgb(0 0 0 / 0.3);
   }
   html.motion .speaker-card:hover .redacted::after {
     transition: transform 1.2s var(--ease-weight);
@@ -566,12 +646,131 @@ html:not(.motion) .reading-progress {
   }
 }
 
+/* Stage moment. Static / no JS: normal flow on black (none of this applies).
+   Keep the two media blocks in sync with STAGE in SpeakersMotion. */
+@media (min-width: 1024px) and (min-height: 44rem) {
+  /* Desktop: a tall runway with a sticky full-viewport stage. Camera timing keys
+     off section progress, so the rug lands at ~0.46 of the runway. */
+  html.motion .speakers-runway {
+    height: 340vh;
+    padding-block: 0;
+  }
+  @media (pointer: coarse) {
+    html.motion .speakers-runway {
+      height: 280vh;
+    }
+  }
+  html.motion .speakers-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: clip;
+  }
+  /* Targeted scrims only: behind the heading (top left) and a soft floor under
+     the strip. The rug, mid-frame, is left untouched. */
+  html.motion .speakers-scrim {
+    background:
+      radial-gradient(ellipse 66% 58% at 16% 20%, rgb(0 0 0 / 0.88), rgb(0 0 0 / 0.76) 45%, rgb(0 0 0 / 0) 100%),
+      linear-gradient(to top, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0) 34%);
+  }
+  html.motion .speakers-head-inner {
+    padding-top: calc(var(--header-h) + 2.5rem);
+  }
+  html.motion .speakers-strip {
+    position: absolute;
+    inset-inline: 0;
+    bottom: clamp(1.25rem, 4svh, 2.75rem);
+  }
+  html.motion .speakers-track {
+    display: flex;
+    gap: 1rem;
+    width: max-content;
+    margin-top: 0;
+  }
+  html.motion .speakers-track > .speaker-card {
+    flex: none;
+    width: 19rem;
+    aspect-ratio: auto;
+    padding: 1.5rem;
+  }
+  html.motion .speakers-track .speaker-num {
+    display: none;
+  }
+  html.motion .speakers-track .speaker-body,
+  html.motion .speakers-track .speaker-foot {
+    margin-top: 1.25rem;
+  }
+  html.motion .speakers-track .speaker-photo {
+    aspect-ratio: 16 / 10;
+  }
+  html.motion .speakers-track .speaker-text {
+    padding: 1.25rem 0 0;
+  }
+}
+@media (max-width: 1023.98px), (max-height: 43.99rem) {
+  /* Phones, tablets, short viewports: the heading block holds over the rug for
+     half a screen (sticky inside a taller wrapper), then the plain list. */
+  html.motion .speakers-runway {
+    padding-top: 0;
+  }
+  html.motion .speakers-head {
+    height: 150svh;
+  }
+  html.motion .speakers-head-inner {
+    position: sticky;
+    top: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 100svh;
+    padding-top: calc(var(--header-h) + 2rem);
+    padding-bottom: 2.5rem;
+    background: linear-gradient(
+      to bottom,
+      rgb(0 0 0 / 0.78),
+      rgb(0 0 0 / 0.5) 30%,
+      rgb(0 0 0 / 0) 46%,
+      rgb(0 0 0 / 0) 62%,
+      rgb(0 0 0 / 0.7) 84%
+    );
+  }
+  html.motion .speakers-meta {
+    margin-top: auto;
+  }
+  html.motion .speakers-track {
+    margin-top: 0;
+  }
+}
+
 /* --- Schedule timeline --------------------------------------------------- */
+/* The orbiting rug carries the frame: the timeline is a column on the left with
+   a scrim behind that column only; phones get a light wash. */
+.schedule-scrim {
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.6) 50%, rgb(0 0 0 / 0.72));
+}
+@media (min-width: 1024px) {
+  .schedule-scrim {
+    background: linear-gradient(
+      to right,
+      rgb(0 0 0 / 0.88),
+      rgb(0 0 0 / 0.8) 40%,
+      rgb(0 0 0 / 0.4) 52%,
+      rgb(0 0 0 / 0) 64%
+    );
+  }
+}
 .timeline-line {
   transform-origin: 50% 0;
 }
-html.motion .timeline-line {
+/* Pre-draw state until ScheduleMotion arms the line (it sets its own start state
+   in the same step). Same 3s failsafe as data-reveal: never stays hidden. */
+html.motion .timeline-line:not([data-armed]) {
   transform: scaleY(0);
+  animation: timeline-failsafe 0.01s linear 3s forwards;
+}
+@keyframes timeline-failsafe {
+  to {
+    transform: none;
+  }
 }
 
 /* --- Mobile menu --------------------------------------------------------- */

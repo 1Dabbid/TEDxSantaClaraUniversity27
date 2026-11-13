@@ -31,11 +31,13 @@ const SUB = ['a', 'b', 'c'];
  *
  * - Static / no JS: natural height, readable clauses, the statement set large.
  * - Motion, md+: a tall runway with a sticky stage. The clauses shrink to a 9px
- *   contract footer and, as you scroll, each phrase of the definition (set as a
- *   defined term, in the sans) lifts off its exact spot in the small type and
- *   grows until it fills the screen, then settles into display weight and
- *   tracking (ThemeMotion). A clause counter ticks in the corner. The loupe
- *   cursor reads the small type.
+ *   contract footer on a locally dark corner. First the DOM text recedes and the
+ *   engraved type on the 3D microphone (right ~45% of the frame) is the only fine
+ *   print on screen; then each phrase of the definition (set as a defined term,
+ *   in the sans) lifts off its exact spot in the small type and grows into the
+ *   left/centre column, settling into display weight and tracking. The lines
+ *   stay white and stack into the finished sentence (ThemeMotion). A clause
+ *   counter ticks in the corner. The loupe cursor reads the small type.
  * - Motion, mobile: natural height, masked line reveals.
  */
 export function Theme({ settings }: { settings: Settings }) {
@@ -46,11 +48,13 @@ export function Theme({ settings }: { settings: Settings }) {
   return (
     <SectionShell id="theme" scrim="none" className="theme-runway">
       <div data-theme-stage data-def-index={defIndex} className="theme-stage relative">
-        <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 scrim-left" />
+        {/* Targeted scrims: one behind the text column (left), one under the
+            contract (bottom left). The right ~45% stays open for the engraving. */}
+        <div aria-hidden="true" className="theme-scrim pointer-events-none absolute inset-0 -z-10" />
         <div
           aria-hidden="true"
           data-theme-scrim
-          className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_40%_50%,rgb(0_0_0/0.82),rgb(0_0_0/0.55)_70%)] opacity-0"
+          className="theme-scrim-stack pointer-events-none absolute inset-0 -z-10"
         />
         <div className="theme-stage-inner shell py-28 md:py-36">
           <div className="flex items-start justify-between gap-6">
@@ -84,6 +88,12 @@ export function Theme({ settings }: { settings: Settings }) {
                 </span>
               </span>
             ))}
+          </p>
+
+          {/* Motion only: a figure caption for the 3D engraving, shown in the beat
+              where it is the only fine print on screen. */}
+          <p aria-hidden="true" data-theme-fig className="theme-fig fine-print">
+            <span className="text-white">Fig.&nbsp;1</span> The fine print, engraved. Read it closely.
           </p>
 
           <div
