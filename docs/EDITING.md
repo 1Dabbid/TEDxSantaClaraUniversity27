@@ -68,7 +68,7 @@ Tiers and benefits first, then the partner:
 
 1. **Partners > Partner tiers**: each tier has **Tier name**, **Description**, **Contribution (optional)** (e.g. $2,500; hidden while blank), **Number of slots (optional)** and **Order**.
 2. **Partners > Partner benefits > Benefits comparison**: one row per **Benefit**, and tick the tiers under **Included in these tiers**. While the list is empty the page says the schedule of benefits is being finalized. Only benefits TEDx allows (no stage time, no say over the programme).
-3. **Partners > Partners (logos)** > create: **Organization name**, **Tier**, **Logo**, **Website**.
+3. **Partners > Partners (logos)** > create: **Organization name**, **Tier**, **Logo**, **Website**. The logo is shown at most 24px tall and 72px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED's prohibited sponsors. Sponsors can never be speakers.
 4. Tick **Published** only once the partnership is signed and the logo approved, then **Save**. Partners appear on `/partners` only, never on the home page.
 
 ### Show team names
@@ -128,7 +128,7 @@ Only the Director of Compliance (or the licence holder) should change these. The
 | --- | --- | --- |
 | Speaker **Portrait** | 4:5 portrait, at least 1200 × 1500 px | JPG, under ~1 MB |
 | Team **Photo (optional)** | square, at least 600 × 600 px | JPG, under ~500 KB |
-| Partner **Logo** | white or light version on a transparent background, wide rather than tall; it is shown at most 32 px tall | SVG (best) or PNG at least 320 px wide |
+| Partner **Logo** | white or light version on a transparent background, wide rather than tall; it is shown at most 24px tall and 72px wide; always smaller than the event logo | SVG (best) or PNG at least 216 px wide |
 
 Use plain file names without spaces (e.g. `jane-doe.jpg`). The site resizes and compresses photos automatically; a huge file only slows down saving.
 

@@ -264,19 +264,21 @@ function BenefitsComparison({
 
 function SponsorMark({ sponsor }: { sponsor: Sponsor }) {
   const mark = sponsor.logo ? (
-    // Capped at 32px tall: always smaller than the event logo in the header.
+    // Capped at 24px tall and 72px wide: always smaller than the event logo (48px tall in the header).
     <Image
       src={sponsor.logo}
       alt={sponsor.name}
-      width={160}
-      height={32}
-      className="h-8 max-h-8 w-auto max-w-[10rem] object-contain"
+      width={72}
+      height={24}
+      className="h-6 max-h-6 w-auto max-w-[4.5rem] object-contain"
     />
   ) : (
-    <span className="text-lg font-medium text-white">{sponsor.name}</span>
+    // Text fallback stays below the size of the event logo's wordmark.
+    <span className="text-sm font-medium text-white">{sponsor.name}</span>
   );
   return (
-    <li data-cursor="loupe" className="flex min-h-28 items-center justify-center border border-white/10 bg-black p-6">
+    // No loupe here: it would magnify partner logos beyond the event logo.
+    <li className="flex min-h-28 items-center justify-center border border-white/10 bg-black p-6">
       {sponsor.url ? (
         <a href={sponsor.url} target="_blank" rel="noopener noreferrer" className="inline-flex p-1">
           {mark}

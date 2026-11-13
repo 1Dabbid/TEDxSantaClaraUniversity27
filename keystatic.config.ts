@@ -465,7 +465,8 @@ export default config({
         tier: fields.relationship({ label: 'Tier', collection: 'tiers' }),
         logo: fields.image({
           label: 'Logo',
-          description: 'A white or light version on a transparent background (PNG or SVG). Shown small, on /partners only.',
+          description:
+            'A white or light version on a transparent background (PNG or SVG). Shown on /partners only, at most 24 px tall and 72 px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED’s prohibited sponsors. Sponsors can never be speakers.',
           directory: 'public/images/sponsors',
           publicPath: '/images/sponsors/',
         }),
