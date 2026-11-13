@@ -48,11 +48,11 @@ export const VIEW_AZ = 0.12;
 
 /**
  * Where every engraved row begins around the barrel (mic-space angle, atan(x, z)). The camera
- * axis meets the barrel at about +0.09; starting the rows half a radian to its left puts the
+ * axis meets the barrel at about +0.09; starting the rows 0.3 rad to its left puts the
  * column of row starts just right of the theme headline in the macro, with the copy running
  * across the lit face of the barrel instead of the seam between row ends and row starts.
  */
-export const ENGRAVING_START_PHI = -0.53;
+export const ENGRAVING_START_PHI = -0.22;
 
 /** Rug pile height: the stand's foot stands on it. */
 export const RUG_TOP = 0.0185;
