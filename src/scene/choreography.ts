@@ -615,9 +615,12 @@ const STAGE_KEYS_DESKTOP: LightKey[] = [
   { at: 2.75, ...STAGE_LOOK, warm: 0.2 },
   { at: 3.1, ...STAGE_LOOK, warm: 0.45 },
   { at: 3.9, ...STAGE_LOOK, cone: 1.45, spot: 0.95, exposure: 0.97, warm: -0.45 },
-  { at: 4.6, ...STAGE_LOOK, fov: 31, cone: 0.45, spot: 0.95, key: 0.35, vignette: 0.6, scrimEdge: 0.5, warm: -0.35 },
-  { at: 5.3, ...STAGE_LOOK, fov: 30, exposure: 0.95, cone: 0.38, spot: 0.95, key: 0.3, vignette: 0.62, scrimEdge: 0.7, warm: -0.2 },
-  { at: 5.8, ...STAGE_LOOK, fov: 30, exposure: 0.9, cone: 0.28, spot: 0.95, key: 0.3, vignette: 0.65, scrimEdge: 0.7, warm: -0.15 },
+  // Venue: the location card sits top right, over the upper beam; the shaft thins right down as the
+  // crane rises (the beam's haze behind the card's small map labels stays under 4.5:1 contrast).
+  { at: 4.2, ...STAGE_LOOK, fov: 31.5, cone: 0.3, spot: 0.95, key: 0.4, vignette: 0.61, scrimEdge: 0.3, warm: -0.4 },
+  { at: 4.6, ...STAGE_LOOK, fov: 31, cone: 0.22, spot: 0.95, key: 0.35, vignette: 0.6, scrimEdge: 0.5, warm: -0.35 },
+  { at: 5.3, ...STAGE_LOOK, fov: 30, exposure: 0.95, cone: 0.21, spot: 0.95, key: 0.3, vignette: 0.62, scrimEdge: 0.7, warm: -0.2 },
+  { at: 5.8, ...STAGE_LOOK, fov: 30, exposure: 0.9, cone: 0.2, spot: 0.95, key: 0.3, vignette: 0.65, scrimEdge: 0.7, warm: -0.15 },
   { at: 6.0, ...STAGE_LOOK, fov: 30, ...DARK, scrimEdge: 0.7, warm: -0.15 },
 ];
 
