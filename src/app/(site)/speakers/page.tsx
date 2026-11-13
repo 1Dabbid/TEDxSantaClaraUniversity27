@@ -10,7 +10,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const anyAnnounced = speakers.some((sp) => sp.announced);
   const description = anyAnnounced
     ? `The speakers of ${SITE_NAME}: ${s.themeName}, ${s.dateLong}, ${s.venueName}.`
-    : `The ${SITE_NAME}: ${s.themeName} lineup is announced soon. ${s.dateLong}, ${s.venueName}.`;
+    : `Speakers for ${SITE_NAME}: ${s.themeName} are to be announced. ${s.dateLong}, ${s.venueName}.`;
   return {
     title: 'Speakers',
     description,
