@@ -19,7 +19,6 @@ const seq = (n: number) => ({ '--seq': n }) as CSSProperties;
 const ADV_CHARS = '!"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~’‘“”–—…';
 const ADV = [338,552,649,655,1016,672,339,377,377,559,679,334,468,334,388,674,431,630,646,676,622,649,599,651,649,334,343,679,679,679,560,1016,760,662,740,722,607,587,750,747,281,584,719,565,932,762,771,648,777,657,655,667,732,760,1057,738,731,664,377,344,377,487,476,365,581,630,588,630,596,360,632,623,271,271,580,271,913,623,613,630,630,414,560,357,623,600,850,580,602,573,469,372,469,679,311,311,540,532,500,1000,1002];
 const TRACKING = -0.06; // em, matches the headline's tracking
-const MARK = 0.36; // em taken by the footnote marker after the last word
 
 function wordEm(word: string): number {
   let w = 0;
@@ -35,8 +34,7 @@ function wordEm(word: string): number {
  * with the first paint and never waits for JS or fonts: the caption types on,
  * each word of the theme name rises from a mask with a shear that settles (left
  * letters lead, so it reads as a letter stagger while every word stays one text
- * run and keeps its kerning), the footnote marker pops last, and the facts and
- * buttons settle (readable from the first frame). HeroMotion adds the scroll-out.
+ * run and keeps its kerning), and the facts and buttons settle (readable from the first frame). HeroMotion adds the scroll-out.
  *
  * Phones: one word per line, sized to fill the column (see wordEm), bold. The
  * facts stack in a narrow left column so the lower right stays open for the
@@ -46,10 +44,9 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
   const cta = ticketCta(settings);
   const caption = `${settings.dateISO.slice(0, 4)} theme`;
   const words = settings.themeName.split(/\s+/).filter(Boolean);
-  // Theme copy (content/theme-copy.yaml). A blank footnote drops the marker too.
+  // Theme copy (content/theme-copy.yaml). A blank footnote drops the note.
   const { heroFootnote, heroScrollCue } = settings.copy;
-  const mark = heroFootnote ? MARK : 0;
-  const fitEm = Math.max(1, ...words.map((w, i) => wordEm(w) + (i === words.length - 1 ? mark : 0)));
+  const fitEm = Math.max(1, ...words.map(wordEm));
   const center = (words.length - 1) / 2;
 
   return (
@@ -90,16 +87,6 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
               </span>
             ))}
           </span>
-          {heroFootnote ? (
-          <a
-            href="#hero-note"
-            className="hero-mark tap relative ml-[0.06em] after:absolute after:-inset-3 after:content-[''] align-super font-mono text-[0.3em] font-normal tracking-normal text-accent no-underline transition-colors hover:text-white"
-            style={{ '--n': words.length } as CSSProperties}
-          >
-            <span aria-hidden="true">1</span>
-            <span className="sr-only"> (see note 1)</span>
-          </a>
-          ) : null}
         </span>
         </h1>
 
@@ -168,8 +155,7 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
           <div className="mt-8 flex items-end justify-between gap-8 max-sm:order-3 sm:mt-12">
             {heroFootnote ? (
               <p id="hero-note" data-hero-seq style={seq(3)} className="fine-print max-w-md">
-                <span className="text-accent">1.</span>
-                {` ${heroFootnote}`}
+                {heroFootnote}
               </p>
             ) : (
               <span />
