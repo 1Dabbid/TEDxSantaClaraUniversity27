@@ -2,8 +2,9 @@ import Link from 'next/link';
 import { Button } from './ui/Button';
 import { Logo } from './Logo';
 import { MobileMenu } from './MobileMenu';
-import { NAV_ITEMS } from './nav';
+import { navItems } from './nav';
 import type { Settings } from '@/lib/content';
+import { getFaq, getTeam } from '@/lib/content';
 import { ticketCta } from '@/lib/tickets';
 
 /**
@@ -12,12 +13,18 @@ import { ticketCta } from '@/lib/tickets';
  * on scroll up (never while it holds focus); the red hairline under it is the
  * reading progress.
  */
-export function Header({ settings }: { settings: Settings }) {
+export async function Header({ settings }: { settings: Settings }) {
   const cta = ticketCta(settings);
+  const [team, faq] = await Promise.all([getTeam(), getFaq()]);
+  // Same conditions the sections use to render themselves (Team.tsx, Faq.tsx).
+  const items = navItems({
+    team: settings.sections.showTeam && team.length > 0,
+    faq: settings.sections.showFaq && faq.length > 0,
+  });
   return (
     <header
       data-site-header
-      className="sticky top-0 z-[var(--z-header)] h-[var(--header-h)] border-b border-white/10 bg-black"
+      className="site-header sticky top-0 z-[var(--z-header)] h-[var(--header-h)] border-b border-white/10 bg-black"
     >
       <div className="shell flex h-full items-center gap-4">
         <Link
@@ -37,7 +44,7 @@ export function Header({ settings }: { settings: Settings }) {
 
         <nav aria-label="Primary" className="ml-auto hidden lg:block">
           <ul className="flex items-center gap-1">
-            {NAV_ITEMS.map((item) => (
+            {items.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
@@ -54,7 +61,7 @@ export function Header({ settings }: { settings: Settings }) {
           <Button href={cta.href} size="sm" aria-label={cta.ariaLabel}>
             Tickets
           </Button>
-          <MobileMenu items={NAV_ITEMS} dateLong={settings.dateLong} dateISO={settings.dateISO} />
+          <MobileMenu items={items} dateLong={settings.dateLong} dateISO={settings.dateISO} />
         </div>
       </div>
       <span
