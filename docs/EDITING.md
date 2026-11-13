@@ -60,7 +60,7 @@ Besides the home page (the scroll story), each topic has its own page with an ad
 | **/team** | Every board role from **People > Team**, as a plain list of roles. | Names and photos for people with **Show name publicly** ticked. Turning off the Team switch, or removing every role, removes the page. |
 | **/faq** | Every question. Each has its own link (e.g. `/faq#tickets-on-sale`, made from the question's words): send it to someone and the answer opens. Rewording a question changes its link. Turning off the FAQ switch removes the page. | |
 
-Menus: at the top of the home page the links scroll to the sections; on every other page the same links open the topic pages. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The whole team", "All 9 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
+Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The whole team", "All 9 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
 
 Unannounced speakers still have a page (`/speakers/speaker-01` and so on) so an old link never breaks, but nothing on the site links to it and search engines are told to ignore it.
 
