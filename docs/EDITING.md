@@ -51,7 +51,7 @@ Doors, talks and end time for the whole evening are in **The event > Event basic
 
 1. **The event > Tickets & speaker applications**.
 2. **Ticket link**: the ticketing page (must start with `https://`).
-3. Optional: **Ticket checkout embed link (optional)**, only if the ticketing service gives you an "embed" link. Leave blank if unsure. If the embedded checkout stays blank on the live site, tell the web team: some services need one more allowed address (`CSP_FRAME_SRC` on Vercel).
+3. Optional: **Ticket checkout embed link (optional)**, only if the ticketing service gives you an "embed" link. Leave blank if unsure. If the embedded checkout stays blank on the live site, tell the web team: some services need one more allowed address (`CSP_FRAME_SRC` on Vercel). The embedded checkout is never allowed to take over the whole page: if the service wants to switch to its own full page (for a payment step, say), that step opens in a new tab instead, and buyers come back to this tab afterwards.
 4. **Price note**: one short sentence, e.g. "Tickets will cost no more than $100." Our cap is **$100**; confirm the limit for our licence tier with the licence holder. Do not call it a TED rule on the site.
 5. **Ticket price in US dollars (optional)**: just the number, e.g. `25` (`0` if free). The admin will not accept more than 100. Search engines show it in event listings; visitors read the Price note.
 6. **Tickets on sale from (optional)**: the first day of sales (pick the date).
