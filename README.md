@@ -2,7 +2,7 @@
 
 The event site for **TEDxSantaClaraUniversity**, theme **Fine Print**: Friday, April 23, 2027, Locatelli Student Activity Center, Santa Clara University. Live at **https://fineprint.tedxscu.com** (Vercel, from the GitHub repo `1Dabbid/TEDxSantaClaraUniversity27`).
 
-Public pages: the home page (`/`), `/partners`, `/speakers` (all speakers) and one page per speaker (`/speakers/<slug>`). Every word, date, link and photo is edited in a content admin at `/keystatic`; nobody needs to touch code to run the event.
+Public pages: the home page (`/`, the scroll story), the topic pages `/speakers`, `/schedule`, `/venue`, `/partners`, `/team`, `/faq` (shared header and closing band in `src/components/pages/`; the navigation rule is documented at the top of `src/components/nav.ts`) and one page per speaker (`/speakers/<slug>`). Every word, date, link and photo is edited in a content admin at `/keystatic`; nobody needs to touch code to run the event.
 
 | You want to… | Read |
 | --- | --- |
