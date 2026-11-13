@@ -222,9 +222,11 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     requestAnimationFrame(() => whenMenuClosed(fn, frames + 1));
   };
 
-  // Track the position on the current page continuously (cheap: one number).
+  // Track the position on the current page continuously (cheap: one number). The
+  // window's own offset, not lenis.scroll: for a native scroll (keyboard, scrollbar,
+  // focus) this listener can run before Lenis has adopted the new position.
   const onScroll = () => {
-    if (!pending && !popped) positions.set(currentKey, lenisRef.current?.scroll ?? window.scrollY);
+    if (!pending && !popped) positions.set(currentKey, window.scrollY);
   };
 
   // Where the Navigation API exists the router renders a traversal *before* popstate

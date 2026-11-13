@@ -7,19 +7,20 @@ import { expect, test, type Page } from '@playwright/test';
  * visible as rendered: no waiting for the 3s CSS failsafe.
  */
 
-/** Fails the lazily loaded chunk that carries gsap, whatever its hashed name. */
-async function failGsapChunk(page: Page) {
-  const failed: string[] = [];
+/** Fails the lazily loaded chunk that carries gsap, whatever its hashed name. Resolves once it has failed. */
+async function failGsapChunk(page: Page): Promise<Promise<string>> {
+  let failed!: (url: string) => void;
+  const done = new Promise<string>((r) => (failed = r));
   await page.route(/\/_next\/static\/chunks\/.*\.js(\?.*)?$/, async (route) => {
     const res = await route.fetch();
     const body = await res.text();
     if (body.includes('scrollerProxy') && body.includes('autoSplit')) {
-      failed.push(route.request().url());
-      return route.abort('failed');
+      await route.abort('failed');
+      return failed(route.request().url());
     }
     return route.fulfill({ response: res, body });
   });
-  return failed;
+  return done;
 }
 
 /** Reveal targets and every element a section moment animates, with anything hidden on them. */
@@ -73,9 +74,11 @@ for (const path of ['/', '/partners']) {
   test(`gsap chunk fails to load on ${path}: everything is visible within 1s`, async ({ page }) => {
     const failed = await failGsapChunk(page);
     await page.goto(path, { waitUntil: 'load' });
+    await failed;
+    // Within 1s of the failure (the CSS failsafe alone would take 3s).
+    const deadline = Date.now() + 1_000;
     await expect.poll(() => page.evaluate(() => document.documentElement.classList.contains('motion')), { timeout: 1_000 }).toBe(false);
-    await expect.poll(() => hiddenMoments(page), { timeout: 1_000 }).toEqual([]);
-    expect(failed.length, 'the gsap chunk was requested (and failed)').toBeGreaterThan(0);
+    await expect.poll(() => hiddenMoments(page), { timeout: Math.max(100, deadline - Date.now()) }).toEqual([]);
 
     // Further down the page as well (nothing is armed later on).
     await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
