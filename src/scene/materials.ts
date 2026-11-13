@@ -1,8 +1,9 @@
 import {
   AdditiveBlending,
   Color,
+  Matrix4,
+  BackSide,
   DoubleSide,
-  FrontSide,
   MeshPhysicalMaterial,
   MeshStandardMaterial,
   ShaderMaterial,
@@ -10,7 +11,7 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
-import { MIC, RUG_RADIUS, SPOT_HEIGHT, STAND_BASE } from './layout';
+import { MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE } from './layout';
 import { EMPTY_MASK } from './textures';
 
 /* ------------------------------------------------------------------------- */
@@ -36,6 +37,10 @@ export const shared = {
   /** Volumetric cone multiplier (floor reflection of the beam). */
   uCone: { value: 1 },
   uTime: { value: 0 },
+  /** Planar floor reflection (high tier): texture, world -> texture matrix, 0..1 strength. */
+  uRefl: { value: EMPTY_MASK as Texture },
+  uReflMat: { value: new Matrix4() },
+  uReflOn: { value: 0 },
 };
 
 /* ------------------------------------------------------------------------- */
@@ -89,6 +94,23 @@ float keyGlint(vec3 nW, float sharp) {
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 H = normalize(L + V + vec3(1e-5));
   return pow(max(dot(nW, H), 0.0), sharp) * step(0.0, dot(nW, L));
+}
+// Broad GGX lobe of the key light (roughness r) times N.L: the round specular hotspot of a glossy form.
+float keyLobe(vec3 nW, float r) {
+  vec3 L = normalize(uKeyPos - vWorld);
+  vec3 V = normalize(cameraPosition - vWorld);
+  vec3 H = normalize(L + V + vec3(1e-5));
+  float a2 = r * r * r * r;
+  float nh = max(dot(nW, H), 0.0);
+  float d = nh * nh * (a2 - 1.0) + 1.0;
+  return a2 / (3.14159 * d * d) * max(dot(nW, L), 0.0);
+}
+// Box-filtered pulse train (pulses of half-width w centred on x = k + 0.5) over a footprint fw:
+// exact area coverage, so a weave fades to its average instead of shimmering.
+float pulseI(float x, float w) { return floor(x) * 2.0 * w + clamp(fract(x) - 0.5 + w, 0.0, 2.0 * w); }
+float pulseF(float x, float w, float fw) {
+  fw = max(fw, 1e-3);
+  return (pulseI(x + 0.5 * fw, w) - pulseI(x - 0.5 * fw, w)) / fw;
 }
 // Level-of-detail glitter: cells about 1.5 px wide, each a tiny randomly tilted mirror.
 float glitter(vec2 sp, vec3 n, vec3 T, vec3 B, float density, float tilt, float sharp) {
@@ -288,9 +310,12 @@ export function createBodyMaterial(cheap: boolean) {
 }
 
 /**
- * Two-layer woven steel grille over a dark foam core: outer weave with real
- * over/under wires, an inner finer mesh seen with parallax through the gaps,
- * glints on the wire crossings, fresnel falloff to a bright edge.
+ * Two-layer woven grille in dark chrome over a black foam core: outer weave
+ * with real over/under wires (analytically box-filtered, so it fades to a
+ * micro-facet average instead of shimmering as it approaches pixel size), a
+ * broad round key hotspot across the ball, crisp glints on the crossings that
+ * travel with the key and the camera, an inner finer mesh seen with parallax
+ * through deep dark gaps, and a tight fresnel rim.
  */
 export function createGrilleMaterial(cheap: boolean) {
   const uniforms = {
@@ -299,12 +324,12 @@ export function createGrilleMaterial(cheap: boolean) {
     uSquash: { value: MIC.grilleSquash },
     // Low tier: a coarser weave that still resolves on small screens.
     uPitch: { value: cheap ? 0.0026 : 0.0013 },
-    uWire: { value: cheap ? 0.15 : 0.15 },
+    uWire: { value: 0.16 },
     uAmp: { value: 0.09 },
     uInner: { value: 1.3 },
-    uFoam: { value: lin('#060607') },
+    uFoam: { value: lin('#030304') },
   };
-  const m = new MeshStandardMaterial({ color: lin('#6c7077'), metalness: 1, roughness: 0.2, envMapIntensity: 1.5 });
+  const m = new MeshStandardMaterial({ color: lin('#7a7f87'), metalness: 1, roughness: 0.12, envMapIntensity: 0.32 });
   patch(m, `mic-grille-${cheap ? 1 : 0}`, {
     uniforms,
     fragmentHead: `uniform float uGC; uniform float uGR; uniform float uSquash; uniform float uPitch; uniform float uWire; uniform float uAmp; uniform float uInner; uniform vec3 uFoam;`,
@@ -325,10 +350,15 @@ export function createGrilleMaterial(cheap: boolean) {
       Tg *= invmax; Bg *= invmax;
       vec2 fwg = fwidth(g);
       float fwm = max(fwg.x, fwg.y);
-      float aa = 1.0 - smoothstep(0.35, 0.8, fwm);
+      // Detail visibility: wire normals, glints and the inner layer only where the weave resolves.
+      float aa = 1.0 - smoothstep(0.22, 0.55, fwm);
       float ndv = clamp(dot(N, Vv), 0.0, 1.0);
-      float w = uWire * mix(1.8, 1.0, sqrt(ndv));
+      float w = uWire * mix(1.7, 1.0, sqrt(ndv));
       vec2 cell = floor(g); vec2 f = fract(g) - 0.5;
+      // Exact filtered coverage of the two wire families.
+      float covA = pulseF(g.y, w, fwg.y);
+      float covB = pulseF(g.x, w, fwg.x);
+      float mask = 1.0 - (1.0 - covA) * (1.0 - covB);
       float aA = 3.14159265 * (g.x - 0.5 + cell.y);
       float aB = 3.14159265 * (g.y - 0.5 + cell.x);
       float hA = uAmp * cos(aA);
@@ -336,10 +366,6 @@ export function createGrilleMaterial(cheap: boolean) {
       float cA = w * w - f.y * f.y; float cB = w * w - f.x * f.x;
       float zA = cA > 0.0 ? hA + sqrt(cA) : -1e3;
       float zB = cB > 0.0 ? hB + sqrt(cB) : -1e3;
-      float soft = max(fwm, 0.02);
-      float mA = 1.0 - smoothstep(w - soft, w + soft, abs(f.y));
-      float mB = 1.0 - smoothstep(w - soft, w + soft, abs(f.x));
-      float mask = max(mA, mB);
       vec3 nl; float hTop;
       if (zA >= zB) {
         float sq = max(sqrt(max(cA, 0.0)), 0.3 * w);
@@ -351,35 +377,38 @@ export function createGrilleMaterial(cheap: boolean) {
         hTop = hB;
       }
       vec3 nw = normalize(Tg * nl.x + Bg * nl.y + N * nl.z);
-      float gapAO = smoothstep(0.0, 0.25, min(abs(f.x), abs(f.y)) - w);
+      vec3 nWire = normalize(mix(N, nw, aa));
+      // Gaps: deep and dark, darkest right against the wires.
+      float gapAO = mix(0.35, smoothstep(0.0, 0.22, min(abs(f.x), abs(f.y)) - w), aa);
       // Inner mesh: finer, rotated 45 degrees, one layer deeper (parallax through the gaps).
       vec2 vt = vec2(dot(Vv, Tg), dot(Vv, Bg)) / max(ndv, 0.3);
       vec2 gi = g - vt * uInner;
       vec2 gr = vec2(gi.x + gi.y, gi.x - gi.y) * 1.1;
-      vec2 fi = abs(fract(gr) - 0.5);
-      float fwi = max(max(fwidth(gr).x, fwidth(gr).y), 0.02);
-      float mi = 1.0 - smoothstep(0.17 - fwi, 0.17 + fwi, min(fi.x, fi.y));
-      mi = mix(0.55, mi, 1.0 - smoothstep(0.35, 0.8, fwi));
-      vec3 foam = uFoam * (0.6 + 0.6 * hash12(floor(gi * 2.0)));
-      vec3 inner = mix(foam, diffuseColor.rgb * 0.07, mi);
-      float wireAO = 0.45 + 0.55 * smoothstep(-uAmp, uAmp, hTop);
-      vec3 cDet = mix(inner * (0.3 + 0.7 * gapAO), diffuseColor.rgb * wireAO, mask);
-      float metDet = mask;
-      float rouDet = mix(0.9, roughnessFactor, mask);
-      vec3 nDet = normalize(mix(N, nw, mask));
-      float cov = 1.0 - (1.0 - 2.0 * uWire) * (1.0 - 2.0 * uWire);
-      cov = mix(cov, 1.0, pow(1.0 - ndv, 1.5) * 0.85);
-      // Unresolved mesh: dark, with a fresnel-bright edge and glitter instead of a grey ball.
-      vec3 cAvg = mix(foam, diffuseColor.rgb * 0.8, cov);
-      diffuseColor.rgb = mix(cAvg, cDet, aa);
-      metalnessFactor = mix(cov, metDet, aa);
-      roughnessFactor = mix(0.27, rouDet, aa);
-      normal = normalize(mix(N, nDet, aa));
+      vec2 fwr = fwidth(gr);
+      float mi = 1.0 - (1.0 - pulseF(gr.x + 0.5, 0.17, fwr.x)) * (1.0 - pulseF(gr.y + 0.5, 0.17, fwr.y));
+      vec3 foam = uFoam * (0.55 + 0.6 * hash12(floor(gi * 2.0)));
+      // The inner layer catches a dim, broad wash of the key through the outer weave.
+      float innerLit = keyLobe(toWorld(N), 0.55) * 0.012;
+      vec3 inner = mix(foam, diffuseColor.rgb * (0.04 + innerLit), mi);
+      float wireAO = mix(0.7, 0.3 + 0.7 * smoothstep(-uAmp, uAmp, hTop), aa);
+      vec3 base = diffuseColor.rgb;
+      diffuseColor.rgb = mix(inner * gapAO, base * wireAO, mask);
+      metalnessFactor = mask;
+      // Unresolved weave: the wire normal spread becomes micro-facet roughness.
+      roughnessFactor = mix(0.9, mix(0.36, roughnessFactor, aa), mask);
+      normal = normalize(mix(N, nWire, mask));
       vec3 T2 = normalize(Tg); vec3 B2 = normalize(Bg);
-      float crossGl = keyGlint(toWorld(nw), 260.0) * mask * aa * wireAO;
-      float farGl = glitter(st, N, T2, B2, 0.05, 0.55, 260.0) * (1.0 - aa) * cov;
-      totalEmissiveRadiance += uKeyColor * (crossGl * 0.12 + farGl * 0.12);
-      totalEmissiveRadiance += uRimColor * rimTerm(N, 0.42) * mix(cov, mask, aa) * 1.2;`,
+      vec3 nWorldMacro = toWorld(N);
+      // Round hotspot with falloff across the ball (broad lobe on the macro normal), on the metal only.
+      float hot = keyLobe(nWorldMacro, mix(0.4, 0.3, aa)) * mask * wireAO;
+      // Crisp glints riding the wire crowns and crossings: they travel with the key sweep and the pointer parallax.
+      float crossGl = keyGlint(toWorld(nw), 320.0) * mask * aa * wireAO;
+      float farGl = glitter(st, N, T2, B2, 0.06, 0.55, 260.0) * (1.0 - aa) * mask;
+      totalEmissiveRadiance += uKeyColor * (hot * 0.14 + crossGl * 0.5 + farGl * 0.2);
+      // Tight bright fresnel rim (rim light) plus a thin key-side edge.
+      float fr = pow(1.0 - ndv, 5.0);
+      totalEmissiveRadiance += uRimColor * rimTerm(N, 0.22) * mix(0.6, 1.0, mask) * 2.2;
+      totalEmissiveRadiance += uKeyColor * fr * clamp(dot(nWorldMacro, normalize(uKeyPos - vWorld)) + 0.2, 0.0, 1.0) * mask * 0.01;`,
   });
   return { material: m, uniforms };
 }
@@ -395,8 +424,9 @@ export function createNickelMaterial(cheap: boolean) {
       float k1 = 1.0 - smoothstep(0.3, 1.0, fy * 9000.0);
       float l1 = mix(0.5, hash11(floor(vObj.y * 9000.0)), k1);
       roughnessFactor = clamp(roughnessFactor * (0.8 + 0.4 * l1), 0.05, 1.0);
-      totalEmissiveRadiance += uKeyColor * keyGlint(toWorld(normal), 600.0) * 0.015;
-      totalEmissiveRadiance += uRimColor * rimTerm(normal, 0.3) * 0.8;`,
+      vec3 nW = toWorld(normal);
+      totalEmissiveRadiance += uKeyColor * (keyGlint(nW, 600.0) * 0.015 + keyLobe(nW, 0.3) * 0.006);
+      totalEmissiveRadiance += uRimColor * rimTerm(normal, 0.3) * 0.9;`,
   });
   return m;
 }
@@ -421,17 +451,29 @@ const GLSL_BOUNCE = /* glsl */ `
     return vec3(0.9, 0.02, 0.05) * face * near * uSpot * 0.16;
   }`;
 
-/** Satin black powder-coated cast metal for the stand and clip. */
+/**
+ * Satin black powder-coated cast metal for the stand and clip. Near the clip
+ * the key is allowed past its narrow cone as a soft fill, so the clip, yoke
+ * and thumb screw read as machined parts (bevel glints, a broad sheen and a
+ * clean rim) rather than a dark silhouette.
+ */
 export function createHardwareMaterial() {
-  const m = new MeshStandardMaterial({ color: lin('#141416'), metalness: 0.85, roughness: 0.4, envMapIntensity: 0.9 });
+  const m = new MeshStandardMaterial({ color: lin('#17171a'), metalness: 0.85, roughness: 0.36, envMapIntensity: 1.0 });
   patch(m, 'hardware', {
-    uniforms: {},
-    fragmentHead: GLSL_BOUNCE,
+    uniforms: { uClip: { value: PIVOT_WORLD.clone() } },
+    fragmentHead: GLSL_BOUNCE + 'uniform vec3 uClip;',
     fragmentBody: `
       float n = vnoise(vWorld.xy * 900.0 + vWorld.z * 700.0);
       roughnessFactor = clamp(roughnessFactor + (n - 0.5) * 0.12, 0.05, 1.0);
-      totalEmissiveRadiance += bounceRed(toWorld(normal));
-      totalEmissiveRadiance += uRimColor * rimTerm(normal, 0.3) * 0.7;`,
+      vec3 nW = toWorld(normal);
+      float nearClip = exp(-distance(vWorld, uClip) / 0.06);
+      vec3 Lk = normalize(uKeyPos - vWorld);
+      float wrap = clamp(dot(nW, Lk) * 0.6 + 0.4, 0.0, 1.0);
+      float ndv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
+      float fres = 0.08 + 0.92 * pow(1.0 - ndv, 5.0);
+      totalEmissiveRadiance += uKeyColor * nearClip * (keyLobe(nW, 0.38) * 0.02 * (0.3 + fres) + keyGlint(nW, 180.0) * 0.05 + wrap * 0.0035);
+      totalEmissiveRadiance += bounceRed(nW);
+      totalEmissiveRadiance += uRimColor * rimTerm(normal, mix(0.3, 0.42, nearClip)) * mix(0.7, 1.4, nearClip);`,
   });
   return m;
 }
@@ -468,7 +510,7 @@ export function createFloorMaterial(cheap: boolean) {
       uH: { value: SPOT_HEIGHT },
       uTanA: { value: (RUG_RADIUS + 0.25) / SPOT_HEIGHT },
     },
-    fragmentHead: `uniform float uRugR; uniform vec2 uStand; uniform float uH; uniform float uTanA;
+    fragmentHead: `uniform float uRugR; uniform vec2 uStand; uniform float uH; uniform float uTanA; uniform sampler2D uRefl; uniform mat4 uReflMat; uniform float uReflOn;
       float sdBox(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }`,
     fragmentBody: `
       vec2 p = vWorld.xz;
@@ -499,80 +541,113 @@ export function createFloorMaterial(cheap: boolean) {
       totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.95, 0.9) * spill * uSpot * 2.2;
       // Red bounce spilling off the rug.
       float outside = smoothstep(uRugR - 0.02, uRugR + 0.02, rr);
-      totalEmissiveRadiance += vec3(0.8, 0.015, 0.04) * exp(-max(rr - uRugR, 0.0) / 0.32) * outside * uSpot * 0.05;
+      totalEmissiveRadiance += vec3(0.8, 0.0, 0.021) * exp(-max(rr - uRugR, 0.0) / 0.32) * outside * uSpot * 0.05;
+      // Scuffs: faint arcs and drag marks that break the reflection up.
+      float sc1 = vnoise(vec2(dot(p, vec2(0.8, 0.6)) * 3.0, dot(p, vec2(-0.6, 0.8)) * 40.0));
+      float sc2 = vnoise(vec2(length(p - vec2(0.6, 1.9)) * 55.0, atan(p.y - 1.9, p.x - 0.6) * 2.0));
+      float scuff2 = smoothstep(0.8, 0.98, sc1) * 0.35 + smoothstep(0.85, 0.99, sc2) * 0.25 * exp(-rr * 0.4);
+      roughnessFactor = clamp(roughnessFactor + scuff2 * 0.25, 0.05, 1.0);
+      vec3 Vd = normalize(vWorld - cameraPosition);
+      float fres = 0.04 + 0.96 * pow(1.0 - clamp(-Vd.y, 0.0, 1.0), 5.0);
+      float gloss = 1.0 - smoothstep(0.42, 0.85, roughnessFactor);
       ${
         cheap
-          ? ''
+          ? `
+      // Low tier: a painted reflection (no extra pass): the rug's red glow just beyond its near edge, a soft warm column under the beam.
+      vec2 toCam = normalize(cameraPosition.xz - p);
+      float nearSide = clamp(dot(p / max(rr, 1e-4), toCam) * 0.5 + 0.5, 0.0, 1.0);
+      float redRefl = exp(-max(rr - uRugR, 0.0) / 0.5) * outside * nearSide;
+      totalEmissiveRadiance += (vec3(0.83, 0.0, 0.022) * redRefl * 0.08 + vec3(1.0, 0.94, 0.86) * exp(-rr * rr / 6.0) * outside * uCone * 0.012) * fres * gloss * uSpot * 3.0;`
           : `
-      // Blurred reflection of the beam: march the mirrored view ray to its
-      // closest approach to the beam axis and test it against the cone.
-      vec3 Vd = normalize(vWorld - cameraPosition);
-      vec3 Rr = reflect(Vd, vec3(0.0, 1.0, 0.0));
-      float tt = max(-dot(p, Rr.xz) / max(dot(Rr.xz, Rr.xz), 1e-4), 0.0);
-      vec3 Q = vWorld + Rr * tt;
-      float coneR = max((uH - Q.y) * uTanA, 0.05);
-      float inCone = 1.0 - smoothstep(0.2 * coneR, 1.25 * coneR, length(Q.xz));
-      float hgt = smoothstep(0.0, 1.2, Q.y) * (1.0 - smoothstep(uH * 0.4, uH, Q.y));
-      float fres = 0.04 + 0.96 * pow(1.0 - clamp(-Vd.y, 0.0, 1.0), 5.0);
-      float gloss = 1.0 - smoothstep(0.45, 0.85, roughnessFactor);
-      totalEmissiveRadiance += vec3(1.0, 0.94, 0.86) * inCone * hgt * (0.4 + 0.6 * Q.y / uH) * fres * gloss * outside * uCone * 0.045;`
+      // Planar reflection (rendered mirrored at half resolution): Fresnel-weighted, blurred by roughness
+      // and stretched vertically like a real glossy floor, jittered by the scuffs.
+      vec4 rc = uReflMat * vec4(vWorld, 1.0);
+      vec2 ruv = rc.xy / max(rc.w, 1e-4);
+      vec2 wob = (vec2(vnoise(p * 7.0), vnoise(p * 7.0 + 5.2)) - 0.5) * 0.006 * (0.6 + 2.0 * scuff2);
+      float lod = mix(0.6, 2.6, smoothstep(0.4, 0.9, roughnessFactor));
+      vec2 sv = vec2(0.0, 0.012 * (1.0 + lod));
+      vec3 refl = textureLod(uRefl, ruv + wob, lod).rgb * 0.4
+                + textureLod(uRefl, ruv + wob + sv, lod + 0.6).rgb * 0.25 + textureLod(uRefl, ruv + wob - sv, lod + 0.6).rgb * 0.25
+                + textureLod(uRefl, ruv + wob + 2.5 * sv, lod + 1.2).rgb * 0.05 + textureLod(uRefl, ruv + wob - 2.5 * sv, lod + 1.2).rgb * 0.05;
+      totalEmissiveRadiance += refl * fres * mix(0.35, 1.0, gloss) * uReflOn * 4.0;`
       }`,
   });
   return m;
 }
 
+/** TEDx red (#EB0028) in linear working space: the hue the rug must keep at its lit centre. */
+export const TEDX_RED = lin('#eb0028');
+
 /**
- * The red circle: cut-pile carpet. Fibres lean along a slowly varying nap
- * (anisotropic sheen and uneven light/dark patches), tufts at two scales, a
- * fuzzy alpha-to-coverage edge, a hot centre under the spot.
+ * The red circle: cut-pile carpet. Fine fibres at two scales (filtered out
+ * with distance, never printed-looking), only a very gentle large-scale nap
+ * variation, a velvet sheen that brightens towards grazing angles, a fuzzy,
+ * slightly irregular alpha-to-coverage edge and a darker pile wall. Every
+ * light term is tinted with the rug's own red so the lit centre keeps the
+ * TEDx hue instead of drifting to pink (white specular) or orange.
  */
 export function createRugMaterial(cheap: boolean) {
-  const params = { color: lin('#a8001b'), metalness: 0, roughness: 1, envMapIntensity: 0, alphaTest: 0.5 };
+  const albedo = TEDX_RED.clone().multiplyScalar(0.46);
+  const params = { color: albedo, metalness: 0, roughness: 1, envMapIntensity: 0, alphaTest: 0.5 };
   const m = cheap
     ? new MeshStandardMaterial(params)
-    : new MeshPhysicalMaterial({ ...params, specularIntensity: 0.2, sheen: 0.8, sheenRoughness: 0.45, sheenColor: lin('#ff4a5c') });
+    : new MeshPhysicalMaterial({ ...params, specularIntensity: 0, sheen: 1, sheenRoughness: 0.5, sheenColor: TEDX_RED.clone().multiplyScalar(0.55) });
   m.alphaToCoverage = true;
   patch(m, `rug-${cheap ? 1 : 0}`, {
     noEnv: true,
-    uniforms: { uR: { value: RUG_RADIUS } },
-    fragmentHead: 'uniform float uR;',
+    uniforms: { uR: { value: RUG_RADIUS }, uRed: { value: TEDX_RED } },
+    fragmentHead: 'uniform float uR; uniform vec3 uRed;',
     alphaBody: `
       vec2 pa = vWorld.xz;
       float ang = atan(pa.y, pa.x);
-      float fz = (vnoise(vec2(ang * 900.0, 0.5)) - 0.5) * 0.012 + (vnoise(pa * 500.0) - 0.5) * 0.01;
-      diffuseColor.a = 1.0 - smoothstep(uR - 0.004, uR + 0.006, length(pa) + fz);`,
+      float fwa = max(length(fwidth(pa)), 1e-6);
+      float kf = 1.0 - smoothstep(0.002, 0.006, fwa);
+      // Tufts poking past the edge (fine, fade with distance) plus a gentle hand-cut irregularity.
+      float fz = (vnoise(vec2(ang * 900.0, 0.5)) - 0.5) * 0.012 * kf + (vnoise(pa * 500.0) - 0.5) * 0.01 * kf
+               + (vnoise(vec2(ang * 23.0, 2.0)) - 0.5) * 0.006;
+      diffuseColor.a = 1.0 - smoothstep(uR - 0.004 - fwa, uR + 0.006 + fwa, length(pa) + fz);`,
     fragmentBody: `
       vec2 p = vWorld.xz;
       float rr = length(p);
       float fw = max(length(fwidth(p)), 1e-6);
       float k1 = 1.0 - smoothstep(0.35 / 900.0, 1.1 / 900.0, fw);
       float k2 = 1.0 - smoothstep(0.35 / 220.0, 1.1 / 220.0, fw);
+      float k3 = 1.0 - smoothstep(0.35 / 60.0, 1.1 / 60.0, fw);
       float n1 = mix(0.5, vnoise(p * 900.0), k1);
       float n2 = mix(0.5, vnoise(p * 220.0 + 7.3), k2);
-      float fib = n1 * 0.55 + n2 * 0.45;
-      // Nap direction field and uneven nap patches.
-      float na = vnoise(p * 3.5) * 6.2831 + vnoise(p * 1.2 + 3.0) * 3.0;
-      vec2 nap = vec2(cos(na), sin(na));
-      float patchy = vnoise(p * 5.0 + 9.0) * 0.6 + vnoise(p * 13.0) * 0.4;
-      vec3 napV = normalize((viewMatrix * vec4(nap.x, 0.0, nap.y, 0.0)).xyz);
-      normal = normalize(normal + napV * (0.04 + 0.09 * patchy));
-      ${cheap ? '' : 'normal = bumpNormal(normal, -vViewPosition, fib, 0.006);'}
-      float edge = smoothstep(uR - 0.08, uR, rr);
-      float hot = 0.5 + 1.0 * exp(-rr * rr / 0.8);
-      float tuft = vnoise(p * 45.0) * 0.6 + vnoise(p * 95.0 + 3.0) * 0.4;
-      diffuseColor.rgb *= (0.62 + 0.5 * fib) * (0.8 + 0.35 * patchy) * (0.8 + 0.4 * tuft) * (1.0 - 0.5 * edge) * hot;
+      float n3 = mix(0.5, vnoise(p * 60.0 + 1.7), k3);
+      float k4 = 1.0 - smoothstep(0.35 / 22.0, 1.1 / 22.0, fw);
+      float n4 = mix(0.5, vnoise(p * 22.0 + 4.1), k4);
+      float fib = n1 * 0.32 + n2 * 0.26 + n3 * 0.26 + n4 * 0.16;
+      // Very gentle, very large-scale nap: the pile was brushed one way, not mottled.
+      float nap = vnoise(p * 0.55 + 3.0);
+      float na = 0.6 + nap * 1.2;
+      vec2 napD = vec2(cos(na), sin(na));
+      vec3 napV = normalize((viewMatrix * vec4(napD.x, 0.0, napD.y, 0.0)).xyz);
+      normal = normalize(normal + napV * 0.035);
+      ${cheap ? '' : 'normal = bumpNormal(normal, -vViewPosition, fib, 0.004);'}
+      vec3 nW = toWorld(normal);
+      float wallF = 1.0 - smoothstep(0.55, 0.92, toWorld(vNormal).y);
+      float edge = smoothstep(uR - 0.06, uR, rr);
+      float hot = 0.62 + 0.55 * exp(-rr * rr / 0.9);
+      diffuseColor.rgb *= (0.64 + 0.58 * fib) * (0.94 + 0.12 * nap) * (1.0 - 0.35 * edge) * hot * mix(1.0, 0.6, wallF);
       roughnessFactor = 1.0;
       // The rug is only lit by the overhead spot: keep it dark when the spot is down.
-      diffuseColor.rgb *= clamp(uSpot * 4.0, 0.0, 1.0);
-      sheenMul = clamp(uSpot * 4.0, 0.0, 1.0);
-      // Fibre highlight (Kajiya-Kay) under the overhead spot: fibres stand up, leaning along the nap.
-      vec3 Tf = normalize(vec3(nap.x * 0.6, 1.0, nap.y * 0.6));
-      vec3 Ls = normalize(vec3(0.0, ${SPOT_HEIGHT.toFixed(2)}, 0.0) - vWorld);
+      float lit = clamp(uSpot * 4.0, 0.0, 1.0);
+      diffuseColor.rgb *= lit;
+      sheenMul = lit;
       vec3 Vw = normalize(cameraPosition - vWorld);
+      float pool = 1.0 - smoothstep(uR * 0.55, uR + 0.2, rr);
+      // Velvet: fibre tips light up towards grazing view angles (retro-reflective pile), in the rug's own red.
+      float ndv = clamp(dot(nW, Vw), 0.0, 1.0);
+      float velvet = pow(1.0 - ndv, 3.0) * (0.55 + 0.45 * n1);
+      totalEmissiveRadiance += uRed * velvet * pool * uSpot * 0.055;
+      // Fibre highlight (Kajiya-Kay) under the overhead spot: fibres stand up, leaning along the nap.
+      vec3 Tf = normalize(vec3(napD.x * 0.5, 1.0, napD.y * 0.5));
+      vec3 Ls = normalize(vec3(0.0, ${SPOT_HEIGHT.toFixed(2)}, 0.0) - vWorld);
       float th = dot(Tf, normalize(Ls + Vw));
       float kk = pow(sqrt(max(1.0 - th * th, 0.0)), 24.0);
-      float pool = 1.0 - smoothstep(uR * 0.6, uR + 0.2, rr);
-      totalEmissiveRadiance += vec3(1.0, 0.16, 0.2) * kk * pool * (0.4 + 0.6 * n1) * uSpot * 0.06;`,
+      totalEmissiveRadiance += uRed * kk * pool * (0.4 + 0.6 * n1) * uSpot * 0.03;`,
   });
   return m;
 }
@@ -605,6 +680,40 @@ export function createCurtainMaterial() {
   return m;
 }
 
+/**
+ * The house (audience floor, raked treads, stage front): matte black. The
+ * stage front's top edge catches the spot's spill; warm pools from the aisle
+ * step lights sit on the tread fronts either side of the centre aisle.
+ */
+export function createVenueMaterial() {
+  const m = new MeshStandardMaterial({ color: lin('#0b0b0c'), metalness: 0, roughness: 0.9, envMapIntensity: 0 });
+  patch(m, 'venue', {
+    noEnv: true,
+    uniforms: {
+      uSeat: { value: [SEATING.centre.x, SEATING.centre.z, SEATING.firstRadius, SEATING.rowGap] },
+      uAisle: { value: SEATING.aisle },
+      uEdgeZ: { value: STAGE_EDGE_Z },
+    },
+    fragmentHead: 'uniform vec4 uSeat; uniform float uAisle; uniform float uEdgeZ;',
+    fragmentBody: `
+      vec3 nW = toWorld(normal);
+      // Stage front: a thin worn nosing along the top edge catches the spill.
+      float front = step(0.7, nW.z) * (1.0 - smoothstep(0.0, 0.03, abs(vWorld.z - uEdgeZ)));
+      float nosing = smoothstep(-0.035, -0.004, vWorld.y) * front;
+      float spill = exp(-vWorld.x * vWorld.x / 18.0);
+      totalEmissiveRadiance += vec3(1.0, 0.93, 0.86) * nosing * spill * uSpot * 0.05;
+      diffuseColor.rgb *= 1.0 - 0.4 * front * (1.0 - nosing);
+      // Aisle step-light pools on the treads.
+      vec2 d = vWorld.xz - uSeat.xy;
+      float R = length(d);
+      float s = atan(d.x, d.y) * R;
+      float fr = fract((R - uSeat.z + uSeat.w * 0.5) / uSeat.w);
+      float pool = exp(-pow(abs(s) - uAisle * 0.5 + 0.08, 2.0) / 0.03) * exp(-fr * 7.0) * step(0.5, nW.y) * step(uEdgeZ + 0.3, vWorld.z);
+      totalEmissiveRadiance += vec3(1.0, 0.6, 0.3) * pool * 0.012;`,
+  });
+  return m;
+}
+
 /** Upholstered seats: fabric noise, a thin warm highlight along the curved top edge, cool rim. */
 export function createSeatMaterial() {
   const m = new MeshStandardMaterial({ color: lin('#1e1e22'), metalness: 0.0, roughness: 0.6, envMapIntensity: 0.2 });
@@ -621,7 +730,7 @@ export function createSeatMaterial() {
       float ndv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
       // Piping along the curved top: faces that point up and towards the stage.
       vec3 toStage = normalize(vec3(-vWorld.x, 3.0, -vWorld.z));
-      float edge = smoothstep(0.55, 0.9, Nw.y) * smoothstep(0.62, 0.9, vWorld.y) * clamp(dot(Nw, toStage), 0.0, 1.0);
+      float edge = smoothstep(0.55, 0.9, Nw.y) * smoothstep(0.62, 0.9, vObj.y) * clamp(dot(Nw, toStage), 0.0, 1.0);
       totalEmissiveRadiance += uEdge * edge * (0.6 + 0.4 * pow(1.0 - ndv, 2.0)) * uSpot;
       totalEmissiveRadiance += uSeatRim * smoothstep(0.6, 0.95, 1.0 - ndv) * smoothstep(0.0, 0.8, Nw.y);`,
   });
@@ -632,7 +741,19 @@ export function createSeatMaterial() {
 /* Spot cone, dust, haze, motes                                              */
 /* ------------------------------------------------------------------------- */
 
-export function createConeMaterial() {
+/** Spot beam: radius at the lens, and how far the soft beam geometry extends past the nominal edge. */
+export const BEAM = { r0: 0.11, rBottom: RUG_RADIUS + 0.25, pad: 1.45 };
+const BEAM_K = (BEAM.rBottom - BEAM.r0) / SPOT_HEIGHT;
+
+/**
+ * Light in haze: a short ray march through the beam volume, drawn on the back
+ * faces of an oversized cone (so it also works with the camera inside it).
+ * Gaussian radial profile (no edges), exponential falloff from the fixture
+ * and a fade at the lens (no cap), Henyey-Greenstein phase (brighter looking
+ * towards the light), slowly drifting haze noise, soft where it meets the
+ * floor. Low tier: three samples and no noise.
+ */
+export function createConeMaterial(cheap = false) {
   return new ShaderMaterial({
     uniforms: {
       uTime: { value: 0 },
@@ -641,39 +762,85 @@ export function createConeMaterial() {
       uHeight: { value: SPOT_HEIGHT },
     },
     vertexShader: /* glsl */ `
-      varying vec3 vWorld; varying vec3 vN;
+      varying vec3 vWorld;
       void main() {
         vec4 w = modelMatrix * vec4(position, 1.0);
         vWorld = w.xyz;
-        vN = normalize(mat3(modelMatrix) * normal);
         gl_Position = projectionMatrix * viewMatrix * w;
       }`,
     fragmentShader: /* glsl */ `
       uniform float uTime; uniform float uIntensity; uniform vec3 uColor; uniform float uHeight;
-      varying vec3 vWorld; varying vec3 vN;
+      varying vec3 vWorld;
       ${GLSL_NOISE}
+      const float R0 = ${BEAM.r0.toFixed(4)};
+      const float K = ${BEAM_K.toFixed(5)};
+      const float PAD = ${BEAM.pad.toFixed(3)};
+      const int STEPS = ${cheap ? 3 : 9};
+      float density(vec3 p, vec3 rd) {
+        float down = uHeight - p.y;
+        float R = R0 + down * K;
+        float q = length(p.xz) / R;
+        float prof = exp(-q * q * 2.3);
+        // Exponential falloff from the fixture, a soft fade at the lens, soft floor contact.
+        float fall = exp(-down / 5.5) * (0.35 + 0.65 * ${BEAM.rBottom.toFixed(3)} / (R + 0.6));
+        float lens = smoothstep(0.0, 1.6, down);
+        float floorF = smoothstep(0.0, 0.35, p.y);
+        float n = 1.0;
+        ${cheap ? '' : 'vec3 np = p * vec3(1.1, 0.55, 1.1) + vec3(uTime * 0.02, -uTime * 0.045, uTime * 0.013); n = 0.55 + 0.9 * vnoise3(np);'}
+        // Henyey-Greenstein, g = 0.5: haze scatters forward, so looking up the beam is brighter.
+        vec3 Ld = normalize(p - vec3(0.0, uHeight, 0.0));
+        float c = dot(Ld, -rd);
+        float g = 0.5;
+        float hg = (1.0 - g * g) / pow(1.0 + g * g - 2.0 * g * c, 1.5) * 0.25;
+        return prof * fall * lens * floorF * n * hg;
+      }
       void main() {
-        vec3 V = normalize(cameraPosition - vWorld);
-        float facing = abs(dot(normalize(vN), V));
-        float core = pow(facing, 3.0);
-        float y01 = clamp(vWorld.y / uHeight, 0.0, 1.0);
-        vec3 p = vWorld * 1.3 + vec3(0.0, -uTime * 0.05, uTime * 0.02);
-        float n = vnoise3(p) * 0.6 + vnoise3(p * 2.7 + 3.1) * 0.4;
-        float haze = 0.45 + 0.75 * n;
-        float fadeFloor = smoothstep(0.0, 1.4, vWorld.y);
-        float fadeTop = 1.0 - smoothstep(0.85, 1.0, y01);
-        float camDist = length(cameraPosition - vWorld);
-        float fadeNear = smoothstep(0.5, 2.5, camDist);
-        float edgeBand = smoothstep(0.05, 0.3, facing) * (1.0 - smoothstep(0.3, 0.75, facing));
-        float a = (core * 0.7 + edgeBand * 0.5) * haze * fadeFloor * fadeTop * fadeNear * (0.4 + 0.6 * y01);
-        gl_FragColor = vec4(uColor * a * uIntensity * 0.2, 1.0);
+        vec3 ro = cameraPosition;
+        vec3 seg = vWorld - ro;
+        float tExit = length(seg);
+        vec3 rd = seg / tExit;
+        // Entry: the other root of the padded cone (apex above the lens).
+        float k = K * PAD;
+        float ay = uHeight + R0 * PAD / k;
+        float h = ay - ro.y;
+        float a = rd.x * rd.x + rd.z * rd.z - k * k * rd.y * rd.y;
+        float b = 2.0 * (ro.x * rd.x + ro.z * rd.z + k * k * h * rd.y);
+        float cc = ro.x * ro.x + ro.z * ro.z - k * k * h * h;
+        float disc = b * b - 4.0 * a * cc;
+        float tEnter = 0.0;
+        if (disc > 0.0 && abs(a) > 1e-6) {
+          float sq = sqrt(disc);
+          float t1 = (-b - sq) / (2.0 * a);
+          float t2 = (-b + sq) / (2.0 * a);
+          float tOther = abs(t1 - tExit) < abs(t2 - tExit) ? t2 : t1;
+          if (tOther < tExit && ro.y + rd.y * tOther < ay) tEnter = max(tOther, 0.0);
+        }
+        // Clip to the floor and below the lens.
+        if (rd.y < 0.0) tExit = min(tExit, -ro.y / rd.y);
+        if (rd.y > 0.0) tExit = min(tExit, (uHeight - ro.y) / rd.y);
+        if (rd.y < 0.0 && ro.y > uHeight) tEnter = max(tEnter, (uHeight - ro.y) / rd.y);
+        float len = tExit - tEnter;
+        if (len <= 0.0) discard;
+        float dt = len / float(STEPS);
+        float jit = hash12(gl_FragCoord.xy + fract(uTime) * 61.0);
+        float sum = 0.0;
+        for (int i = 0; i < STEPS; i++) {
+          vec3 p = ro + rd * (tEnter + (float(i) + jit) * dt);
+          sum += density(p, rd);
+        }
+        sum *= dt;
+        // Low in the beam the haze also catches red light bounced off the rug.
+        vec3 pm = ro + rd * (tEnter + 0.5 * len);
+        float bounce = exp(-max(pm.y, 0.0) / 0.9) * exp(-max(length(pm.xz) - ${RUG_RADIUS.toFixed(2)}, 0.0) / 0.6);
+        vec3 col = mix(uColor, vec3(1.0, 0.0, 0.03), bounce * 0.55);
+        gl_FragColor = vec4(col * sum * uIntensity * 0.55, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
     transparent: true,
     depthWrite: false,
     blending: AdditiveBlending,
-    side: FrontSide,
+    side: BackSide,
     toneMapped: true,
     fog: false,
   });
@@ -686,7 +853,7 @@ export function createDustMaterial() {
       uScale: { value: 400 },
       uIntensity: { value: 1 },
       uHeight: { value: SPOT_HEIGHT },
-      uTan: { value: (RUG_RADIUS + 0.25) / SPOT_HEIGHT },
+      uTan: { value: BEAM_K },
     },
     vertexShader: /* glsl */ `
       attribute vec4 seed;
@@ -698,8 +865,13 @@ export function createDustMaterial() {
         p.y = mod(p.y - t * 2.0, uHeight * 0.95);
         p.x += sin(uTime * 0.11 + seed.x * 6.28) * 0.12;
         p.z += cos(uTime * 0.09 + seed.y * 6.28) * 0.12;
-        float coneR = (uHeight - p.y) * uTan;
-        float inside = 1.0 - smoothstep(coneR * 0.6, coneR, length(p.xz));
+        float coneR = ${BEAM.r0.toFixed(4)} + (uHeight - p.y) * uTan;
+        float qd = length(p.xz) / coneR;
+        // Only lit inside the beam (same soft profile as the haze), brighter looking up the beam.
+        float inside = exp(-qd * qd * 2.6);
+        vec3 wp = (modelMatrix * vec4(p, 1.0)).xyz;
+        float cph = dot(normalize(wp - vec3(0.0, uHeight, 0.0)), normalize(cameraPosition - wp));
+        inside *= 0.5 + 1.5 * pow(max(cph, 0.0), 3.0);
         // Motes turn their flat sides to the light now and then: sharp sparkles.
         float ph = sin(uTime * (0.5 + seed.z * 1.4) + seed.x * 40.0) * 0.5 + 0.5;
         float twinkle = 0.25 + 0.5 * ph + 3.0 * pow(ph, 24.0);

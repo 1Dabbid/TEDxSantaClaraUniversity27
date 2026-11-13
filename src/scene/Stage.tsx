@@ -8,13 +8,15 @@ import {
   CylinderGeometry,
   PlaneGeometry,
   type Mesh,
+  type Object3D,
   type Points,
   type ShaderMaterial,
   type SpotLight,
 } from 'three';
 import { machinedLathe } from './geometry';
-import { RUG_RADIUS, SPOT_ANGLE, SPOT_HEIGHT } from './layout';
+import { RUG_RADIUS, SPOT_ANGLE, SPOT_HEIGHT, STAGE_EDGE_Z } from './layout';
 import {
+  BEAM,
   createConeMaterial,
   createCurtainMaterial,
   createDustMaterial,
@@ -22,8 +24,11 @@ import {
   createRugMaterial,
 } from './materials';
 import { look } from './look';
+import { REFLECT_LAYER } from './reflection';
 
 const R = RUG_RADIUS;
+/** Makes an object visible to the floor reflection as well as the main camera. */
+export const reflected = (o: Object3D) => o.layers.enable(REFLECT_LAYER);
 
 /** Upstage curtain: distance behind the stage centre, width, height. */
 const CURTAIN = { z: -4.6, width: 34, height: 8 };
@@ -39,8 +44,10 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
   const dust = useRef<Points>(null);
 
   const geo = useMemo(() => {
-    const floor = new PlaneGeometry(90, 90, 1, 1);
+    // Stage deck: ends at the stage front, the house continues below (Venue).
+    const floor = new PlaneGeometry(90, 45 + STAGE_EDGE_Z, 1, 1);
     floor.rotateX(-Math.PI / 2);
+    floor.translate(0, 0, (STAGE_EDGE_Z - 45) / 2);
     // Rug: ~18 mm pile with a rounded, slightly sagging lip.
     const rug = machinedLathe(
       [
@@ -54,7 +61,8 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
       ],
       high ? 256 : 96,
     );
-    const cone = new CylinderGeometry(0.11, Math.tan(SPOT_ANGLE) * SPOT_HEIGHT, SPOT_HEIGHT, high ? 72 : 40, 1, true);
+    // Oversized beam hull: the march inside it gives the soft gaussian edge, so the hull itself never shows.
+    const cone = new CylinderGeometry(BEAM.r0 * BEAM.pad, BEAM.rBottom * BEAM.pad, SPOT_HEIGHT, high ? 48 : 32, 1, true);
     cone.translate(0, SPOT_HEIGHT / 2, 0);
 
     const count = high ? 700 : 260;
@@ -64,7 +72,7 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     const rnd = () => ((s = (s * 16807) % 2147483647) / 2147483647);
     for (let i = 0; i < count; i++) {
       const y = rnd() * SPOT_HEIGHT * 0.95;
-      const rr = Math.sqrt(rnd()) * (SPOT_HEIGHT - y) * Math.tan(SPOT_ANGLE) * 1.05;
+      const rr = Math.sqrt(rnd()) * (BEAM.r0 + ((SPOT_HEIGHT - y) * (BEAM.rBottom - BEAM.r0)) / SPOT_HEIGHT) * 1.15;
       const a = rnd() * Math.PI * 2;
       pos.set([Math.cos(a) * rr, y, Math.sin(a) * rr], i * 3);
       seed.set([rnd(), rnd(), rnd(), rnd()], i * 4);
@@ -83,7 +91,7 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     () => ({
       floor: createFloorMaterial(!high),
       rug: createRugMaterial(!high),
-      cone: createConeMaterial(),
+      cone: createConeMaterial(!high),
       dust: createDustMaterial(),
       curtain: createCurtainMaterial(),
     }),
@@ -119,10 +127,11 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
   return (
     <group>
       <mesh geometry={geo.floor} material={mats.floor} />
-      <mesh geometry={geo.rug} material={mats.rug} />
-      <mesh geometry={geo.curtain} material={mats.curtain} position={[0, 0, CURTAIN.z]} />
+      <mesh geometry={geo.rug} material={mats.rug} onUpdate={reflected} />
+      <mesh geometry={geo.curtain} material={mats.curtain} position={[0, 0, CURTAIN.z]} onUpdate={reflected} />
       <spotLight
         ref={spot}
+        onUpdate={reflected}
         position={[0, SPOT_HEIGHT, 0]}
         angle={SPOT_ANGLE * 1.08}
         penumbra={0.55}
@@ -131,8 +140,8 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
         intensity={200}
         color="#fff2e4"
       />
-      <mesh ref={cone} geometry={geo.cone} material={mats.cone} renderOrder={5} frustumCulled={false} />
-      <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} />
+      <mesh ref={cone} geometry={geo.cone} material={mats.cone} renderOrder={5} frustumCulled={false} onUpdate={reflected} />
+      <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} onUpdate={reflected} />
     </group>
   );
 }

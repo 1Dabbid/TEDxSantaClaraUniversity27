@@ -13,6 +13,7 @@ import {
   OneFactor,
   OneMinusSrcAlphaFactor,
   OrthographicCamera,
+  type PerspectiveCamera,
   Scene,
   ShaderMaterial,
   UnsignedByteType,
@@ -20,6 +21,7 @@ import {
   WebGLRenderTarget,
 } from 'three';
 import { look } from './look';
+import { createReflection } from './reflection';
 
 const VERT = /* glsl */ `
   varying vec2 vUv;
@@ -135,7 +137,7 @@ function fullscreenTriangle() {
  * target with mipmaps → one composite pass. Otherwise renders straight to the
  * screen with a cheap blended vignette/grain veil.
  */
-export default function Post({ post }: { post: boolean }) {
+export default function Post({ post, reflect = false }: { post: boolean; reflect?: boolean }) {
   const get = useThree((s) => s.get);
   const size = useThree((s) => s.size);
   const dpr = useThree((s) => s.viewport.dpr);
@@ -232,16 +234,25 @@ export default function Post({ post }: { post: boolean }) {
     [res],
   );
 
+  // Planar floor reflection (high tier only): one small extra scene pass, skipped in macro shots.
+  const reflection = useMemo(() => (reflect ? createReflection(get().gl) : null), [reflect, get]);
+  useEffect(() => () => reflection?.dispose(), [reflection]);
+
   const resRef = useRef(res);
   useEffect(() => {
     resRef.current = res;
   }, [res]);
 
-  useFrame((state) => {
+  useFrame((state, dt) => {
     const { scene, camera, gl } = state;
     const res = resRef.current;
     const t = state.clock.elapsedTime;
     gl.toneMappingExposure = look.exposure;
+    if (reflection) {
+      const w = Math.floor(state.size.width * state.viewport.dpr);
+      const h = Math.floor(state.size.height * state.viewport.dpr);
+      reflection.render(scene, camera as PerspectiveCamera, w, h, Math.min(dt, 0.1));
+    }
     if (post) {
       const u = res.composite.uniforms;
       u.uTime.value = t;

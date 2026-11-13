@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import {
   CatmullRomCurve3,
@@ -11,6 +11,7 @@ import {
   TubeGeometry,
   Vector3,
   type BufferGeometry,
+  type Group,
 } from 'three';
 import { bevelledExtrude, machinedLathe, mergeParts, roundedBox, threadProfile, type ProfilePoint } from './geometry';
 import {
@@ -31,6 +32,7 @@ import {
   createNickelMaterial,
   createPolishedMaterial,
 } from './materials';
+import { REFLECT_LAYER } from './reflection';
 import { createEngravingMask } from './textures';
 
 /** Body profile: tail, knurled grip, tapered barrel with two seam lines, neck under the band ring. */
@@ -342,6 +344,7 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
   const high = quality === 'high';
   const gl = useThree((s) => s.gl);
   const fade = useRef(0);
+  const root = useRef<Group>(null);
   const maskOn = useRef<{ value: number } | null>(null);
 
   const geo = useMemo(() => {
@@ -431,11 +434,16 @@ export default function Microphone({ quality }: { quality: 'high' | 'low' }) {
     maskOn.current.value = f * f * (3 - 2 * f);
   });
 
+  // The microphone and stand show in the floor reflection.
+  useLayoutEffect(() => {
+    root.current?.traverse((o) => o.layers.enable(REFLECT_LAYER));
+  }, [geo, mats]);
+
   const sx = STAND_BASE.x;
   const sz = STAND_BASE.z;
 
   return (
-    <group>
+    <group ref={root}>
       {/* The microphone, in its own (tilted) frame */}
       <group position={MIC_POSITION} quaternion={MIC_QUATERNION}>
         <mesh geometry={geo.body} material={mats.body.material} />

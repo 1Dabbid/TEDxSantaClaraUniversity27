@@ -7,9 +7,12 @@ import {
   BufferGeometry,
   Color,
   FogExp2,
+  HalfFloatType,
   Object3D,
   PlaneGeometry,
   Vector3,
+  WebGLRenderTarget,
+  UnsignedByteType,
   type Group,
   type Mesh,
   type PerspectiveCamera,
@@ -35,7 +38,8 @@ import { createHazeMaterial, createMotesMaterial, shared } from './materials';
 import Microphone from './Microphone';
 import Post from './Post';
 import Seats from './Seats';
-import Stage from './Stage';
+import Stage, { reflected } from './Stage';
+import Venue from './Venue';
 import { SECTION_IDS, scrollState, type SectionId } from './scrollState';
 
 type Tier = 'high' | 'low';
@@ -145,9 +149,17 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
         o.visible = true;
       }
     });
+    // With post (and the floor reflection) every scene program draws into an
+    // HDR target, which selects the variant without tone mapping: compile that one.
+    const prev = gl.getRenderTarget();
+    const half = gl.extensions.has('EXT_color_buffer_float') || gl.extensions.has('EXT_color_buffer_half_float');
+    const probe = post ? new WebGLRenderTarget(1, 1, { type: half ? HalfFloatType : UnsignedByteType }) : null;
+    if (probe) gl.setRenderTarget(probe);
     gl.compileAsync(scene, camera).catch(() => {});
+    gl.setRenderTarget(prev);
+    probe?.dispose();
     for (const o of hidden) o.visible = false;
-  }, [get, tier]);
+  }, [get, tier, post]);
 
   // Section metrics.
   useEffect(() => {
@@ -402,10 +414,11 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
 
   return (
     <>
-      <Post post={post} />
+      <Post post={post} reflect={tier === 'high'} />
       <primitive object={keyTarget} />
       <spotLight
         ref={keyLight}
+        onUpdate={reflected}
         target={keyTarget}
         angle={0.09}
         penumbra={0.9}
@@ -415,10 +428,11 @@ export default function Experience({ quality, pathname = '/' }: { quality: Exclu
         color="#f6f2ec"
       />
       {/* Cool backlight from high upstage: rims the stand and the tops of the seat backs seen from the rear */}
-      <directionalLight position={[0, 7, -8]} intensity={0.3} color="#dfe5f2" />
+      <directionalLight position={[0, 7, -8]} intensity={0.3} color="#dfe5f2" onUpdate={reflected} />
       <Microphone quality={tier} />
       <Stage quality={tier} />
       <Seats quality={tier} />
+      <Venue />
       <mesh ref={hazeRef} geometry={fx.hazeGeo} material={fx.haze} renderOrder={4} frustumCulled={false} />
       <group ref={motesRef}>
         <points geometry={fx.motesGeo} material={fx.motes} renderOrder={10} frustumCulled={false} />

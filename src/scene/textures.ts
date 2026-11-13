@@ -39,7 +39,7 @@ const yieldToIdle = () =>
  * so letters keep their proportions on the barrel.
  *
  * Built incrementally (rows drawn in ~8 ms slices between idle callbacks) straight into a canvas that is
- * uploaded to the GPU as is: no pixel readback, no CPU blur. The canvas text
+ * uploaded to the GPU as a single-channel (R8) texture: no pixel readback, no CPU blur. The canvas text
  * antialiasing gives the walls their slope; mipmaps are generated on the GPU.
  */
 export async function createEngravingMask(width: number, height: number): Promise<Texture> {
@@ -127,6 +127,11 @@ export async function createEngravingMask(width: number, height: number): Promis
   }
 
   const tex = new CanvasTexture(canvas);
+  // Single channel on the GPU: WebGL2 uploads the canvas straight into an R8
+  // texture (the browser drops G/B/A during the upload; no pixel readback here).
+  // 4096 x 2048 R8 with its mip chain is ~11 MB instead of ~45 MB as RGBA8.
+  tex.format = RedFormat;
+  tex.internalFormat = 'R8';
   // flipY (default) puts v = 0 at the bottom of the band, like the old mask.
   tex.wrapS = RepeatWrapping;
   tex.wrapT = ClampToEdgeWrapping;
