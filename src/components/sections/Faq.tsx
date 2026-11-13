@@ -11,8 +11,14 @@ import { SectionShell, SectionTitle } from './SectionShell';
  * Native <details>/<summary> accordion: works without JavaScript, keyboard
  * operable (Enter/Space), and announced as expandable by screen readers.
  */
-export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings }) {
-  if (!settings.sections.showFaq || items.length === 0) return null;
+/** Questions shown at home; the rest are on /faq ("All 9 questions"). */
+const HOME_QUESTIONS = 5;
+
+export function Faq({ items: all, settings }: { items: FaqItem[]; settings: Settings }) {
+  if (!settings.sections.showFaq || all.length === 0) return null;
+  // The first few at home, so "All questions" leads somewhere that offers more (rule 4, nav.ts).
+  const items = all.slice(0, HOME_QUESTIONS);
+  const more = all.length > items.length;
 
   return (
     <SectionShell id="faq" scrim="solid" className="py-24 sm:py-32">
@@ -47,7 +53,9 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
         </div>
 
         <FaqList items={items} className="lg:col-span-8" />
-        <MoreLink href="/faq" label="All questions" className="-mt-6 lg:col-span-8 lg:col-start-5" />
+        {more ? (
+          <MoreLink href="/faq" label={`All ${all.length} questions`} className="-mt-6 lg:col-span-8 lg:col-start-5" />
+        ) : null}
       </div>
     </SectionShell>
   );
