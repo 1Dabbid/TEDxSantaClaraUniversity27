@@ -71,9 +71,18 @@ export function speakerFiles(): SpeakerFile[] {
 
 export const publishedSpeakers = () => speakerFiles().filter((s) => s.published);
 
+/**
+ * The topic pages that exist with today's content: /team and /faq follow their
+ * switches (Contact & site > Show / hide sections), the others always exist.
+ */
+export function topicRoutes(): string[] {
+  const on = (key: string) => contentValue('sections.yaml', key) !== 'false';
+  return ['/speakers', '/schedule', '/venue', '/partners', ...(on('showTeam') ? ['/team'] : []), ...(on('showFaq') ? ['/faq'] : [])];
+}
+
 /** Every public, statically generated page. */
 export function publicRoutes(): string[] {
-  return ['/', '/partners', '/speakers', ...publishedSpeakers().map((s) => `/speakers/${s.slug}`)];
+  return ['/', ...topicRoutes(), ...publishedSpeakers().map((s) => `/speakers/${s.slug}`)];
 }
 
 export type Problems = { console: string[]; failed: string[] };

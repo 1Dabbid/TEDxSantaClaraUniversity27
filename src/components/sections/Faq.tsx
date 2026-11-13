@@ -3,6 +3,8 @@ import { faqJsonLd, jsonLdString } from '@/lib/jsonld';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { JsonLd } from '@/components/print/Print';
 import { FaqMotion } from '@/motion/sections/FaqMotion';
+import { MoreLink } from '@/components/pages/MoreLink';
+import { FaqList } from './FaqList';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 /**
@@ -44,40 +46,8 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
           </div>
         </div>
 
-        <ol data-reveal="stagger" className="min-w-0 border-t border-white/15 lg:col-span-8">
-          {items.map((item, i) => (
-            <li key={i} className="min-w-0 border-b border-white/15">
-              <details className="faq-clause group">
-                <summary
-                  className="group/q grid min-h-11 cursor-pointer list-none grid-cols-[2.5rem_minmax(0,1fr)_2rem] items-baseline gap-2 py-6 text-lg font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] sm:grid-cols-[4rem_minmax(0,1fr)_2.5rem] sm:text-2xl sm:tracking-tight [&::-webkit-details-marker]:hidden"
-                >
-                  <span
-                    aria-hidden="true"
-                    className="fine-print text-mute tabular-nums transition-colors duration-300 group-hover/q:text-white group-open:text-white"
-                  >
-                    {String(i + 1).padStart(2, '0')}
-                  </span>
-                  {/* overflow-wrap: the long event name must not push the page sideways at 320px. */}
-                  <span className="min-w-0 text-balance [overflow-wrap:anywhere] transition-transform duration-500 ease-[var(--ease-cinema)] pointer-fine:group-hover/q:translate-x-1">
-                    {item.question}
-                  </span>
-                  {/* Plus that turns into a minus: shape change, not colour. */}
-                  <span
-                    aria-hidden="true"
-                    className="relative ml-auto block size-4 self-center text-mute transition-colors duration-300 group-hover/q:text-white group-open:text-white"
-                  >
-                    <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-current" />
-                    <span className="faq-icon-v absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-current" />
-                  </span>
-                </summary>
-                <div className="faq-answer grid grid-cols-[2.5rem_minmax(0,1fr)_2rem] gap-2 pb-8 sm:grid-cols-[4rem_minmax(0,1fr)_2.5rem]">
-                  <span aria-hidden="true" />
-                  <p className="min-w-0 max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{item.answer}</p>
-                </div>
-              </details>
-            </li>
-          ))}
-        </ol>
+        <FaqList items={items} className="lg:col-span-8" />
+        <MoreLink href="/faq" label="All questions" className="-mt-6 lg:col-span-8 lg:col-start-5" />
       </div>
     </SectionShell>
   );

@@ -49,6 +49,19 @@ The home page shows what is true today and grows by itself as you publish. You n
 | **Partners** | A short text invitation on the home page (never names or logos) linking to `/partners`. On `/partners`, **Current partners** is hidden. | **Published** partners appear on `/partners` only. |
 | **Hero buttons** | **Tickets** and **Get updates** (mailing list). | Once a speaker is announced: **Tickets** and **Speakers**. |
 
+### The topic pages
+
+Besides the home page (the scroll story), each topic has its own page with an address you can share: **/speakers**, **/schedule**, **/venue**, **/partners**, **/team** and **/faq**. They read the same content as the home page, so there is nothing extra to fill in.
+
+| Page | While nothing is published | Once you publish |
+| --- | --- | --- |
+| **/venue** | Address, **Open in Maps**, the coordinates, and Directions, Parking and Accessibility with one line saying the details follow (Directions points to the address; Accessibility to the contact email). Times show "To be announced". | Each **Getting there** note you fill in (**Venue & directions**) appears under its title; **Doors open at**, **Talks start at**, **Event ends at** appear at the top. |
+| **/schedule** | The date, "Running order to follow" and the mailing list button. | The full running order (**Show the running order**). |
+| **/team** | Every board role from **People > Team**, as a plain list of roles. | Names and photos for people with **Show name publicly** ticked. Turning off the Team switch removes the page. |
+| **/faq** | Every question. Each has its own link (e.g. `/faq#tickets-on-sale`, made from the question's words): send it to someone and the answer opens. Rewording a question changes its link. Turning off the FAQ switch removes the page. | |
+
+Menus: at the top of the home page the links scroll to the sections; on every other page the same links open the topic pages. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The whole team", "All questions", and "All speakers" once a speaker is announced).
+
 Unannounced speakers still have a page (`/speakers/speaker-01` and so on) so an old link never breaks, but nothing on the site links to it and search engines are told to ignore it.
 
 ## 4. Recipes

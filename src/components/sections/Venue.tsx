@@ -6,12 +6,13 @@ import { SectionLabel } from '@/components/ui/SectionLabel';
 import { keepTedxCase } from '@/components/ui/KeepCase';
 import { ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { VenueMotion } from '@/motion/sections/VenueMotion';
+import { MoreLink } from '@/components/pages/MoreLink';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 const LETTERS = 'abcdefghijklmnopqrstuvwxyz';
 
 /** A surveyor's reticle: concentric rings, degree ticks, a single red point. Decorative. */
-function Reticle() {
+export function Reticle() {
   const ticks = Array.from({ length: 72 }, (_, i) => i * 5);
   return (
     <svg viewBox="0 0 320 320" aria-hidden="true" data-reticle className="block size-full" fill="none">
@@ -222,6 +223,7 @@ export function Venue({ settings }: { settings: Settings }) {
             </ol>
           </div>
         ) : null}
+        <MoreLink href="/venue" label="Venue details" />
       </div>
     </SectionShell>
   );

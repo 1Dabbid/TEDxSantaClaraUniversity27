@@ -165,3 +165,49 @@ export function speakerJsonLd(sp: Speaker) {
   };
   return { '@context': 'https://schema.org', '@graph': [person, breadcrumb] };
 }
+
+/** One step of a page's trail: its name and its path ('/' for home). */
+export type Crumb = { name: string; path: string };
+
+/** schema.org BreadcrumbList for a topic page, e.g. Home > Venue. */
+export function breadcrumbJsonLd(trail: Crumb[]) {
+  return {
+    '@type': 'BreadcrumbList',
+    itemListElement: trail.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      name: c.name,
+      item: `${SITE_URL}${c.path}`,
+    })),
+  };
+}
+
+/** A topic page's own graph: any page-specific nodes, then its breadcrumb. */
+export function pageJsonLd(trail: Crumb[], ...nodes: object[]) {
+  return { '@context': 'https://schema.org', '@graph': [...nodes, breadcrumbJsonLd(trail)] };
+}
+
+/**
+ * schema.org Place for /venue, built from the same Venue content as the Event's
+ * location (placeJsonLd), plus the page's own address and the map link.
+ */
+export function venuePlaceJsonLd(s: Settings) {
+  return {
+    ...placeJsonLd(s),
+    '@id': `${SITE_URL}/venue#place`,
+    url: `${SITE_URL}/venue`,
+    ...(s.mapUrl ? { hasMap: s.mapUrl } : {}),
+    maximumAttendeeCapacity: s.capacity,
+  };
+}
+
+/** schema.org FAQPage for /faq: each question also carries its own address (`/faq#<id>`). */
+export function faqPageJsonLd(items: FaqItem[], ids: string[]) {
+  const base = faqJsonLd(items);
+  return {
+    ...base,
+    '@id': `${SITE_URL}/faq#faqpage`,
+    url: `${SITE_URL}/faq`,
+    mainEntity: base.mainEntity.map((q, i) => ({ ...q, url: `${SITE_URL}/faq#${ids[i]}` })),
+  };
+}
