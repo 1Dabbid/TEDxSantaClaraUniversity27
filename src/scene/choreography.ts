@@ -363,11 +363,11 @@ export const DESKTOP_SHOTS: Shot[] = [
 ];
 
 /** Portrait: the same axis, the subject centred, in the lower middle (the copy sits above it on full-width scrims). */
-const P_ANCHOR: readonly [number, number] = [0.5, 0.62];
+const P_ANCHOR: readonly [number, number] = [0.5, 0.57];
 const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 1.15, dof: 0.6, key: 0.85, motes: 0.6, scrim: 0.35, bloom: 0.9, focus: [0.6, 0.45] as const };
 const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.02, spot: 0.15, key: 0.75, rim: 3.4, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
 /** On phones the speakers and schedule copy sits over the beam: a thinner shaft, darker at the top edge, keeps it at 4.5:1. */
-const STAGE_PORTRAIT = { ...STAGE_LOOK, fov: 40, exposure: 1.0, parallax: 0, cone: 0.55, spot: 1.1, scrimEdge: 0.55 };
+const STAGE_PORTRAIT = { ...STAGE_LOOK, fov: 36, exposure: 1.0, parallax: 0, cone: 0.4, spot: 1.1, scrimEdge: 0.55 };
 
 export const PORTRAIT_SHOTS: Shot[] = [
   { at: 0, aim: { mic: 0.1 }, dist: 0.62, anchor: [0.5, 0.66], ...HERO_PORTRAIT_LOOK },
@@ -401,20 +401,23 @@ export const PORTRAIT_SHOTS: Shot[] = [
   { at: 1.4, aim: { mic: 0.08 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.82, keyDir: [1.0, 2.2, 0.3] },
   { at: 1.72, aim: { mic: 0.072 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.51, keyDir: [1.3, 2.0, 0.3] },
   // The same pull back as on landscape, at portrait distances.
-  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.158, anchor: [0.54, 0.56], ...MACRO_PORTRAIT, roll: 0.44, keyDir: [1.4, 1.9, 0.3], dof: 0.5 },
-  { at: 1.865, aim: { mic: 0.082 }, dist: 0.273, anchor: [0.53, 0.575], roll: 0.37, ...PULL_BARREL, fov: 33, exposure: 1.08, scrim: 0.35, parallax: 0 },
-  { at: 1.9375, aim: { mic: 0.09 }, dist: 0.494, anchor: [0.515, 0.59], roll: 0.3, ...PULL_MIC, fov: 34.5, scrim: 0.35, parallax: 0 },
-  { at: 2.01, aim: { mic: 0.1 }, dist: 0.98, anchor: [0.5, 0.6], roll: 0.23, ...PULL_DARK, fov: 36, parallax: 0 },
-  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.943, anchor: P_ANCHOR, roll: 0.16, ...PULL_STAND, fov: 37, parallax: 0 },
-  { at: 2.155, aim: { stand: 1.38 }, dist: 3.517, anchor: P_ANCHOR, roll: 0.09, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.18, cone: 0.04, key: 0.7 },
-  { at: 2.2275, aim: { stand: 1.16 }, dist: 6.08, anchor: P_ANCHOR, roll: 0.02, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.24, cone: 0.05, key: 0.65 },
-  { at: 2.3, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT, ...STAGE_WARM, cone: 0.06 },
-  { at: 2.4, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT, spot: 0.8, cone: 0.3, key: 0.55 },
-  { at: 2.5, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
-  { at: 2.96, aim: { stand: 0.85 }, dist: 9.6, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
-  { at: 3.92, aim: { stand: 0.83 }, dist: 10.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.7, spot: 1.05, exposure: 0.97 },
-  { at: 4.6, aim: { stand: 0.68 }, dist: 15, lift: 0.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 1.5, key: 0.3, scrimEdge: 0.6 },
-  { at: 5.3, aim: { stand: 0.52 }, dist: 21, lift: 1.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, exposure: 0.95, cone: 1.6, key: 0.3, vignette: 0.64 },
+  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.155, anchor: [0.54, 0.56], ...MACRO_PORTRAIT, roll: 0.44, keyDir: [1.4, 1.9, 0.3], dof: 0.5 },
+  { at: 1.865, aim: { mic: 0.082 }, dist: 0.262, anchor: [0.53, 0.57], roll: 0.37, ...PULL_BARREL, fov: 33, exposure: 1.08, scrim: 0.35, parallax: 0 },
+  { at: 1.9375, aim: { mic: 0.09 }, dist: 0.463, anchor: [0.515, 0.575], roll: 0.3, ...PULL_MIC, fov: 34.5, scrim: 0.35, parallax: 0 },
+  { at: 2.01, aim: { mic: 0.1 }, dist: 0.894, anchor: [0.5, 0.575], roll: 0.23, ...PULL_DARK, fov: 36, parallax: 0 },
+  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.726, anchor: P_ANCHOR, roll: 0.16, ...PULL_STAND, fov: 36, parallax: 0 },
+  { at: 2.155, aim: { stand: 1.38 }, dist: 3.051, anchor: P_ANCHOR, roll: 0.09, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.18, cone: 0.04, key: 0.7 },
+  { at: 2.2275, aim: { stand: 1.16 }, dist: 5.159, anchor: P_ANCHOR, roll: 0.02, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.24, cone: 0.05, key: 0.65 },
+  // Speakers on phones: the stand held a little low on the line so the whole microphone, its stand
+  // and most of the rug sit between the heading and the copy at the bottom; the mic head stays
+  // about 10 px tall against a narrower, dimmer shaft.
+  { at: 2.3, aim: { stand: 0.55 }, dist: 8.0, anchor: P_ANCHOR, ...STAGE_PORTRAIT, ...STAGE_WARM, cone: 0.06 },
+  { at: 2.4, aim: { stand: 0.55 }, dist: 8.0, anchor: P_ANCHOR, ...STAGE_PORTRAIT, spot: 0.8, cone: 0.3, key: 0.55 },
+  { at: 2.5, aim: { stand: 0.55 }, dist: 8.0, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
+  { at: 2.96, aim: { stand: 0.55 }, dist: 8.0, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
+  { at: 3.92, aim: { stand: 0.53 }, dist: 8.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.7, spot: 1.05, exposure: 0.97 },
+  { at: 4.6, aim: { stand: 0.52 }, dist: 15, lift: 0.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 1.5, key: 0.3, scrimEdge: 0.6 },
+  { at: 5.3, aim: { stand: 0.48 }, dist: 21, lift: 1.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, exposure: 0.95, cone: 1.6, key: 0.3, vignette: 0.64 },
   { at: 5.78, aim: { stand: 0.45 }, dist: 24, lift: 1.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, exposure: 0.88, cone: 1.6, key: 0.3, vignette: 0.66 },
   { at: 6.0, aim: { stand: 0.45 }, dist: 24, lift: 1.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, ...DARK },
   { at: 9.5, aim: { stand: 0.45 }, dist: 24, lift: 1.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, ...DARK },
