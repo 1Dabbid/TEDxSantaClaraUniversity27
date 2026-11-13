@@ -95,7 +95,7 @@ export default async function TeamPage() {
             { k: 'Organizer', v: 'Student-run' },
             { k: 'Board', v: `${team.length} ${team.length === 1 ? 'role' : 'roles'}` },
             { k: 'Campus', v: campus },
-            ...(settings.contactEmail ? [{ k: 'Contact', v: settings.contactEmail }] : []),
+            ...(settings.contactEmail ? [{ k: 'Contact', v: <a href={mail}>{settings.contactEmail}</a> }] : []),
           ]}
         />
       </section>
@@ -117,7 +117,7 @@ export default async function TeamPage() {
           current="/team"
           heading="Write to the team."
           body="One address for questions about the event."
-          action={{ label: settings.contactEmail, href: mail, ariaLabel: `Email ${settings.contactEmail}` }}
+          action={{ label: settings.contactEmail, href: mail }}
         />
       ) : (
         <ClosingBand current="/team" />

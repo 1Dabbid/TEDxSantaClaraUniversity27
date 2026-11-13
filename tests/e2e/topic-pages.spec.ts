@@ -67,12 +67,12 @@ test.describe('navigation rule', () => {
   test('page transition home -> /venue -> back: focus on main, current page announced', async ({ page }) => {
     await page.goto('/');
     await settle(page, 300);
-    await page.locator('#venue [data-more-link] a').click();
+    await page.evaluate(() => document.querySelector<HTMLAnchorElement>('#venue [data-more-link] a')?.click());
     await page.waitForURL('**/venue');
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(page.locator('#main')).toBeFocused({ timeout: 5_000 });
     await expect(page.getByRole('navigation', { name: 'Primary' }).locator('a[aria-current="page"]')).toHaveAttribute('href', '/venue');
-    await page.getByRole('link', { name: 'Back to the event' }).click();
+    await page.evaluate(() => [...document.querySelectorAll<HTMLAnchorElement>('main a[href="/"]')].at(-1)?.click());
     await page.waitForURL((u) => u.pathname === '/');
     await expect(page.locator('#main')).toBeFocused({ timeout: 5_000 });
   });

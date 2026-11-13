@@ -53,7 +53,7 @@ export function FaqList({ items, ids, className = '' }: { items: FaqItem[]; ids?
                       data-faq-permalink
                       className="fine-print link-draw tap mt-4 inline-flex min-h-11 items-center text-mute hover:text-white focus-visible:text-white pointer-fine:min-h-0 pointer-fine:py-1"
                     >
-                      Link to this question<span className="sr-only">: {item.question}</span>
+                      Link to this question<span className="sr-only tracking-normal normal-case">: {item.question}</span>
                     </a>
                   </div>
                 ) : (
