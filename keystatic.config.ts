@@ -1,4 +1,5 @@
 import { collection, config, fields, singleton } from '@keystatic/core';
+import { TEDX_MAX_CAPACITY } from './src/lib/site';
 
 /**
  * Keystatic content model: what student editors see at /keystatic.
@@ -82,6 +83,13 @@ export default config({
         }),
         doorsTime: timeField('Doors open at'),
         endTime: timeField('Event ends at'),
+        capacity: fields.integer({
+          label: 'Seat capacity',
+          description:
+            'How many guests the event can seat. Shown in the hero, Venue, Tickets (the seat ruler draws one tick per seat), the Partners page, the share image and search descriptions. TEDx rules cap a standard licence at 100 attendees, so it can never be more than 100. Lower it only if the room is smaller.',
+          defaultValue: TEDX_MAX_CAPACITY,
+          validation: { isRequired: true, min: 1, max: TEDX_MAX_CAPACITY },
+        }),
         accentColor: fields.text({
           label: 'Accent colour',
           description: 'The single red used for buttons and small details. Keep the TEDx red #EB0028 unless told otherwise.',
@@ -207,7 +215,10 @@ export default config({
           'Partnerships email',
           'Used by every “Become a partner” button. While blank, those buttons link to tedxscu.com.',
         ),
-        livestreamUrl: urlField('Livestream link (optional)', 'Only if the event is streamed.'),
+        livestreamUrl: urlField(
+          'Livestream link (optional)',
+          'Only if the event is streamed, e.g. the YouTube live page. When filled in, a “Watch live” link appears in the hero and the Tickets section (it opens in a new tab). Leave blank to show nothing.',
+        ),
         socials: fields.object(
           {
             instagram: urlField('Instagram', 'Full link, e.g. https://www.instagram.com/…'),
@@ -278,7 +289,8 @@ export default config({
             question: fields.text({ label: 'Question', validation: { isRequired: true } }),
             answer: fields.text({
               label: 'Answer',
-              description: 'Plain text. Line breaks are kept.',
+              description:
+                'Plain text. Line breaks are kept. Write {capacity} where the seat count belongs; the site fills in the number from Event basics.',
               multiline: true,
               validation: { isRequired: true },
             }),

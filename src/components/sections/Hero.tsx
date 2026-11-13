@@ -1,7 +1,9 @@
 import type { CSSProperties } from 'react';
 import type { Settings } from '@/lib/content';
 import { ticketCta } from '@/lib/tickets';
+import { seatsLabel } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
+import { WatchLive } from '@/components/ui/WatchLive';
 import { HeroMotion } from '@/motion/sections/HeroMotion';
 import { SectionShell } from './SectionShell';
 
@@ -117,13 +119,13 @@ export function Hero({ settings }: { settings: Settings }) {
                 <dt className="fine-print">Venue</dt>
                 <dd className="mt-1.5 text-white">
                   {settings.venueName}
-                  <span className="block text-mute">Santa Clara University</span>
+                  {settings.venueCampus ? <span className="block text-mute">{settings.venueCampus}</span> : null}
                 </dd>
               </div>
               <div>
                 <dt className="fine-print">Capacity</dt>
                 <dd className="mt-1.5 text-white">
-                  100 seats
+                  {seatsLabel(settings.capacity)}
                   <span className="block text-mute">Tickets {cta.status}</span>
                 </dd>
               </div>
@@ -137,6 +139,7 @@ export function Hero({ settings }: { settings: Settings }) {
             <Button href="#speakers" variant="ghost" size="lg">
               Speakers
             </Button>
+            <WatchLive url={settings.livestreamUrl} size="lg" className="sm:ml-3" />
           </div>
 
           <div className="mt-8 flex items-end justify-between gap-8 sm:mt-12">

@@ -1,5 +1,6 @@
 import type { Settings } from '@/lib/content';
 import { formatCoordinate } from '@/lib/links';
+import { seatsLabel } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
@@ -152,7 +153,7 @@ export function Venue({ settings }: { settings: Settings }) {
               <span className="fine-print text-mute">Capacity</span>
             </dt>
             <dd className="col-start-2 mt-3 leading-relaxed text-white">
-              <span className="block text-xl tracking-tight tabular-nums">100 seats</span>
+              <span className="block text-xl tracking-tight tabular-nums">{seatsLabel(settings.capacity)}</span>
               <span className="mt-2 block text-mute">One room, one evening.</span>
             </dd>
           </div>

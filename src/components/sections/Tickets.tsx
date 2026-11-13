@@ -1,6 +1,8 @@
+import type { CSSProperties } from 'react';
 import type { ApplicationsState, Settings, TicketState } from '@/lib/content';
 import { getFaq } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
+import { WatchLive } from '@/components/ui/WatchLive';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { ClauseNo, StatusRegister } from '@/components/print/Print';
 import { TicketsMotion } from '@/motion/sections/TicketsMotion';
@@ -18,6 +20,9 @@ const APPLICATION_OPTIONS = [
   { value: 'open', label: 'Open' },
   { value: 'closed', label: 'Closed' },
 ] as const satisfies readonly { value: ApplicationsState; label: string }[];
+
+/** Seat numbers are printed with three figures: 001 … 100. */
+const pad = (n: number) => String(n).padStart(3, '0');
 
 type Copy = { title: string; subtitle: string; body: string };
 
@@ -46,21 +51,26 @@ const COPY: Record<TicketState, Copy> = {
 };
 
 /**
- * The room as a ruler: one hairline per seat on a common baseline, every tenth
- * seat drawn long and numbered. 100 across on desktop, two rows of 50 on
- * phones. All ticks brighten when sold out. Decorative.
+ * The room as a ruler: one hairline per seat (settings.capacity) on a common
+ * baseline, every tenth seat drawn long and numbered, plus the first and the
+ * last. All seats across on desktop, two rows on phones. All ticks brighten
+ * when sold out. Decorative. TicketsMotion reads the ticks and `data-seats`.
  */
-function SeatStrip({ filled }: { filled: boolean }) {
+function SeatStrip({ seats, filled }: { seats: number; filled: boolean }) {
   return (
     <div
       aria-hidden="true"
       data-seat-ruler
-      className="grid grid-cols-[repeat(50,minmax(0,1fr))] gap-y-12 md:grid-cols-[repeat(100,minmax(0,1fr))]"
+      data-seats={seats}
+      className="grid grid-cols-[repeat(var(--seats-row),minmax(0,1fr))] gap-y-12 md:grid-cols-[repeat(var(--seats),minmax(0,1fr))]"
+      style={{ '--seats': seats, '--seats-row': Math.ceil(seats / 2) } as CSSProperties}
     >
-      {Array.from({ length: 100 }, (_, i) => {
+      {Array.from({ length: seats }, (_, i) => {
         const n = i + 1;
-        const major = n % 10 === 0;
-        const labelled = major || n === 1;
+        const last = n === seats;
+        const major = n % 10 === 0 || last;
+        // A tenth seat right before the last one would collide with its label.
+        const labelled = n === 1 || last || (major && seats - n >= 5);
         return (
           <span key={n} className="relative flex h-7 items-end border-b border-white/25">
             <span
@@ -74,9 +84,9 @@ function SeatStrip({ filled }: { filled: boolean }) {
                 data-seat-label
                 className={`absolute top-full mt-2 font-mono text-[0.625rem] tracking-[0.04em] text-mute tabular-nums ${
                   n === 1 ? 'left-0' : 'right-0'
-                } ${n === 1 || n === 100 ? 'text-white' : ''} ${n % 20 === 10 && n !== 1 ? 'max-md:hidden' : ''}`}
+                } ${n === 1 || last ? 'text-white' : ''} ${n % 20 === 10 && n !== 1 && !last ? 'max-md:hidden' : ''}`}
               >
-                {String(n).padStart(3, '0')}
+                {pad(n)}
               </span>
             ) : null}
           </span>
@@ -192,6 +202,7 @@ export async function Tickets({ settings }: { settings: Settings }) {
   const state = settings.ticketState;
   const copy = COPY[state];
   const showEmbed = state === 'on-sale' && Boolean(settings.ticketEmbedUrl);
+  const seats = settings.capacity;
 
   return (
     <SectionShell id="tickets" className="py-32 sm:py-44">
@@ -213,19 +224,19 @@ export async function Tickets({ settings }: { settings: Settings }) {
             className="-ml-[0.04em] leading-[0.82] font-semibold tracking-[-0.06em] whitespace-nowrap tabular-nums"
             style={{ fontSize: 'calc(100cqi / 4.5)' }}
           >
-            001
+            {pad(1)}
             <span data-seat-dash className="mx-[0.14em] inline-block h-[0.035em] w-[0.7em] bg-white/50 align-middle" />
-            <span data-seat-count>100</span>
+            <span data-seat-count>{pad(seats)}</span>
           </p>
           </div>
           <div className="mt-8 sm:mt-12">
-            <SeatStrip filled={state === 'sold-out'} />
+            <SeatStrip seats={seats} filled={state === 'sold-out'} />
           </div>
           {/* Caption for the decorative strip; the heading and clause 5.1 carry the capacity. */}
           <div aria-hidden="true" className="mt-12 flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1">
             <span className="fine-print text-mute">Fig.&nbsp;5 · One tick per seat</span>
             <span data-cursor="loupe" className="fine-print text-mute">
-              Seat 100. That is the whole room.
+              Seat {seats}. That is the whole room.
             </span>
           </div>
         </div>
@@ -245,6 +256,7 @@ export async function Tickets({ settings }: { settings: Settings }) {
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <TicketAction settings={settings} showFaq={showFaq} />
+              <WatchLive url={settings.livestreamUrl} size="lg" className="sm:ml-3" />
             </div>
           </div>
 
@@ -252,7 +264,7 @@ export async function Tickets({ settings }: { settings: Settings }) {
             <ul data-reveal="stagger" className="border-t border-white/15">
               <li className="grid grid-cols-[3.5rem_1fr] gap-2 border-b border-white/15 py-5">
                 <ClauseNo>5.1</ClauseNo>
-                <span className="text-mute">Capacity is limited to 100 guests.</span>
+                <span className="text-mute">Capacity is limited to {seats} guests.</span>
               </li>
               {settings.ticketPriceNote ? (
                 <li className="grid grid-cols-[3.5rem_1fr] gap-2 border-b border-white/15 py-5">
