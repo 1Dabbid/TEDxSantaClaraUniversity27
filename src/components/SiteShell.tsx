@@ -4,6 +4,7 @@ import { Footer } from '@/components/Footer';
 import { Header } from '@/components/Header';
 import { SkipLink } from '@/components/SkipLink';
 import { getSettings } from '@/lib/content';
+import { REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY } from '@/lib/motion-pref';
 import { engravingLines } from '@/lib/site';
 import MotionRoot from '@/motion/MotionRoot';
 import SmoothScroll from '@/motion/SmoothScroll';
@@ -12,11 +13,14 @@ import SceneGate from '@/motion/SceneGate';
 /**
  * Runs before first paint (it is the first thing in <body>, ahead of every element
  * it affects). Adds `html.motion` only when JS runs, the visitor has no
- * reduced-motion preference and no Save-Data. Without it (no JS, reduced motion)
- * the server HTML is the complete, fully visible design. MotionRoot removes the
- * class again if the quality tier resolves to `static`.
+ * reduced-motion preference, has not turned on the site's own "Reduce motion"
+ * switch (footer; stored in localStorage, see src/lib/quality.ts) and has no
+ * Save-Data. With the switch on it adds `html.reduce-motion` instead, which the
+ * CSS treats like the reduced-motion media query. Without `html.motion` (no JS,
+ * reduced motion) the server HTML is the complete, fully visible design.
+ * MotionRoot removes the class again if the quality tier resolves to `static`.
  */
-const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection;if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData))d.classList.add('motion')}catch(e){}`;
+const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection,u=0;try{u=localStorage.getItem('${REDUCE_MOTION_KEY}')==='1'}catch(e){}if(u)d.classList.add('${REDUCE_MOTION_CLASS}');else if(!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData))d.classList.add('motion')}catch(e){}`;
 
 /**
  * The public site's chrome: site CSS, motion boot, skip link, header, the WebGL

@@ -22,7 +22,8 @@ export function WatchLive({ url, size = 'md', className = '' }: { url: string; s
       } ${className}`}
     >
       <span aria-hidden="true" className="relative flex size-2.5 shrink-0 items-center justify-center">
-        <span className="absolute inset-0 rounded-full bg-accent/35 motion-safe:animate-ping" />
+        {/* Pulses only with motion on (html.motion): never with reduced motion or the site's "Reduce motion" switch. */}
+        <span className="absolute inset-0 rounded-full bg-accent/35 motion-safe:[html.motion_&]:animate-ping" />
         <span className="relative size-2 rounded-full bg-accent" />
       </span>
       <span className="link-draw pb-0.5 group-hover:bg-[length:100%_1px] group-focus-visible:bg-[length:100%_1px]">

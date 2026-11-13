@@ -105,11 +105,15 @@
   }
 }
 
-/* Reduced motion: the per-section plates in globals.css instead. */
+/* Reduced motion (the media query, or the site's "Reduce motion" switch):
+   the per-section plates in globals.css instead. */
 @media (prefers-reduced-motion: reduce) {
   .stack {
     display: none;
   }
+}
+:global(html.reduce-motion) .stack {
+  display: none;
 }
 
 /* The live scene is coming: never request the other stills (the hero stays

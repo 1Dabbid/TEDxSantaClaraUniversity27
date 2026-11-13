@@ -13,8 +13,13 @@ import { SectionShell, SectionTitle } from './SectionShell';
 const glass = 'border border-white/[0.09] bg-gradient-to-b from-black/[0.66] to-black/[0.54]';
 const cardBase = `speaker-card group relative flex min-w-0 flex-col ${glass}`;
 
-/** An announced speaker: portrait, name, role, talk title; the whole card links to the speaker page. */
-export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
+/**
+ * An announced speaker: portrait, name, role, talk title; the whole card links to the speaker page.
+ * `level`: the name's heading level (3 under the home page's section heading, 2 on /speakers,
+ * where the list sits directly under the page's h1).
+ */
+export function SpeakerCard({ speaker, index, level = 3 }: { speaker: Speaker; index: number; level?: 2 | 3 }) {
+  const Heading = level === 2 ? 'h2' : 'h3';
   const clause = `§ 2.${index + 1}`;
   return (
     // Phones: portrait beside the text (a column of full-width portraits is six screens long).
@@ -34,11 +39,11 @@ export function SpeakerCard({ speaker, index }: { speaker: Speaker; index: numbe
         </span>
       </div>
       <div className="speaker-text min-w-0 p-6 max-sm:self-center max-sm:p-4">
-        <h3 className="text-xl font-semibold tracking-tight wrap-anywhere">
+        <Heading className="text-xl font-semibold tracking-tight wrap-anywhere">
           <Link href={`/speakers/${speaker.slug}`} className="after:absolute after:inset-0 after:content-['']">
             {speaker.name}
           </Link>
-        </h3>
+        </Heading>
         {speaker.role ? <p className="mt-1 text-sm text-[#d0d0d0] wrap-anywhere">{speaker.role}</p> : null}
         {speaker.talkTitle ? <p className="mt-4 text-white wrap-anywhere">“{speaker.talkTitle}”</p> : null}
       </div>
@@ -135,7 +140,11 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
           <div className="speakers-head-inner shell">
             <SectionLabel index={2}>Speakers</SectionLabel>
             <div data-speakers-title className="origin-[0%_100%]">
-              <SectionTitle id="speakers">{any ? 'Meet the speakers.' : settings.copy.speakersEmptyHeading}</SectionTitle>
+              {/* The longer empty-state line wraps before the microphone (right of frame): at full
+                  width its last letters ran over the mic's highlights (under 2:1 in the stills and the live scene). */}
+              <SectionTitle id="speakers" className={any ? '' : 'max-w-[11ch]'}>
+                {any ? 'Meet the speakers.' : settings.copy.speakersEmptyHeading}
+              </SectionTitle>
             </div>
             <div data-speakers-meta className="speakers-meta mt-6 flex flex-col items-start gap-y-3 sm:mt-8">
               <p className="max-w-[34rem] text-lg text-mute">
@@ -173,7 +182,7 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
           ) : (
             <div data-speakers-track className="speakers-track mt-14 sm:mt-16">
               <div
-                className={`speakers-panel grid gap-10 p-6 sm:p-8 md:grid-cols-2 md:gap-12 ${glass}`}
+                className={`speakers-panel grid grid-cols-1 gap-10 p-6 sm:p-8 md:grid-cols-2 md:gap-12 ${glass}`}
               >
                 <div>
                   <h3 className="text-lg font-semibold tracking-tight">Hear it first</h3>

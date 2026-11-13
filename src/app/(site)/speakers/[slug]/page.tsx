@@ -192,7 +192,10 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
             <div aria-hidden="true" className="pointer-events-none absolute inset-3 border border-white/15" />
           </div>
           <figcaption data-cursor="loupe" className="fine-print mt-3 flex justify-between gap-4 text-mute">
-            <span className="shrink-0">Fig. {String(index + 1).padStart(2, '0')}</span>
+            {/* The figure number is print decoration: the caption reads as the name. */}
+            <span aria-hidden="true" className="shrink-0">
+              Fig. {String(index + 1).padStart(2, '0')}
+            </span>
             <span className="min-w-0 text-right wrap-anywhere">{keepTedxCase(speaker.name)}</span>
           </figcaption>
         </figure>
@@ -235,12 +238,8 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
           </section>
 
           <div className="mt-14 flex flex-wrap gap-3">
-            {/* An aria-label replaces the button's own "(opens in a new tab)" text, so restate it. */}
-            <Button
-              href={cta.href}
-              aria-label={/^https?:/.test(cta.href) ? `${cta.ariaLabel} (opens in a new tab)` : cta.ariaLabel}
-              size="lg"
-            >
+            {/* cta.ariaLabel already says "(opens in a new tab)" for an external ticket link. */}
+            <Button href={cta.href} aria-label={cta.ariaLabel} size="lg">
               Tickets
             </Button>
             <Button href="/speakers" variant="ghost" size="lg">
