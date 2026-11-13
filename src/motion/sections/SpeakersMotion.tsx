@@ -85,6 +85,15 @@ function setup({ gsap, root }: MotionKit) {
       tl.fromTo(head, { y: 0 }, { y: () => lift(), duration: STRIP_IN_END - STRIP_IN, ease: 'power2.inOut' }, STRIP_IN);
     }
     tl.fromTo(strip, { y: 90, opacity: 0 }, { y: 0, opacity: 1, duration: STRIP_IN_END - STRIP_IN, ease: 'power2.out' }, STRIP_IN);
+    // While the strip is invisible its cards must not catch the pointer (the
+    // loupe over empty black, a click on nothing opening a speaker page).
+    // Focus is unaffected: Tab still reaches the cards and scrolls them in.
+    tl.fromTo(
+      strip,
+      { pointerEvents: 'none' },
+      { pointerEvents: 'auto', duration: 0.001, immediateRender: true },
+      STRIP_IN + (STRIP_IN_END - STRIP_IN) * 0.4,
+    );
     tl.fromTo(track, { x: 0 }, { x: () => endX(), duration: TRAVEL_END - TRAVEL_START }, TRAVEL_START);
     tl.to({}, { duration: 0.001 }, 1);
 
