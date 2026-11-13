@@ -2,19 +2,19 @@ heroFootnote: Terms and conditions apply. They are the whole point.
 heroScrollCue: Scroll to read the fine print
 themeHeading: Read the fine print.
 themeFigureCaption: The fine print, engraved. Read it closely.
-themeFootnote: Read in full before proceeding. The details are binding.
+themeFootnote: Returning to campus for the first time since 2020. The details are binding.
 speakersEmptyHeading: Speakers to be announced.
 scheduleEmptyHeading: Running order to follow.
 scheduleEmptyNote: Doors, talks and intermission times are published here once the speakers are confirmed. The date and venue are final.
 newsletterHeading: Don’t miss the fine print.
-partnerBandHeading: Help make the first one happen.
-partnerBandBody: '{eventName} is student-run and this is its first mainstage event: one evening, {capacity} seats, talks recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to support it.'
+partnerBandHeading: Help bring it back.
+partnerBandBody: '{eventName} returns, student-run and back on campus for the first time since 2020: one evening, {capacity} seats, talks recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to support it.'
 partnersHeading: Put your name in the fine print.
-partnersIntro: 'It is the club’s first mainstage event, organized by students at Santa Clara University: one evening of live talks for up to {capacity} guests, recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to make it possible.'
-partnersDescription: 'Partner with {eventName}: support the first {eventName} mainstage event, up to {capacity} guests; talks are recorded and submitted for publication on the TEDx Talks YouTube channel.'
-partnersEditionFigure: 1st
-partnersEditionTitle: The first mainstage.
-partnersEditionBody: Partners who join now are part of it from the start.
+partnersIntro: 'It returns on {date}, the first {eventName} since 2020, organized by students at {campus}: one evening of live talks for up to {capacity} guests, recorded and submitted for publication on the TEDx Talks YouTube channel. We are inviting a small number of partners to make it possible.'
+partnersDescription: 'Partner with {eventName}, the first {eventName} since 2020: up to {capacity} guests; talks are recorded and submitted for publication on the TEDx Talks YouTube channel.'
+partnersEditionFigure: '2020'
+partnersEditionTitle: The first since 2020.
+partnersEditionBody: The club went dormant after its 2020 event. A new student board is bringing {eventName} back, and partners who join now are part of the return.
 notFoundHeading: This page does not exist.
 notFoundBody: The link may be out of date, or the page may have moved.
 footerSignoff: |-

@@ -35,7 +35,7 @@ All of these are in the admin; each field explains itself. See `docs/EDITING.md`
 | **Team** | The new board; untick **Show name publicly** until each person agrees. |
 | **Partner tiers** | **Tier name** and **Description**: 2027's are theme puns ("Fine Print Supporter", "Bold Print Partner"). The slug (the file name, e.g. `fine-print-supporter`) is never shown to visitors, so it can stay; delete and re-create a tier only if you want it renamed too, then fix the tiers chosen under **Partner benefits** and **Partners**. |
 | **Partners (logos)** | Untick **Published** or delete: partnerships are per event. |
-| **FAQ** | Read every answer. Use `{date}`, `{venue}`, `{campus}`, `{capacity}`, `{eventName}` instead of typing those facts. 2027's "Who organizes it?" answer says "the first mainstage event": change it. |
+| **FAQ** | Read every answer. Use `{date}`, `{venue}`, `{campus}`, `{capacity}`, `{eventName}` instead of typing those facts. 2027's "Who organizes it?" answer says this is "the first {eventName} since 2020": change it (the event is no longer a return). |
 
 ## 3. Content: the theme wording (admin, no code)
 
@@ -43,7 +43,7 @@ All of these are in the admin; each field explains itself. See `docs/EDITING.md`
 
 - Home: caption under the hero, scroll hint, theme section heading, caption of the engraved microphone, footnote under the theme story, closing mailing-list heading, partner invitation heading and text.
 - Speakers heading and Schedule lines shown while nothing is announced.
-- Partners page: heading, introduction, search description, first card ("1st / The first mainstage." in 2027: it is not the first mainstage any more).
+- Partners page: heading, introduction, search description, first card ("2020 / The first since 2020." in 2027, about the club's return: rewrite it, it will not be true again). The theme footnote also mentions the return ("Returning to campus for the first time since 2020"), and so does the partner invitation text.
 - 404 page heading and text, footer sign-off ("End of document / Signed and dated"), page-change caption ("§ continuing…").
 
 The share image, page titles, search descriptions, structured data (JSON-LD), sitemap, the share image's alt text and the home-screen manifest are all built from Event basics, Venue and Theme copy: nothing else to edit for them.
