@@ -80,7 +80,7 @@ src/
   lib/quality.ts          quality tier store + useQuality()
   motion/                 MotionRoot, SmoothScroll (Lenis + ScrollTrigger), SceneGate, gsap.ts, lenisRef
   motion/engine/          reveal, cursor, magnetic, navigation, chrome, focus (the global motion engine)
-  motion/sections/        Hero, Theme, Schedule, Venue, Tickets, Team, Faq, Newsletter, Footer, Partners
+  motion/sections/        Hero, Theme, Speakers, Schedule, Venue, Tickets, Team, Faq, Newsletter, Footer, Partners
                           moments (*Motion.tsx) and kit.ts (shared masks, fold checks)
   scene/                  scrollState, SceneLoader, SceneCanvas, Experience
 ```
@@ -104,7 +104,7 @@ A plain mutable singleton. Read it freely in `useFrame` or GSAP callbacks; it ne
 ### Canvas
 `SceneGate` (in the root layout) decides whether the scene exists on the current route: it is mounted on `/`; on `/partners`, `/speakers/*` and the 404 page it is not mounted, unless the home page was already shown in this browsing session, in which case the live canvas is kept hidden and paused (R3F `frameloop: 'never'`) so returning home is instant. A cold load of a secondary page never downloads three.js. Inside the gate, `SceneLoader` mounts `SceneCanvas` via `next/dynamic({ ssr: false })` only when quality is not `static`, after `load` + `requestIdleCallback`. three.js is therefore never in the initial bundle. `SceneCanvas` is fixed, full viewport, `aria-hidden`, `pointer-events: none`, at `z-index: var(--z-canvas)` (0). Page content sits at `var(--z-content)` (10) and the header at `var(--z-header)` (50). DPR is `[1,2]` on high and `[1,1.5]` on low. `Experience.tsx` holds the scene; keep its default export and the `quality` prop.
 
-Readability never depends on the canvas: each section has its own gradient scrim (`scrim-y`, `scrim-left`, `scrim-solid` in `globals.css`).
+Readability never depends on the canvas: each section has its own gradient scrim (`scrim-y`, `scrim-left`, `scrim-solid` in `globals.css`). Hero, Theme, Speakers and Schedule use targeted scrims instead (`hero-scrim`, `theme-scrim`, `speakers-scrim`, `schedule-scrim`): a soft gradient behind the text block only, so the shot stays visible. Small text is checked at 4.5:1 against the brightest scene pixel behind it.
 
 ### Motion
 - Always import GSAP from `@/motion/gsap` (registers ScrollTrigger and SplitText once). `@gsap/react` (`useGSAP`) is installed.
@@ -121,7 +121,8 @@ Readability never depends on the canvas: each section has its own gradient scrim
   - `focus.ts`: keyboard focus cancels any Lenis glide in flight and nudges the focused element clear of the header.
 - Plain CSS link style: `link-draw` draws a 1px underline from the left on hover/focus. Bare `<a>` inside running text (`p`, `li`, `dd`) gets a resting underline automatically.
 - Gate any new animation on `useQuality() !== 'static'` and animate from the static layout (e.g. `gsap.from`) so the no-JS and reduced-motion look stays correct.
-- Theme: on viewports at least 768px wide and 44rem tall it is a 250vh runway with a sticky stage (the phrase scrub in `ThemeMotion`); smaller or shorter viewports get a natural-height section with masked line reveals.
+- Theme: on viewports at least 768px wide and 44rem tall it is a 250vh runway with a sticky stage (the phrase scrub in `ThemeMotion`); smaller or shorter viewports get a natural-height section with masked line reveals. The right ~45% of the pinned frame is kept free of DOM text for the engraving shot.
+- Speakers: on viewports at least 1024px wide and 44rem tall it is a 340vh runway with a sticky stage: the heading holds over the lit rug, then a strip of cards travels sideways in the lower edge (`SpeakersMotion`; keyboard focus scrolls the runway to the focused card). Smaller or shorter viewports hold the heading for half a screen, then a vertical list. Static: a grid on black.
 - Section moments: each lower section has one scroll-linked moment in `src/motion/sections/*Motion.tsx`, mounted inside its section and run through `useSectionMotion` (lazy gsap, scoped `gsap.context`, reverted on route change). Mouse/trackpad at 768px+ gets the scrubbed version (`FULL` in `kit.ts`); touch and small screens get a shorter one played once (`COMPACT`).
   - Venue: crop marks draw from their corners, the plate settles, the coordinates resolve digit by digit (odometer wheels); the reticle's bezel turns a few degrees with scroll.
   - Tickets: the seat ruler prints tick by tick (scrubbed) while "001 – 100" counts the seats on detented counter wheels; the status cross is stamped.

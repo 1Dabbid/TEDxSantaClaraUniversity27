@@ -7,6 +7,9 @@ function setup({ gsap, root }: MotionKit) {
   const timeline = root.querySelector<HTMLElement>('[data-timeline]');
   const line = root.querySelector<HTMLElement>('[data-timeline-line]');
   if (!timeline || !line) return;
+  // Armed in the same step the tween sets scaleY(0): lifts the CSS pre-draw
+  // state and its failsafe (globals.css).
+  line.setAttribute('data-armed', '');
   gsap.fromTo(
     line,
     { scaleY: 0 },
@@ -16,6 +19,7 @@ function setup({ gsap, root }: MotionKit) {
       scrollTrigger: { trigger: timeline, start: 'top 80%', end: 'bottom 55%', scrub: 0.8 },
     },
   );
+  return () => line.removeAttribute('data-armed');
 }
 
 export function ScheduleMotion() {
