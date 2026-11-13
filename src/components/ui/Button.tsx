@@ -6,7 +6,8 @@ type Size = 'sm' | 'md' | 'lg';
 
 const base =
   'group relative inline-flex items-center justify-center gap-2 rounded-full font-medium tracking-tight whitespace-nowrap ' +
-  'transition-[background-color,color,border-color,transform] duration-300 ease-[var(--ease-cinema)] ' +
+  // No CSS transition on transform: the magnetic hover drives it from JS.
+  'transition-[background-color,color,border-color] duration-300 ease-[var(--ease-cinema)] ' +
   'focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white';
 
 const variants: Record<Variant, string> = {
@@ -36,8 +37,8 @@ type ButtonAsLink = CommonProps & { href: string; external?: boolean } & Omit<
 
 /**
  * Primary (red) or ghost button. Renders a Next <Link> for internal hrefs and
- * a plain <a> for external ones. `data-magnetic` is a hook for the motion layer
- * (a magnetic hover effect can query `[data-magnetic]`); it does nothing on its own.
+ * a plain <a> for external ones. `data-magnetic` opts it into the magnetic hover
+ * of the motion engine (fine pointers only, off in static quality).
  */
 export function Button({
   variant = 'primary',

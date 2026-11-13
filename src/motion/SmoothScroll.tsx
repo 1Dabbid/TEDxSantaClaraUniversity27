@@ -114,12 +114,11 @@ export default function SmoothScroll({ children }: { children?: ReactNode }) {
 
     Promise.all([import('./gsap'), import('lenis')]).then(([{ gsap, ScrollTrigger }, { default: Lenis }]) => {
       if (cancelled) return;
-      const header = document.querySelector<HTMLElement>('[data-site-header]');
+      // Anchor links are handled by the motion engine (header offset + focus).
       const lenis = new Lenis({
         autoRaf: false,
         lerp: 0.085,
         smoothWheel: true,
-        anchors: { offset: -(header?.offsetHeight ?? 0) },
       });
       lenisRef.current = lenis;
       document.documentElement.dataset.smoothScroll = 'true';
@@ -131,10 +130,17 @@ export default function SmoothScroll({ children }: { children?: ReactNode }) {
       };
       gsap.ticker.add(tick);
       gsap.ticker.lagSmoothing(0);
+      // Pins, splits and layout changes all end in a ScrollTrigger refresh: re-measure sections then.
+      const onRefresh = () => {
+        measure();
+        write(lenis.scroll, lenis.velocity);
+      };
+      ScrollTrigger.addEventListener('refresh', onRefresh);
       measure();
       ScrollTrigger.refresh();
 
       teardown = () => {
+        ScrollTrigger.removeEventListener('refresh', onRefresh);
         gsap.ticker.remove(tick);
         lenis.destroy();
         lenisRef.current = null;
@@ -148,14 +154,8 @@ export default function SmoothScroll({ children }: { children?: ReactNode }) {
     };
   }, [enabled]);
 
-  // Route changes: reset smooth scroll position (unless navigating to a hash) and refresh triggers.
-  useEffect(() => {
-    const lenis = lenisRef.current;
-    if (lenis && !window.location.hash) lenis.scrollTo(0, { immediate: true, force: true });
-    if (lenis) {
-      import('./gsap').then(({ ScrollTrigger }) => ScrollTrigger.refresh());
-    }
-  }, [pathname]);
+  // Route changes: scroll position (top, hash target, or restored on back/forward) and the
+  // ScrollTrigger refresh are owned by the motion engine (src/motion/engine/navigation.ts).
 
   return <>{children}</>;
 }

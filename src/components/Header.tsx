@@ -8,6 +8,9 @@ import { ticketCta } from '@/lib/tickets';
 
 /**
  * Sticky, solid black bar. The logo only ever sits on this solid surface.
+ * With motion on, the engine slides the whole bar away on scroll down and back
+ * on scroll up (never while it holds focus); the red hairline under it is the
+ * reading progress.
  */
 export function Header({ settings }: { settings: Settings }) {
   const cta = ticketCta(settings);
@@ -38,9 +41,9 @@ export function Header({ settings }: { settings: Settings }) {
               <li key={item.href}>
                 <Link
                   href={item.href}
-                  className="rounded-full px-3 py-2 text-sm text-mute transition-colors hover:text-white"
+                  className="group block rounded-full px-3 py-2 text-sm text-mute transition-colors duration-300 hover:text-white focus-visible:text-white"
                 >
-                  {item.label}
+                  <span className="link-draw pb-0.5 group-focus-visible:bg-[length:100%_1px]">{item.label}</span>
                 </Link>
               </li>
             ))}
@@ -54,6 +57,11 @@ export function Header({ settings }: { settings: Settings }) {
           <MobileMenu items={NAV_ITEMS} dateLong={settings.dateLong} dateISO={settings.dateISO} />
         </div>
       </div>
+      <span
+        aria-hidden="true"
+        data-progress
+        className="reading-progress pointer-events-none absolute inset-x-0 top-full h-px bg-accent"
+      />
     </header>
   );
 }

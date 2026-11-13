@@ -24,8 +24,11 @@
   --text-title--line-height: 1.05;
   --text-fine: 0.6875rem;
   --text-fine--line-height: 1.5;
+  --text-micro: 0.5625rem; /* 9px: the literal fine print */
+  --text-micro--line-height: 1.55;
 
-  --ease-cinema: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-cinema: cubic-bezier(0.16, 1, 0.3, 1); /* expo out */
+  --ease-weight: cubic-bezier(0.76, 0, 0.24, 1); /* quart in-out */
 }
 
 :root {
@@ -33,6 +36,8 @@
   --z-canvas: 0;
   --z-content: 10;
   --z-header: 50;
+  --z-curtain: 70;
+  --z-cursor: 80;
   color-scheme: dark;
 }
 
@@ -72,9 +77,8 @@
     border-radius: 2px;
   }
 
-  [id] {
-    scroll-margin-top: var(--header-h);
-  }
+  /* Anchor offset comes from html { scroll-padding-top } only; adding scroll-margin
+     on targets as well would double it (native jumps and Lenis both sum the two). */
 }
 
 /* Lenis (smooth scroll) required styles */
@@ -129,6 +133,55 @@ html.lenis body {
     max-width: 88rem;
     padding-inline: clamp(1.25rem, 4vw, 3.5rem);
   }
+
+  /* Underline that draws from the left on hover/focus. Paint-only, works across wrapped lines. */
+  .link-draw,
+  [data-underline] {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-repeat: no-repeat;
+    background-position: 100% 100%;
+    background-size: 0% 1px;
+    transition:
+      background-size 0.6s var(--ease-cinema),
+      color 0.3s ease;
+    text-decoration: none;
+  }
+  .link-draw:hover,
+  .link-draw:focus-visible,
+  [data-underline]:hover,
+  [data-underline]:focus-visible {
+    background-position: 0% 100%;
+    background-size: 100% 1px;
+  }
+  /* Inline links inside running text get the same treatment, with a resting underline. */
+  :where(main) :where(p, li, dd) > a:not([class]) {
+    background-image: linear-gradient(currentColor, currentColor), linear-gradient(rgb(255 255 255 / 0.3), rgb(255 255 255 / 0.3));
+    background-repeat: no-repeat;
+    background-position: 0% 100%, 0% 100%;
+    background-size: 0% 1px, 100% 1px;
+    transition: background-size 0.6s var(--ease-cinema);
+    text-decoration: none;
+  }
+  :where(main) :where(p, li, dd) > a:not([class]):hover,
+  :where(main) :where(p, li, dd) > a:not([class]):focus-visible {
+    background-size: 100% 1px, 100% 1px;
+  }
+
+  /* Redaction bar: a premium "withheld" placeholder. */
+  .redacted {
+    display: block;
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(180deg, #1c1c1c, #121212);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06);
+  }
+  .redacted::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(100deg, transparent 30%, rgb(255 255 255 / 0.07) 50%, transparent 70%);
+    transform: translateX(-110%);
+  }
 }
 
 @keyframes scene-in {
@@ -138,6 +191,490 @@ html.lenis body {
   to {
     opacity: 1;
   }
+}
+
+/* ------------------------------------------------------------------------- *
+ * Motion layer.
+ *
+ * `html.motion` is set by an inline script before first paint only when the
+ * visitor has JS, no reduced-motion preference and no Save-Data, and is removed
+ * again by MotionRoot if the quality tier resolves to `static`. Everything
+ * below is scoped to it, so the server HTML (no JS, reduced motion) is the
+ * complete, fully visible design.
+ * ------------------------------------------------------------------------- */
+
+/* Pre-reveal state. The engine marks elements [data-reveal-armed] in the same
+   frame it sets their GSAP start state, so there is never a visible jump. The
+   failsafe animation shows everything if the motion bundle never arrives. */
+html.motion [data-reveal]:not([data-reveal-armed]) {
+  opacity: 0;
+  animation: reveal-failsafe 0.01s linear 3s forwards;
+}
+@keyframes reveal-failsafe {
+  to {
+    opacity: 1;
+  }
+}
+
+/* SplitText masks: give descenders room inside the clip. */
+.rv-line-mask,
+.rv-word-mask {
+  padding-block: 0.1em;
+  margin-block: -0.1em;
+}
+.rv-word-mask {
+  padding-inline: 0.04em;
+  margin-inline: -0.04em;
+}
+
+/* Header: hides on scroll down (engine toggles data-hidden), never while focused. */
+[data-site-header] {
+  transition: transform 0.7s var(--ease-cinema);
+}
+[data-site-header][data-hidden] {
+  transform: translate3d(0, -100%, 0);
+}
+.reading-progress {
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+html:not(.motion) .reading-progress {
+  display: none;
+}
+
+/* Hero intro: pure CSS, starts on first paint, finishes in ~1.5s. */
+.hero-word {
+  display: inline-block;
+  white-space: nowrap;
+}
+.hero-char {
+  display: inline-block;
+  overflow: clip;
+  padding-block: 0.06em 0.16em;
+  margin-block: -0.06em -0.16em;
+}
+.hero-char > span {
+  display: inline-block;
+}
+.hero-type {
+  display: inline-block;
+}
+.scroll-cue-line {
+  position: relative;
+  display: block;
+  width: 1px;
+  height: 2.5rem;
+  overflow: hidden;
+  background: rgb(255 255 255 / 0.15);
+}
+.scroll-cue-line::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--color-accent);
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html.motion .hero-type {
+    animation: type-on 0.55s steps(var(--steps, 24), end) 0.05s both;
+  }
+  html.motion .hero-char > span {
+    animation: rise 1.05s var(--ease-cinema) both;
+    animation-delay: calc(0.2s + var(--i) * 0.042s);
+  }
+  html.motion .hero-mark {
+    display: inline-block;
+    animation: mark-pop 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) both;
+    animation-delay: calc(0.62s + var(--n, 10) * 0.042s);
+  }
+  html.motion [data-hero-seq] {
+    animation: settle 1s var(--ease-cinema) both;
+    animation-delay: calc(0.45s + var(--seq) * 0.08s);
+  }
+  html.motion .hero-rule {
+    animation: draw-x 1.2s var(--ease-weight) 0.5s both;
+  }
+  html.motion .scroll-cue {
+    animation: fade-in 0.8s ease 1.3s both;
+  }
+  html.motion .scroll-cue-line::after {
+    animation: cue 2.4s var(--ease-weight) 1.6s infinite;
+  }
+  /* Hold the intro while a page transition curtain is still covering it. */
+  html.nav-pending [data-hero] * {
+    animation-play-state: paused !important;
+  }
+}
+
+@keyframes type-on {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes rise {
+  from {
+    transform: translate3d(0, 112%, 0);
+  }
+  to {
+    transform: none;
+  }
+}
+@keyframes mark-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.3) translate3d(0, 40%, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+/* The facts row and buttons are readable from the first frame: they only settle. */
+@keyframes settle {
+  from {
+    opacity: 0.55;
+    transform: translate3d(0, 14px, 0);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes draw-x {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes cue {
+  0% {
+    transform: translateY(-100%);
+  }
+  55%,
+  100% {
+    transform: translateY(100%);
+  }
+}
+
+/* --- Theme: the fine print made literal ---------------------------------- */
+.theme-fine {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  color: var(--color-mute);
+}
+.theme-fine-columns {
+  column-gap: 2.5rem;
+}
+@media (min-width: 768px) {
+  .theme-fine-columns {
+    columns: 2;
+  }
+}
+.theme-fine li {
+  break-inside: avoid;
+}
+.theme-phrase {
+  color: #fff;
+  white-space: nowrap;
+  hyphens: none;
+}
+.theme-line {
+  display: block;
+  white-space: nowrap;
+}
+.theme-line-inner {
+  display: inline-block;
+  transform-origin: 0 0;
+}
+.theme-stack {
+  font-size: min(var(--theme-fs, 8vw), 10rem);
+  line-height: 0.95;
+  letter-spacing: -0.055em;
+  font-weight: 600;
+}
+.theme-counter {
+  display: none;
+}
+
+/* Mobile with motion: masked line reveals at natural height. */
+@media (max-width: 767.98px) {
+  .theme-stack {
+    font-size: 11.5vw;
+  }
+  .theme-line {
+    white-space: normal;
+  }
+  html.motion .theme-line {
+    overflow: clip;
+    padding-block: 0.06em 0.14em;
+    margin-block: -0.06em -0.14em;
+  }
+}
+
+/* Desktop with motion: 250vh runway, a sticky stage, 9px contract text. */
+@media (min-width: 768px) {
+  html.motion .theme-runway {
+    height: 250vh;
+  }
+  html.motion .theme-stage {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    overflow: hidden;
+  }
+  html.motion .theme-stage-inner {
+    position: relative;
+    height: 100%;
+    padding-top: calc(var(--header-h) + 2.5rem);
+    padding-bottom: 2.5rem;
+    display: flex;
+    flex-direction: column;
+  }
+  html.motion .theme-fine {
+    font-size: var(--text-micro);
+    line-height: var(--text-micro--line-height);
+    letter-spacing: 0.02em;
+    color: var(--color-subtle);
+    text-align: justify;
+    hyphens: auto;
+    max-width: 46rem;
+    margin-top: auto;
+  }
+  html.motion .theme-fine .theme-phrase {
+    color: var(--color-mute);
+  }
+  html.motion .theme-stack {
+    position: absolute;
+    left: clamp(1.25rem, 4vw, 3.5rem);
+    right: clamp(1.25rem, 4vw, 3.5rem);
+    top: 46%;
+    transform: translateY(-50%);
+    margin: 0;
+    pointer-events: none;
+  }
+  html.motion .theme-counter {
+    display: flex;
+  }
+  html.motion .theme-tagline {
+    display: none;
+  }
+}
+
+/* --- Speakers ------------------------------------------------------------ */
+.speaker-card {
+  transition:
+    transform 0.8s var(--ease-cinema),
+    border-color 0.4s ease,
+    background-color 0.4s ease;
+}
+.speaker-card:has(a:focus-visible) {
+  outline: 2px solid #fff;
+  outline-offset: 4px;
+}
+.speaker-card a:focus-visible {
+  outline: none;
+}
+@media (hover: hover) and (pointer: fine) {
+  html.motion .speaker-card:hover,
+  html.motion .speaker-card:focus-within {
+    transform: translate3d(0, -8px, 0);
+    border-color: rgb(255 255 255 / 0.28);
+    background-color: rgb(14 14 14 / 0.92);
+  }
+  html.motion .speaker-card:hover .redacted::after {
+    transition: transform 1.2s var(--ease-weight);
+    transform: translateX(110%);
+  }
+}
+
+/* --- Schedule timeline --------------------------------------------------- */
+.timeline-line {
+  transform-origin: 50% 0;
+}
+html.motion .timeline-line {
+  transform: scaleY(0);
+}
+
+/* --- Mobile menu --------------------------------------------------------- */
+@media (prefers-reduced-motion: no-preference) {
+  html.motion [data-menu-panel]:not([hidden]) {
+    animation: menu-in 0.7s var(--ease-cinema) both;
+  }
+  html.motion [data-menu-panel]:not([hidden]) [data-menu-item] {
+    animation: menu-item 0.9s var(--ease-cinema) both;
+    animation-delay: calc(0.08s + var(--i) * 0.05s);
+  }
+}
+@keyframes menu-in {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes menu-item {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 1.5rem, 0);
+  }
+}
+
+/* --- Page transition curtain -------------------------------------------- */
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-curtain);
+  background: #000;
+  pointer-events: none;
+  clip-path: inset(100% 0 0 0);
+  visibility: hidden;
+}
+.curtain-rule {
+  transform: scaleX(0);
+  transform-origin: 0 50%;
+}
+
+/* --- Custom cursor + loupe ---------------------------------------------- */
+.cursor {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-cursor);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+html.has-cursor .cursor[data-visible] {
+  opacity: 1;
+}
+.cursor-dot,
+.cursor-ring,
+.cursor-lens {
+  position: fixed;
+  left: 0;
+  top: 0;
+  will-change: transform;
+}
+.cursor-dot > span {
+  display: block;
+  width: 6px;
+  height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: #fff;
+  transition:
+    transform 0.4s var(--ease-cinema),
+    opacity 0.3s ease;
+}
+.cursor-ring > span {
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin: -18px 0 0 -18px;
+  border-radius: 50%;
+  border: 1px solid rgb(255 255 255 / 0.45);
+  transition:
+    transform 0.6s var(--ease-cinema),
+    opacity 0.3s ease,
+    border-color 0.3s ease;
+}
+.cursor[data-state='link'] .cursor-ring > span {
+  transform: scale(1.75);
+  border-color: rgb(255 255 255 / 0.85);
+}
+.cursor[data-state='link'] .cursor-dot > span {
+  transform: scale(0.5);
+}
+.cursor[data-pressed] .cursor-ring > span {
+  transform: scale(0.8);
+}
+.cursor[data-state='link'][data-pressed] .cursor-ring > span {
+  transform: scale(1.5);
+}
+.cursor[data-state='text'] .cursor-ring > span,
+.cursor[data-state='text'] .cursor-dot > span,
+.cursor[data-state='loupe'] .cursor-ring > span {
+  opacity: 0;
+  transform: scale(0.4);
+}
+.cursor-lens > div {
+  --lens: 176px;
+  position: relative;
+  width: var(--lens);
+  height: var(--lens);
+  margin: calc(var(--lens) / -2) 0 0 calc(var(--lens) / -2);
+  border-radius: 50%;
+  overflow: hidden;
+  background: #050505;
+  box-shadow:
+    0 0 0 1px rgb(255 255 255 / 0.35),
+    0 0 0 6px rgb(255 255 255 / 0.04),
+    0 24px 60px -10px rgb(0 0 0 / 0.9);
+  opacity: 0;
+  transform: scale(0.2);
+  transition:
+    transform 0.55s var(--ease-cinema),
+    opacity 0.3s ease;
+}
+.cursor[data-state='loupe'] .cursor-lens > div {
+  opacity: 1;
+  transform: none;
+}
+.cursor[data-state='loupe'] .cursor-dot > span {
+  transform: scale(0.6);
+  background: var(--color-accent);
+}
+.cursor-lens-content {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.cursor-lens-glass {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 30% 22%, rgb(255 255 255 / 0.14), transparent 38%),
+    radial-gradient(circle at 50% 50%, transparent 62%, rgb(0 0 0 / 0.55) 100%);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.08);
+}
+.cursor-lens-label {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 8px;
+  letter-spacing: 0.18em;
+  color: rgb(255 255 255 / 0.6);
+}
+html.has-cursor,
+html.has-cursor body,
+html.has-cursor a,
+html.has-cursor button,
+html.has-cursor summary,
+html.has-cursor label,
+html.has-cursor [role='button'] {
+  cursor: none;
+}
+html.has-cursor input,
+html.has-cursor textarea,
+html.has-cursor select,
+html.has-cursor [contenteditable] {
+  cursor: auto;
 }
 
 @media (prefers-reduced-motion: reduce) {
