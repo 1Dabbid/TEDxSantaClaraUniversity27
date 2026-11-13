@@ -1,13 +1,12 @@
 import type { Settings } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
-import { Button } from '@/components/ui/Button';
+import { MoreLink } from '@/components/pages/MoreLink';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { Arrow } from '@/components/print/Print';
 
 /**
  * Partner invitation on the home page. Text only, by TEDx rule: no sponsor
  * logos or names on the home page, ever (tests/e2e/home-html.spec.ts). It
- * invites; the pitch itself lives on /partners.
+ * invites; the pitch itself (and the red "Become a partner") lives on /partners.
  *
  * Not a scene section (no data-section): it sits on black after Tickets, where
  * the 3D journey is already fading out, so the camera simply holds. Its ground
@@ -42,10 +41,8 @@ export function PartnerBand({ settings }: { settings: Settings }) {
             </p>
           </div>
           <div className="flex flex-col items-start gap-4 md:col-span-5 md:items-end">
-            <Button href="/partners" size="lg">
-              Partnership details
-              <Arrow className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5" />
-            </Button>
+            {/* Navigation, not an action: the quiet link (Button.tsx, "Which style where"). */}
+            <MoreLink href="/partners" label="Partnership details" className="" />
             {mail ? (
               <a href={mail} className="link-draw inline-block py-1.5 text-mute hover:text-white [overflow-wrap:anywhere]">
                 or write to {settings.partnershipsEmail}
