@@ -3,6 +3,7 @@ import { faqJsonLd, jsonLdString } from '@/lib/jsonld';
 import { clause } from '@/lib/links';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { JsonLd } from '@/components/print/Print';
+import { FaqMotion } from '@/motion/sections/FaqMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
 /**
@@ -14,6 +15,7 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
 
   return (
     <SectionShell id="faq" scrim="solid" className="py-32 sm:py-44">
+      <FaqMotion />
       <JsonLd json={jsonLdString(faqJsonLd(items))} />
       <div className="shell grid grid-cols-1 gap-14 md:grid-cols-12">
         <div className="min-w-0 md:col-span-4">
@@ -42,7 +44,7 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
         <ol data-reveal="stagger" className="min-w-0 border-t border-white/15 md:col-span-8">
           {items.map((item, i) => (
             <li key={i} className="min-w-0 border-b border-white/15">
-              <details className="group">
+              <details className="faq-clause group">
                 <summary
                   className="group/q grid min-h-11 cursor-pointer list-none grid-cols-[3.75rem_minmax(0,1fr)_2rem] items-baseline gap-2 py-7 text-lg font-medium text-white focus-visible:outline-2 focus-visible:outline-offset-[-2px] sm:grid-cols-[5rem_minmax(0,1fr)_2.5rem] sm:text-2xl sm:tracking-tight [&::-webkit-details-marker]:hidden"
                 >
@@ -62,10 +64,10 @@ export function Faq({ items, settings }: { items: FaqItem[]; settings: Settings 
                     className="relative ml-auto block size-4 self-center text-mute transition-colors duration-300 group-hover/q:text-white group-open:text-white"
                   >
                     <span className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-current" />
-                    <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-current transition-transform duration-300 group-open:scale-y-0" />
+                    <span className="faq-icon-v absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-current" />
                   </span>
                 </summary>
-                <div className="grid grid-cols-[3.75rem_minmax(0,1fr)_2rem] gap-2 pb-9 sm:grid-cols-[5rem_minmax(0,1fr)_2.5rem]">
+                <div className="faq-answer grid grid-cols-[3.75rem_minmax(0,1fr)_2rem] gap-2 pb-9 sm:grid-cols-[5rem_minmax(0,1fr)_2.5rem]">
                   <span aria-hidden="true" />
                   <p className="min-w-0 max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{item.answer}</p>
                 </div>

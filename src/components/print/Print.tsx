@@ -125,11 +125,11 @@ export function Arrow({ dir = 'right', className = '' }: { dir?: ArrowDir; class
 export function CropMarks({ className = '' }: { className?: string }) {
   const c = 'absolute size-3 border-white/40';
   return (
-    <span aria-hidden="true" className={`pointer-events-none absolute inset-0 ${className}`}>
-      <span className={`${c} left-0 top-0 border-l border-t`} />
-      <span className={`${c} right-0 top-0 border-r border-t`} />
-      <span className={`${c} bottom-0 left-0 border-b border-l`} />
-      <span className={`${c} bottom-0 right-0 border-b border-r`} />
+    <span aria-hidden="true" data-crop-marks className={`pointer-events-none absolute inset-0 ${className}`}>
+      <span data-crop="0% 0%" className={`${c} left-0 top-0 border-l border-t`} />
+      <span data-crop="100% 0%" className={`${c} right-0 top-0 border-r border-t`} />
+      <span data-crop="0% 100%" className={`${c} bottom-0 left-0 border-b border-l`} />
+      <span data-crop="100% 100%" className={`${c} bottom-0 right-0 border-b border-r`} />
     </span>
   );
 }
