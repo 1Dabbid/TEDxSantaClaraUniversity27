@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { NextConfig } from 'next';
+import { normalizeLink } from './src/lib/content-checks';
 
 const isDev = process.env.NODE_ENV !== 'production';
 
@@ -19,7 +20,9 @@ function frameOrigins(): string[] {
   try {
     const yaml = readFileSync(join(process.cwd(), 'content/tickets.yaml'), 'utf8');
     const raw = yaml.match(/^ticketEmbedUrl:\s*['"]?([^'"\s]+)['"]?\s*$/m)?.[1];
-    if (raw) origins.add(new URL(raw).origin);
+    // Same normalisation as the content loader, so "checkout.example.com/x" still gets its origin allowed.
+    const url = normalizeLink(raw).url;
+    if (url) origins.add(new URL(url).origin);
   } catch {
     /* no file or no valid URL: nothing to allow */
   }

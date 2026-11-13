@@ -2,8 +2,19 @@ import 'server-only';
 import { cache } from 'react';
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
+import {
+  contentWarning,
+  fillPlaceholders,
+  isRealDate,
+  isValidSlug,
+  normalizeLink,
+  requiredText,
+  SLUG_MESSAGE,
+  TIME_PATTERN,
+} from './content-checks';
+import { checkImage } from './content-images';
 import { formatCalendarDate } from './dates';
-import { EMAIL_PATTERN, TEDX_MAX_CAPACITY } from './site';
+import { EMAIL_PATTERN, SITE_NAME, TED_LANGUAGE_DEFAULTS, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './site';
 
 /**
  * Typed content loader. Components never import Keystatic directly; they get
@@ -13,9 +24,218 @@ import { EMAIL_PATTERN, TEDX_MAX_CAPACITY } from './site';
  * basics, Venue, Tickets, Contact, Sections) so editors are not faced with one
  * giant form. `getSettings()` merges them back into the single `Settings`
  * object that every component receives.
+ *
+ * Editor mistakes never break the build or a page: bad links, images, slugs,
+ * dates and times are dropped (or fixed when the intent is obvious) with a
+ * warning naming the file and field; see src/lib/content-checks.ts. What still
+ * stops the build (a file that is not valid YAML, a value the admin cannot
+ * produce) is reported with the file, the field's admin label and the allowed
+ * values (describeContentError below).
  */
 
-const reader = createReader(process.cwd(), keystaticConfig);
+/**
+ * Fields whose value the loader below checks and repairs itself (links, times,
+ * the event date, TED's texts, emails), so the lenient reader stays quiet about them.
+ */
+const LOADER_CHECKED = new Set([
+  'mapUrl', 'ticketUrl', 'ticketEmbedUrl', 'speakerApplicationsUrl', 'newsletterUrl', 'livestreamUrl',
+  'instagram', 'linkedin', 'youtube', 'tiktok', 'link', 'url',
+  'doorsTime', 'talksTime', 'endTime', 'dateISO', 'aboutTedx', 'aboutTed', 'contactEmail', 'partnershipsEmail',
+]);
+
+type FieldNode = {
+  kind?: string;
+  formKind?: string;
+  label?: string;
+  options?: unknown;
+  fields?: Record<string, FieldNode>;
+  element?: FieldNode;
+  reader?: { parse: (value: unknown) => unknown };
+};
+
+/**
+ * A copy of an admin schema whose text, number and date fields do not throw when
+ * a value fails the admin's own checks (a pattern, a length, a min/max). Keystatic's
+ * reader enforces those at build time too, so a hand-edited value such as
+ * "www.example.com" in a link field would otherwise stop the whole deploy. The raw
+ * value is passed on instead, with a warning, and the loader repairs or drops it.
+ * Select fields stay strict: an option the admin cannot produce is reported by
+ * describeContentError.
+ */
+function lenientSchema(schema: Record<string, FieldNode>, file: string, labels: string[] = []): Record<string, FieldNode> {
+  const wrap = (node: FieldNode, key: string, path: string[]): FieldNode => {
+    if (node.kind === 'object' && node.fields) return { ...node, fields: lenientSchema(node.fields, file, path) };
+    if (node.kind === 'array' && node.element) return { ...node, element: wrap(node.element, key, [...path, 'item']) };
+    // Text fields report formKind 'slug'; uploads and rich content keep Keystatic's own handling.
+    if (node.kind !== 'form' || node.options || !node.reader || (node.formKind && node.formKind !== 'slug')) return node;
+    const parse = node.reader.parse;
+    return {
+      ...node,
+      reader: {
+        ...node.reader,
+        parse(value: unknown) {
+          try {
+            return parse(value);
+          } catch (err) {
+            if (!(err instanceof Error) || err.name !== 'FieldDataError') throw err;
+            const kept = typeof value === 'string' || typeof value === 'number' ? value : null;
+            if (!LOADER_CHECKED.has(key)) {
+              contentWarning(file, path.join(' › '), `${err.message.replace(/\.$/, '')}. The site uses the value as it is (or its built-in default); please fix it in the admin.`);
+            }
+            return kept;
+          }
+        },
+      },
+    };
+  };
+  return Object.fromEntries(
+    Object.entries(schema).map(([key, node]) => [key, wrap(node, key, [...labels, node.label ?? key])]),
+  );
+}
+
+const lenientConfig = {
+  ...keystaticConfig,
+  singletons: Object.fromEntries(
+    Object.entries(keystaticConfig.singletons).map(([key, s]) => [
+      key,
+      { ...s, schema: lenientSchema(s.schema as unknown as Record<string, FieldNode>, `${s.path ?? `content/${key}`}.yaml`) },
+    ]),
+  ),
+  collections: Object.fromEntries(
+    Object.entries(keystaticConfig.collections).map(([key, c]) => [
+      key,
+      { ...c, schema: lenientSchema(c.schema as unknown as Record<string, FieldNode>, `${c.path ?? `content/${key}/*`}.yaml`) },
+    ]),
+  ),
+} as unknown as typeof keystaticConfig;
+
+const reader = createReader(process.cwd(), lenientConfig);
+
+type SingletonKey = keyof typeof keystaticConfig.singletons;
+type CollectionKey = keyof typeof keystaticConfig.collections;
+
+/** content/<file>.yaml for a singleton. */
+function singletonFile(key: SingletonKey): string {
+  return `${keystaticConfig.singletons[key].path ?? `content/${key}`}.yaml`;
+}
+/** content/<dir>/<slug>.yaml for a collection entry. */
+function entryFile(key: CollectionKey, slug: string): string {
+  return `${(keystaticConfig.collections[key].path ?? `content/${key}/*`).replace(/\*$/, '')}${slug}.yaml`;
+}
+
+type SchemaNode = {
+  kind?: string;
+  label?: string;
+  fields?: Record<string, SchemaNode>;
+  element?: SchemaNode;
+  options?: readonly { label: string; value: string }[];
+};
+
+/** "items.2.kind" -> the field's admin label (with the item number) and its select options, if any. */
+function describeField(schema: Record<string, SchemaNode>, path: string): { label: string; options?: SchemaNode['options'] } {
+  const labels: string[] = [];
+  let node: SchemaNode | undefined = { kind: 'object', fields: schema };
+  for (const part of path.split('.')) {
+    if (node?.kind === 'array' && /^\d+$/.test(part)) {
+      labels.push(`item ${Number(part) + 1}`);
+      node = node.element;
+    } else if (node?.kind === 'object' && node.fields) {
+      node = node.fields[part];
+      labels.push(node?.label ?? part);
+    } else {
+      labels.push(part);
+      node = undefined;
+    }
+  }
+  return { label: labels.join(' › ') || path, options: node?.options };
+}
+
+/**
+ * Rewrites a Keystatic reader error so an editor can act on it: which file,
+ * which form in the admin, which field (by its label), what values are allowed,
+ * and where the undo instructions are.
+ */
+function describeContentError(err: unknown, file: string, adminLabel: string, schema: Record<string, SchemaNode>): Error {
+  const raw = err instanceof Error ? err.message : String(err);
+  const lines: string[] = [`Content error in ${file} (in the admin: “${adminLabel}”).`];
+  if (err instanceof Error && err.name === 'YAMLException') {
+    lines.push(
+      'This file is not valid YAML, usually after a hand edit on GitHub (a missing space after a colon, wrong indentation or an unclosed quote). The line and column are in brackets below:',
+      raw,
+    );
+  } else if (raw.startsWith('Invalid data for')) {
+    for (const line of raw.split('\n').slice(1)) {
+      const m = /^([^:]+): (.*)$/.exec(line.trim());
+      if (!m) {
+        lines.push(`- ${line.trim()}`);
+        continue;
+      }
+      const { label, options } = describeField(schema, m[1]);
+      const allowed = options?.length ? ` Allowed values: ${options.map((o) => `${o.value} (“${o.label}”)`).join(', ')}.` : '';
+      lines.push(`- ${label} (${m[1]}): ${m[2]}.${allowed}`);
+    }
+  } else {
+    lines.push(raw);
+  }
+  const undo = 'undo the last edit of this file on GitHub: see docs/EDITING.md, “If the site fails to build after an edit”.';
+  lines.push(err instanceof Error && err.name === 'YAMLException' ? `The admin cannot open this file until it is fixed: ${undo}` : `Fix the field in the admin and save, or ${undo}`);
+  const out = new Error(lines.join('\n'));
+  out.name = 'ContentError';
+  return out;
+}
+
+async function readSingleton<K extends SingletonKey>(key: K) {
+  const def = keystaticConfig.singletons[key];
+  try {
+    return await reader.singletons[key].read();
+  } catch (err) {
+    throw describeContentError(err, singletonFile(key), def.label, def.schema as unknown as Record<string, SchemaNode>);
+  }
+}
+
+/**
+ * Every entry of a collection whose slug is a valid page address. Entries with an
+ * invalid slug (e.g. "Jane Doe!") are skipped with a warning, so routes and the
+ * sitemap can never contain them. A broken entry names its own file.
+ */
+async function readCollection<K extends CollectionKey>(key: K) {
+  const def = keystaticConfig.collections[key];
+  const slugs = await reader.collections[key].list();
+  const entries = await Promise.all(
+    slugs.map(async (slug) => {
+      if (!isValidSlug(slug)) {
+        contentWarning(
+          entryFile(key, slug),
+          'Slug',
+          `"${slug}" is not a valid page address, so this entry is left out. ${SLUG_MESSAGE} Click Regenerate next to the slug in the admin.`,
+        );
+        return null;
+      }
+      try {
+        const entry = await reader.collections[key].read(slug);
+        return entry ? { slug, entry } : null;
+      } catch (err) {
+        throw describeContentError(err, entryFile(key, slug), `${def.label} › ${slug}`, def.schema as unknown as Record<string, SchemaNode>);
+      }
+    }),
+  );
+  return entries.filter((e) => e !== null);
+}
+
+/** A link field: normalised to an absolute https:// URL, or '' (hidden) with a warning. */
+function link(value: string | null | undefined, file: string, field: string, kind: 'web' | 'instagram' = 'web'): string {
+  const { url, note } = normalizeLink(value, kind);
+  if (note) contentWarning(file, field, url ? `${note}. Please paste the full address in the admin.` : `${note}.`);
+  return url;
+}
+
+/** A time such as "5:30 PM", or '' (shown as to be announced) with a warning. */
+function time(value: string | null | undefined, field: string): string {
+  const t = str(value);
+  if (!t || TIME_PATTERN.test(t)) return t;
+  contentWarning('content/settings.yaml', field, `"${t}" is not a time like 5:30 PM, so it is shown as to be announced.`);
+  return '';
+}
 
 export type TicketState = 'coming-soon' | 'on-sale' | 'sold-out' | 'closed';
 export type ApplicationsState = 'coming-soon' | 'open' | 'closed';
@@ -160,6 +380,8 @@ export type PartnerBenefit = { benefit: string; tiers: string[] };
 export const PLACEHOLDER_SPEAKER_NAME = 'Speaker to be announced';
 
 const ACCENT_FALLBACK = '#EB0028';
+/** The last known event date, used only when the Event date field is not a real date. */
+const DEFAULT_DATE = '2027-04-23';
 function capacityOf(v: number | null | undefined): number {
   return typeof v === 'number' && Number.isInteger(v) && v >= 1 ? Math.min(v, TEDX_MAX_CAPACITY) : TEDX_MAX_CAPACITY;
 }
@@ -170,21 +392,6 @@ function priceOf(v: number | null | undefined): number | null {
 
 const byOrder = <T extends { order: number }>(a: T, b: T) => a.order - b.order;
 
-/**
- * Speaker and team photos must be raster images. Keystatic's image field cannot
- * restrict file types, so the build checks instead: an SVG can carry script, and
- * portraits have no reason to be vector files. (Sponsor logos may be SVG: they are
- * only ever shown through <img>, and /images/* is served with a sandboxed CSP.)
- */
-const RASTER_PHOTO = /\.(jpe?g|png|webp|avif)$/i;
-function rasterPhoto(path: string | null, where: string): string | null {
-  if (path && !RASTER_PHOTO.test(path)) {
-    throw new Error(
-      `${where}: the photo "${path}" is not a JPG, PNG, WebP or AVIF file. SVG and other formats are not allowed for photos; upload a JPG or PNG in the admin instead.`,
-    );
-  }
-  return path;
-}
 const str = (v: string | null | undefined) => (v ?? '').trim();
 
 /**
@@ -208,13 +415,24 @@ function coordinates(lat: string, lng: string, note: string) {
 
 export const getSettings = cache(async (): Promise<Settings> => {
   const [s, venue, tickets, contact, sections] = await Promise.all([
-    reader.singletons.settings.readOrThrow(),
-    reader.singletons.venue.read(),
-    reader.singletons.tickets.read(),
-    reader.singletons.contact.read(),
-    reader.singletons.sections.read(),
+    readSingleton('settings'),
+    readSingleton('venue'),
+    readSingleton('tickets'),
+    readSingleton('contact'),
+    readSingleton('sections'),
   ]);
-  const dateISO = s.dateISO || '2027-04-23';
+  if (!s) throw new Error('content/settings.yaml is missing (Event basics in the admin). Restore it from the GitHub history.');
+  const rawDate = str(s.dateISO);
+  const dateISO = isRealDate(rawDate) ? rawDate : DEFAULT_DATE;
+  if (rawDate !== dateISO) {
+    contentWarning(
+      'content/settings.yaml',
+      'Event date',
+      `"${rawDate}" is not a real calendar date, so the site shows ${DEFAULT_DATE} instead. Pick the date again in Event basics.`,
+    );
+  }
+  const T = 'content/tickets.yaml';
+  const C = 'content/contact.yaml';
 
   const venueName = str(venue?.venueName) || 'Locatelli Student Activity Center';
   const venueCampus = str(venue?.campus);
@@ -233,7 +451,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
     .filter((n) => n.title || n.body);
 
   return {
-    eventName: s.eventName || 'TEDxSantaClaraUniversity',
+    eventName: SITE_NAME,
     themeName: s.themeName,
     themeTagline: s.themeTagline,
     themeStory: s.themeStory,
@@ -241,9 +459,9 @@ export const getSettings = cache(async (): Promise<Settings> => {
     dateLong: formatCalendarDate(dateISO, 'long'),
     dateMedium: formatCalendarDate(dateISO, 'medium'),
     dateShort: formatCalendarDate(dateISO, 'short'),
-    doorsTime: str(s.doorsTime),
-    talksTime: str(s.talksTime),
-    endTime: str(s.endTime),
+    doorsTime: time(s.doorsTime, 'Doors open at'),
+    talksTime: time(s.talksTime, 'Talks start at'),
+    endTime: time(s.endTime, 'Event ends at'),
     capacity: capacityOf(s.capacity),
     accentColor: /^#[0-9a-f]{6}$/i.test(s.accentColor) ? s.accentColor : ACCENT_FALLBACK,
 
@@ -253,28 +471,28 @@ export const getSettings = cache(async (): Promise<Settings> => {
     venuePostalAddress: postal,
     venueAddressLabel: str(venue?.addressLabel),
     venueCoordinates: coordinates(str(venue?.latitude), str(venue?.longitude), str(venue?.coordinatesNote)),
-    mapUrl: str(venue?.mapUrl),
+    mapUrl: link(venue?.mapUrl, 'content/venue.yaml', 'Map link'),
     venueNotes,
 
     ticketState: tickets?.ticketState ?? 'coming-soon',
-    ticketUrl: str(tickets?.ticketUrl),
-    ticketEmbedUrl: str(tickets?.ticketEmbedUrl),
+    ticketUrl: link(tickets?.ticketUrl, T, 'Ticket link'),
+    ticketEmbedUrl: link(tickets?.ticketEmbedUrl, T, 'Ticket checkout embed link'),
     ticketPriceNote: str(tickets?.ticketPriceNote),
     ticketPrice: priceOf(tickets?.ticketPrice),
     ticketSaleStart: str(tickets?.ticketSaleStart),
     speakerApplicationsState: tickets?.speakerApplicationsState ?? 'coming-soon',
-    speakerApplicationsUrl: str(tickets?.speakerApplicationsUrl),
+    speakerApplicationsUrl: link(tickets?.speakerApplicationsUrl, T, 'Speaker application link'),
     speakerApplicationsDeadline: str(tickets?.speakerApplicationsDeadline),
 
-    newsletterUrl: str(contact?.newsletterUrl),
+    newsletterUrl: link(contact?.newsletterUrl, C, 'Newsletter sign-up link'),
     contactEmail: email(contact?.contactEmail, 'contactEmail'),
     partnershipsEmail: email(contact?.partnershipsEmail, 'partnershipsEmail'),
-    livestreamUrl: str(contact?.livestreamUrl),
+    livestreamUrl: link(contact?.livestreamUrl, C, 'Livestream link'),
     socials: {
-      instagram: str(contact?.socials.instagram),
-      linkedin: str(contact?.socials.linkedin),
-      youtube: str(contact?.socials.youtube),
-      tiktok: str(contact?.socials.tiktok),
+      instagram: link(contact?.socials.instagram, C, 'Social links › Instagram', 'instagram'),
+      linkedin: link(contact?.socials.linkedin, C, 'Social links › LinkedIn'),
+      youtube: link(contact?.socials.youtube, C, 'Social links › YouTube'),
+      tiktok: link(contact?.socials.tiktok, C, 'Social links › TikTok'),
     },
 
     sections: {
@@ -287,7 +505,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
 });
 
 export const getSpeakers = cache(async (): Promise<Speaker[]> => {
-  const entries = await reader.collections.speakers.all();
+  const entries = await readCollection('speakers');
   return entries
     .filter((e) => e.entry.published)
     .map(({ slug, entry }) => ({
@@ -298,8 +516,8 @@ export const getSpeakers = cache(async (): Promise<Speaker[]> => {
       talkTitle: entry.announced ? entry.talkTitle : '',
       shortBio: entry.announced ? entry.shortBio : '',
       bio: entry.announced ? entry.bio : '',
-      photo: entry.announced ? rasterPhoto(entry.photo, `Speaker "${slug}"`) : null,
-      link: entry.announced ? str(entry.link) : '',
+      photo: entry.announced ? checkImage(entry.photo, { file: entryFile('speakers', slug), field: 'Portrait' }) : null,
+      link: entry.announced ? link(entry.link, entryFile('speakers', slug), 'Personal link') : '',
       linkLabel: entry.announced ? str(entry.linkLabel) || 'Website' : '',
       order: entry.order ?? 0,
     }))
@@ -312,23 +530,42 @@ export const getSpeaker = cache(async (slug: string): Promise<Speaker | null> =>
 });
 
 export const getSchedule = cache(async (): Promise<Schedule> => {
-  const s = await reader.singletons.schedule.read();
+  const s = await readSingleton('schedule');
   return { published: s?.published ?? false, items: [...(s?.items ?? [])] };
 });
 
-/** FAQ answers may write {capacity}; it is replaced with the seat capacity from Event basics. */
+/**
+ * FAQ questions and answers may write {capacity}, {date}, {venue}, {campus} and
+ * {eventName}; they are filled in from Event basics and Venue, so answers never go
+ * stale when those change. An unknown {placeholder} is left as typed, with a warning.
+ */
 export const getFaq = cache(async (): Promise<FaqItem[]> => {
-  const [f, s] = await Promise.all([reader.singletons.faq.read(), getSettings()]);
+  const [f, s] = await Promise.all([readSingleton('faq'), getSettings()]);
+  const values = {
+    capacity: String(s.capacity),
+    date: s.dateLong,
+    venue: s.venueName,
+    campus: s.venueCampus || s.venueName,
+    eventName: s.eventName,
+  };
+  const fill = (text: string, n: number) => {
+    const r = fillPlaceholders(text, values);
+    for (const u of r.unknown) {
+      contentWarning(
+        'content/faq.yaml',
+        `Questions › item ${n}`,
+        `${u} is not a known placeholder (use {capacity}, {date}, {venue}, {campus} or {eventName}); it is shown as typed.`,
+      );
+    }
+    return r.text;
+  };
   return (f?.items ?? [])
-    .filter((i) => i.question && i.answer)
-    .map((i) => ({
-      question: i.question.replaceAll('{capacity}', String(s.capacity)),
-      answer: i.answer.replaceAll('{capacity}', String(s.capacity)),
-    }));
+    .filter((i) => str(i.question) && str(i.answer))
+    .map((i, n) => ({ question: fill(i.question, n + 1), answer: fill(i.answer, n + 1) }));
 });
 
 export const getTeam = cache(async (): Promise<TeamMember[]> => {
-  const entries = await reader.collections.team.all();
+  const entries = await readCollection('team');
   return entries
     .map(({ slug, entry }) => {
       const visible = entry.showName && Boolean(str(entry.name));
@@ -336,7 +573,7 @@ export const getTeam = cache(async (): Promise<TeamMember[]> => {
         slug,
         role: entry.role,
         name: visible ? str(entry.name) : null,
-        photo: visible ? rasterPhoto(entry.photo, `Team member "${slug}"`) : null,
+        photo: visible ? checkImage(entry.photo, { file: entryFile('team', slug), field: 'Photo' }) : null,
         order: entry.order ?? 0,
       };
     })
@@ -344,7 +581,7 @@ export const getTeam = cache(async (): Promise<TeamMember[]> => {
 });
 
 export const getTiers = cache(async (): Promise<Tier[]> => {
-  const entries = await reader.collections.tiers.all();
+  const entries = await readCollection('tiers');
   return entries
     .map(({ slug, entry }) => ({
       slug,
@@ -358,29 +595,40 @@ export const getTiers = cache(async (): Promise<Tier[]> => {
 });
 
 export const getSponsors = cache(async (): Promise<Sponsor[]> => {
-  const entries = await reader.collections.sponsors.all();
+  const entries = await readCollection('sponsors');
   return entries
     .filter((e) => e.entry.published)
     .map(({ slug, entry }) => ({
       slug,
       name: entry.name,
-      tier: entry.tier,
-      logo: entry.logo,
-      url: str(entry.url),
+      tier: entry.tier && isValidSlug(entry.tier) ? entry.tier : null,
+      logo: checkImage(entry.logo, { file: entryFile('sponsors', slug), field: 'Logo', allowSvg: true }),
+      url: link(entry.url, entryFile('sponsors', slug), 'Website'),
     }))
     .sort((a, b) => a.name.localeCompare(b.name));
 });
 
 export const getPartnerBenefits = cache(async (): Promise<PartnerBenefit[]> => {
-  const b = await reader.singletons.benefits.read();
+  const b = await readSingleton('benefits');
   return (b?.items ?? [])
-    .map((i) => ({ benefit: str(i.benefit), tiers: [...i.tiers] }))
+    .map((i) => ({ benefit: str(i.benefit), tiers: i.tiers.filter(isValidSlug) }))
     .filter((i) => i.benefit);
 });
 
 export const getTedLanguage = cache(async (): Promise<TedLanguage> => {
-  const t = await reader.singletons.tedLanguage.read();
-  return { aboutTedx: str(t?.aboutTedx), aboutTed: str(t?.aboutTed) };
+  const t = await readSingleton('tedLanguage');
+  const pick = (value: string | undefined, key: keyof TedLanguage, label: string) => {
+    const r = requiredText(value, TED_LANGUAGE_DEFAULTS[key], TED_TEXT_MIN_LENGTH);
+    if (r.usedFallback) {
+      contentWarning(
+        'content/ted-language.yaml',
+        label,
+        'The text is empty or too short to be TED’s official text, so the footer shows the built-in copy. Paste the official text in the admin.',
+      );
+    }
+    return r.text;
+  };
+  return { aboutTedx: pick(t?.aboutTedx, 'aboutTedx', 'About TEDx'), aboutTed: pick(t?.aboutTed, 'aboutTed', 'About TED') };
 });
 
 /** Splits multi-paragraph plain text (blank-line separated) into paragraphs. */

@@ -1,5 +1,6 @@
 import { ImageResponse } from 'next/og';
 import { getSettings } from '@/lib/content';
+import { stripEmoji } from '@/lib/content-checks';
 import { ogAlt, SITE_NAME } from '@/lib/site';
 import { ogFonts } from './_og/fonts';
 
@@ -18,8 +19,10 @@ export const contentType = 'image/png';
 export default async function OpenGraphImage() {
   const [s, fonts] = await Promise.all([getSettings(), ogFonts()]);
   const grey = '#a6a6a6';
-  const where = s.venueCampus || s.venueName;
-  const themeSize = s.themeName.length > 12 ? 100 : 140;
+  // No emoji in share images: the renderer would fetch emoji artwork from a CDN during the build.
+  const where = stripEmoji(s.venueCampus || s.venueName);
+  const themeName = stripEmoji(s.themeName);
+  const themeSize = themeName.length > 12 ? 100 : 140;
 
   return new ImageResponse(
     (
@@ -54,7 +57,7 @@ export default async function OpenGraphImage() {
               lineHeight: 0.95,
             }}
           >
-            {s.themeName}
+            {themeName}
             <div
               style={{
                 display: 'flex',
