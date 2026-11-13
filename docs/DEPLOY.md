@@ -80,6 +80,20 @@ The GitHub App is created once, by the **repo owner (`1Dabbid`)**, through Keyst
 
 Saves go to the repo's **default branch** (`main`), which Vercel deploys: live in about a minute or two.
 
+### Security checklist
+
+Go through this once after step d, and again whenever the team changes hands.
+
+- [ ] **GitHub App is private**: github.com > Settings > Developer settings > GitHub Apps > the Keystatic app > **Advanced / Make private**, so it reads "Only on this account" under *Where can this GitHub App be installed?* **(verify on first deploy)**.
+- [ ] **Installed only on this repository**: github.com > Settings > Applications > Installed GitHub Apps > the app > **Configure** > *Only select repositories* > `TEDxSantaClaraUniversity27` and nothing else.
+- [ ] **No localhost callback URLs on the production app**: in the app's settings, remove the `http://localhost:3000/...` and `http://127.0.0.1:3000/...` callback URLs the setup flow added, leaving only `https://fineprint.tedxscu.com/api/keystatic/github/oauth/callback`. (For local GitHub-mode testing, create a separate development app instead.)
+- [ ] **Protect the default branch**: repo > Settings > Branches (or Rules > Rulesets) > a rule for `main` that blocks force pushes and deletion. Keystatic saves are ordinary commits by collaborators, so do not require pull requests unless editors are expected to open them.
+- [ ] **Only collaborators with Write access can edit content**: the admin can only commit as the signed-in GitHub user, so the repo's collaborator list *is* the editor list. Review it (repo > Settings > Collaborators) at the start and end of each year.
+- [ ] **`KEYSTATIC_SECRET` is at least 32 random characters** (e.g. `openssl rand -hex 32`), never a word or a reused password. Rotate it, together with the GitHub App's client secret, if either may have leaked (step d.10).
+- [ ] **The four Keystatic variables are set for Production only**, Deployment Protection is on for previews, and `/keystatic` on a preview URL answers 404.
+- [ ] **Never set `ANALYZE=1` on Vercel**: it publishes browser source maps of the whole site. It is only for local bundle analysis.
+- [ ] Know the residual risk: the signed-in editor's GitHub access token is kept in a cookie that the admin's own JavaScript must read (`keystatic-gh-access-token`, a Keystatic design decision), so script running on this origin could read it. The site therefore allows no third-party scripts, uploads under `/images`, `/brand`, `/stills` and `/icons` are served with a sandboxed, script-free Content-Security-Policy, and speaker and team photos must be JPG, PNG, WebP or AVIF (the build rejects anything else). Sponsor logos may be SVG; they are only shown through `<img>`, which never runs script.
+
 ## e. Post-deploy checklist
 
 - [ ] `https://fineprint.tedxscu.com` loads over HTTPS; `http://` and the `*.vercel.app` URL redirect to it (see "Search engines and preview URLs").
