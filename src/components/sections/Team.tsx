@@ -13,7 +13,7 @@ export function teamVisible(settings: Settings, team: TeamMember[]): boolean {
 function Signature({ member }: { member: TeamMember }) {
   return (
     <li data-sign>
-      <div data-sign-mark className="flex h-14 items-end gap-4 pb-3 sm:h-16">
+      <div data-sign-mark className="flex min-h-14 items-end gap-4 pb-3 sm:min-h-16">
         {member.photo ? (
           <Image
             src={member.photo}
@@ -23,10 +23,10 @@ function Signature({ member }: { member: TeamMember }) {
             className="size-11 shrink-0 rounded-full object-cover grayscale sm:size-12"
           />
         ) : null}
-        <p className="text-2xl leading-tight font-light tracking-tight text-balance text-white">{member.name}</p>
+        <p className="min-w-0 text-2xl leading-tight font-light tracking-tight text-balance text-white wrap-anywhere">{member.name}</p>
       </div>
       <div data-sign-line aria-hidden="true" className="h-px bg-white/50" />
-      <p data-sign-text className="mt-3 text-base leading-snug text-balance text-mute">
+      <p data-sign-text className="mt-3 text-base leading-snug text-balance text-mute wrap-anywhere">
         {member.role}
       </p>
     </li>

@@ -156,19 +156,19 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
         <h1
           id="speaker-title"
           data-reveal="lines"
-          className="mt-6 max-w-[14ch] text-[clamp(3.25rem,11vw,11rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance break-words"
+          className="mt-6 max-w-[14ch] text-[clamp(3.25rem,11vw,11rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance wrap-anywhere"
         >
           {speaker.name}
         </h1>
         {speaker.role ? (
-          <p data-reveal="fade" className="mt-8 max-w-2xl text-xl text-mute sm:text-2xl">
+          <p data-reveal="fade" className="mt-8 max-w-2xl text-xl text-mute wrap-anywhere sm:text-2xl">
             {speaker.role}
           </p>
         ) : null}
       </div>
 
       <div className="shell grid gap-14 py-20 sm:py-28 md:grid-cols-12">
-        <figure className="md:col-span-5">
+        <figure className="min-w-0 md:col-span-5">
           <div className="relative aspect-[4/5] overflow-hidden border border-white/10 bg-panel">
             {speaker.photo ? (
               <Image
@@ -192,12 +192,12 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
             <div aria-hidden="true" className="pointer-events-none absolute inset-3 border border-white/15" />
           </div>
           <figcaption data-cursor="loupe" className="fine-print mt-3 flex justify-between gap-4 text-mute">
-            <span>Fig. {String(index + 1).padStart(2, '0')}</span>
-            <span className="text-right">{keepTedxCase(speaker.name)}</span>
+            <span className="shrink-0">Fig. {String(index + 1).padStart(2, '0')}</span>
+            <span className="min-w-0 text-right wrap-anywhere">{keepTedxCase(speaker.name)}</span>
           </figcaption>
         </figure>
 
-        <div className="md:col-span-7 md:pl-6 lg:pl-12">
+        <div className="min-w-0 wrap-anywhere md:col-span-7 md:pl-6 lg:pl-12">
           {speaker.talkTitle ? (
             <section aria-labelledby="talk-title" className="border-t border-white/15 pt-6">
               <h2 id="talk-title" className="fine-print text-mute">
