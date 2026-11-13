@@ -180,9 +180,11 @@ function patch(material: MeshStandardMaterial, key: string, p: Patch) {
       .replace('material.clearcoat = clearcoat;', 'material.clearcoat = clearcoat * ccMul;')
       // In the floor reflection (mirrored camera below the deck) every surface fades with its height
       // above the floor, like a reflection in a satin finish: contact is sharp and full, a metre up is gone.
+      // Once faded out it is dropped from the mirrored pass, so it cannot black out what it stands
+      // in front of (the stand's dark silhouette cut a thin line through the reflected beam).
       .replace(
         '#include <dithering_fragment>',
-        `#include <dithering_fragment>\nif (cameraPosition.y < 0.0) gl_FragColor.rgb *= exp(-max(vWorld.y, 0.0) / ${(p.reflFade ?? REFL_FADE).toFixed(3)});`,
+        `#include <dithering_fragment>\nif (cameraPosition.y < 0.0) { float reflF = exp(-max(vWorld.y, 0.0) / ${(p.reflFade ?? REFL_FADE).toFixed(3)}); if (reflF < 0.02) discard; gl_FragColor.rgb *= reflF; }`,
       )
       .replace('material.sheenColor = sheenColor;', 'material.sheenColor = sheenColor * sheenMul;');
     if (p.noEnv) shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_maps>', '');
@@ -629,12 +631,16 @@ export function createFloorMaterial(cheap: boolean) {
       vec4 rc = uReflMat * vec4(vWorld, 1.0);
       vec2 ruv = rc.xy / max(rc.w, 1e-4);
       vec2 wob = (vec2(vnoise(p * 7.0), vnoise(p * 7.0 + 5.2)) - 0.5) * 0.006 * (0.6 + 2.0 * scuff2);
-      float lod = mix(0.6, 2.6, smoothstep(0.4, 0.9, roughnessFactor));
+      // Everything the deck mirrors stands on the rug, so the reflection blurs and fades the further
+      // the deck point is from the rug's edge (the reflected beam spreads into a broad glow, never a line).
+      float lod = mix(0.6, 2.6, smoothstep(0.4, 0.9, roughnessFactor)) + min(2.4, dr * 1.6);
       vec2 sv = vec2(0.0, 0.012 * (1.0 + lod));
-      vec3 refl = textureLod(uRefl, ruv + wob, lod).rgb * 0.4
-                + textureLod(uRefl, ruv + wob + sv, lod + 0.6).rgb * 0.25 + textureLod(uRefl, ruv + wob - sv, lod + 0.6).rgb * 0.25
+      vec2 sh = vec2(0.006 * (1.0 + lod), 0.0);
+      vec3 refl = textureLod(uRefl, ruv + wob, lod).rgb * 0.3
+                + textureLod(uRefl, ruv + wob + sv, lod + 0.6).rgb * 0.2 + textureLod(uRefl, ruv + wob - sv, lod + 0.6).rgb * 0.2
+                + textureLod(uRefl, ruv + wob + sh, lod + 0.6).rgb * 0.1 + textureLod(uRefl, ruv + wob - sh, lod + 0.6).rgb * 0.1
                 + textureLod(uRefl, ruv + wob + 2.5 * sv, lod + 1.2).rgb * 0.05 + textureLod(uRefl, ruv + wob - 2.5 * sv, lod + 1.2).rgb * 0.05;
-      totalEmissiveRadiance += refl * fres * mix(0.35, 1.0, gloss) * uReflOn * 4.0;`
+      totalEmissiveRadiance += refl * fres * mix(0.35, 1.0, gloss) * uReflOn * 4.0 * mix(0.35, 1.0, exp(-dr / 1.6));`
       }`,
   });
   return m;
