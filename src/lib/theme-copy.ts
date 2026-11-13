@@ -46,8 +46,7 @@ export const THEME_COPY_DEFAULTS = {
   /** /partners, first "What your support makes possible" card. Blank title: the card is left out. Body: placeholders. */
   partnersEditionFigure: '1st',
   partnersEditionTitle: 'The first mainstage.',
-  partnersEditionBody:
-    'This is the first {eventName} mainstage event. Partners who join now are part of it from the start.',
+  partnersEditionBody: 'Partners who join now are part of it from the start.',
   /** 404 page. */
   notFoundHeading: 'This page does not exist.',
   notFoundBody: 'The link may be out of date, or the page may have moved.',
