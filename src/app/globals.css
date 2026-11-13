@@ -305,7 +305,18 @@ html:not(.motion) .reading-progress {
     rgb(0 0 0 / 0) 72%
   );
 }
-@media (max-width: 639.98px) {
+/* Portrait tablets: same composition as phones (narrow left column, the mic
+   open in the lower right), at tablet type sizes. */
+@media (min-width: 640px) and (max-width: 1023.98px) and (max-aspect-ratio: 9/10) {
+  .hero-facts {
+    max-width: 19rem;
+  }
+  .hero-facts dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+}
+@media (max-width: 1023.98px) and (max-aspect-ratio: 9/10) {
   .hero-scrim {
     background:
       linear-gradient(to bottom, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0) 40%),

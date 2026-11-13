@@ -20,7 +20,8 @@ const TRAVEL_END = 0.96;
  *   1. on approach the heading scales up from small, anchored bottom left;
  *   2. hold: heading, badge and caption top left, the lit rug alone mid-frame;
  *   3. the strip of glass cards rises into the lower edge and travels sideways
- *      with the scroll (x only), the rug still in view above it.
+ *      with the scroll (x only), the rug still in view above it; on short
+ *      screens the heading block moves up just enough to make room.
  * Keyboard: focusing a card scrolls the page to the runway position where that
  * card is fully in view, so every card is reachable and visible by Tab alone.
  *
@@ -30,6 +31,7 @@ function setup({ gsap, root }: MotionKit) {
   const title = root.querySelector<HTMLElement>('[data-speakers-title]');
   const meta = root.querySelector<HTMLElement>('[data-speakers-meta]');
   const strip = root.querySelector<HTMLElement>('[data-speakers-strip]');
+  const head = root.querySelector<HTMLElement>('[data-speakers-head]');
   const track = root.querySelector<HTMLElement>('[data-speakers-track]');
   if (!title || !strip || !track) return;
 
@@ -69,6 +71,11 @@ function setup({ gsap, root }: MotionKit) {
       defaults: { ease: 'none' },
       scrollTrigger: { trigger: root, start: 'top top', end: 'bottom bottom', scrub: 0.6, invalidateOnRefresh: true },
     });
+    // Short screens: the heading block gives way (moves up) just enough for the strip.
+    if (head) {
+      const lift = () => -Math.max(0, head.offsetTop + head.offsetHeight + 24 - strip.offsetTop);
+      tl.fromTo(head, { y: 0 }, { y: () => lift(), duration: STRIP_IN_END - STRIP_IN, ease: 'power2.inOut' }, STRIP_IN);
+    }
     tl.fromTo(strip, { y: 90, opacity: 0 }, { y: 0, opacity: 1, duration: STRIP_IN_END - STRIP_IN, ease: 'power2.out' }, STRIP_IN);
     tl.fromTo(track, { x: 0 }, { x: () => endX(), duration: TRAVEL_END - TRAVEL_START }, TRAVEL_START);
     tl.to({}, { duration: 0.001 }, 1);
