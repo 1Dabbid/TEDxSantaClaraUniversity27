@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 import { SITE_URL, settle, topicRoutes } from './helpers';
 import { faqIds } from '../../src/lib/faq-ids';
 
@@ -129,23 +129,53 @@ test.describe('FAQ deep links', () => {
     expect(ids).toEqual(faqIds(questions));
   });
 
-  test('a hash opens the question and brings it into view', async ({ page }) => {
-    await page.goto('/faq');
-    const id = await page.locator('main ol > li[id]').last().getAttribute('id');
-    await page.goto(`/faq#${id}`);
-    await settle(page, 300);
+  /** The question ids /faq renders, read from the server HTML (no browser visit, so the next goto is a cold load). */
+  const questionIds = async (request: APIRequestContext) =>
+    [...(await (await request.get('/faq')).text()).matchAll(/<li id="([^"]+)"/g)].map((m) => m[1]);
+
+  /** The linked question is open, on screen and not hidden under the fixed header. */
+  const expectLanded = async (page: Page, id: string) => {
     const target = page.locator(`[id="${id}"]`);
     await expect(target.locator('details')).toHaveAttribute('open', '');
     await expect(target).toBeInViewport();
+    const header = await page.locator('header').first().boundingBox();
+    const box = await target.boundingBox();
+    expect(box!.y, 'question below the header').toBeGreaterThanOrEqual((header?.y ?? 0) + (header?.height ?? 0) - 1);
+  };
+
+  test('a shared link (cold load of /faq#id) opens the question below the header', async ({ page, request }) => {
+    const id = (await questionIds(request)).at(-1)!;
+    await page.goto(`/faq#${id}`);
+    await settle(page, 600);
+    await expectLanded(page, id);
     // Only the linked question opens.
     await expect(page.locator('main details[open]')).toHaveCount(1);
   });
 
+  test('back and forward between two question links re-open and re-land on each', async ({ page, request }) => {
+    const ids = await questionIds(request);
+    const [a, b] = [ids.at(-1)!, ids[0]];
+    await page.goto(`/faq#${a}`);
+    await settle(page, 600);
+    await page.locator(`[id="${b}"] summary`).click();
+    await page.locator(`[id="${b}"] [data-faq-permalink]`).click();
+    await expect(page).toHaveURL(new RegExp(`#${b}$`));
+    await settle(page, 600);
+    await expectLanded(page, b);
+    await page.goBack();
+    await expect(page).toHaveURL(new RegExp(`#${a}$`));
+    await settle(page, 600);
+    await expectLanded(page, a);
+    await page.goForward();
+    await expect(page).toHaveURL(new RegExp(`#${b}$`));
+    await settle(page, 600);
+    await expectLanded(page, b);
+  });
+
   test.describe('without JavaScript', () => {
     test.use({ javaScriptEnabled: false });
-    test('the hash still lands on the question as a normal anchor', async ({ page }) => {
-      await page.goto('/faq');
-      const id = await page.locator('main ol > li[id]').last().getAttribute('id');
+    test('a shared link still lands on the question as a normal anchor', async ({ page, request }) => {
+      const id = (await questionIds(request)).at(-1)!;
       await page.goto(`/faq#${id}`);
       await expect(page.locator(`[id="${id}"]`)).toBeInViewport();
     });
