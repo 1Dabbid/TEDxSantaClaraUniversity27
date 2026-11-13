@@ -84,7 +84,8 @@ test.describe('scene stills', () => {
         expect(p.display, id).toBe('block');
         expect(p.image, id).toContain(`/stills/${id}-landscape`);
       }
-      expect((await plate(page, 'tickets')).display).toBe('none');
+      // No still for the sections after the venue.
+      expect((await plate(page, 'tickets')).image).toBe('none');
     });
   });
 
@@ -149,7 +150,13 @@ test.describe('scene stills', () => {
     // SwiftShader draws slowly: the hand-over waits for the canvas to fade up.
     await expect(page.locator('html')).toHaveClass(/scene-live/, { timeout: 60_000 });
     await expect(page.locator('html')).not.toHaveClass(/scene-pending/);
-    await expect.poll(() => display(page, '[data-scene-stills]'), { timeout: 5000 }).toBe('none');
+    // Fades out (400 ms), then leaves the layout. A busy software rasterizer can starve the
+    // main thread for seconds per frame, so allow for that.
+    await expect
+      .poll(() => page.evaluate(() => `${document.documentElement.classList.contains('scene-live')} ${getComputedStyle(document.querySelector('[data-scene-stills]')!).display}`), {
+        timeout: 20_000,
+      })
+      .toBe('true none');
     // Scroll the whole stack's range: nothing below the hero is fetched.
     for (const id of ['theme', 'speakers', 'schedule', 'venue', 'team']) {
       await scrollToSection(page, id, 0.2);
