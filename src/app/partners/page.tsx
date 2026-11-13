@@ -70,7 +70,7 @@ const reasons = (capacity: number): { figure: ReactNode; title: string; body: st
   {
     figure: <PlayMark />,
     title: 'Talks that travel.',
-    body: 'Talks are recorded and published on the TEDx YouTube channel, so the ideas outlast the evening.',
+    body: 'Talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
   },
   {
     figure: <LoopMark />,

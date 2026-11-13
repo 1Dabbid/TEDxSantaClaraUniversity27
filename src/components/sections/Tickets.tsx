@@ -47,7 +47,7 @@ const COPY: Record<TicketState, Copy> = {
   closed: {
     title: 'Ticket sales are closed.',
     subtitle: 'Thank you.',
-    body: 'To everyone who will be in the room: see you there. Talks are recorded and published on the TEDx YouTube channel after the event.',
+    body: 'To everyone who will be in the room: see you there. Talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
   },
 };
 
