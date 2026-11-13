@@ -5,9 +5,10 @@ import { notFound } from 'next/navigation';
 import type { Settings, Speaker } from '@/lib/content';
 import { getSettings, getSpeakers, paragraphs } from '@/lib/content';
 import { jsonLdString, speakerJsonLd } from '@/lib/jsonld';
-import { ogAlt, SITE_NAME } from '@/lib/site';
+import { clip, SITE_NAME } from '@/lib/site';
 import { ticketCta } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
+import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, JsonLd, Redaction } from '@/components/print/Print';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -39,10 +40,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return {};
   const { speaker, index } = data;
   // Plain digits in the title: screen readers spell out "Nº" letter by letter.
-  const title = speaker.announced ? speaker.name : `Speaker ${String(index + 1).padStart(2, '0')}: to be announced`;
+  const title = speaker.announced
+    ? [speaker.name, speaker.talkTitle].filter(Boolean).join(': ')
+    : `Speaker ${String(index + 1).padStart(2, '0')}: to be announced`;
+  // The event clause is always kept whole; the bio is shortened to fit about 155 characters.
+  const speaking = ` Speaking at ${SITE_NAME}: ${settings.themeName}, ${settings.dateLong}.`;
   const description = speaker.announced
-    ? speaker.shortBio || `${speaker.name} speaks at ${SITE_NAME}.`
+    ? speaker.shortBio
+      ? `${clip(speaker.shortBio, Math.max(40, 155 - speaking.length))}${speaking}`
+      : `${speaker.name}.${speaking}`
     : `This ${SITE_NAME} speaker has not been announced yet.`;
+  const socialTitle = `${SITE_NAME} · ${title}`;
+  // Share image: the colocated opengraph-image.tsx (file convention), never set here.
   return {
     title,
     description,
@@ -50,14 +59,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     openGraph: {
       type: speaker.announced ? 'profile' : 'website',
       siteName: SITE_NAME,
-      title: `${title} · ${SITE_NAME}`,
+      title: socialTitle,
       description,
       url: `/speakers/${slug}`,
       locale: 'en_US',
-      images: [{ url: '/opengraph-image', width: 1200, height: 630, alt: ogAlt(settings) }],
     },
+    twitter: { card: 'summary_large_image', title: socialTitle, description },
     // Placeholder pages exist so links never 404, but should not be indexed.
-    robots: speaker.announced ? undefined : { index: false, follow: true },
+    ...(speaker.announced ? {} : { robots: { index: false, follow: true } }),
   };
 }
 
@@ -81,7 +90,7 @@ function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; ne
           ) : null}
         </div>
         <div className="flex items-center border-b border-white/15 py-6 sm:border-x sm:border-b-0 sm:px-8">
-          <Link href="/#speakers" className="fine-print link-draw inline-block py-1.5 text-white">
+          <Link href="/speakers" className="fine-print link-draw inline-block py-1.5 text-white">
             All speakers
           </Link>
         </div>
@@ -115,7 +124,7 @@ function Breadcrumb({ index }: { index: number }) {
         </li>
         <li aria-hidden="true">/</li>
         <li>
-          <Link href="/#speakers" className="inline-block py-1.5 hover:text-white">
+          <Link href="/speakers" className="inline-block py-1.5 hover:text-white">
             Speakers
           </Link>
         </li>
@@ -135,7 +144,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
   const body = bio.length ? bio : speaker.shortBio ? [speaker.shortBio] : [];
   return (
     <>
-      <JsonLd json={jsonLdString(speakerJsonLd(speaker, settings))} />
+      <JsonLd json={jsonLdString(speakerJsonLd(speaker))} />
       <div className="shell pt-12 sm:pt-16">
         <Breadcrumb index={index} />
         <p data-reveal="fade" className="fine-print mt-16 sm:mt-24 text-mute">
@@ -181,7 +190,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
           </div>
           <figcaption data-cursor="loupe" className="fine-print mt-3 flex justify-between gap-4 text-mute">
             <span>Fig. {String(index + 1).padStart(2, '0')}</span>
-            <span className="text-right">{speaker.name}</span>
+            <span className="text-right">{keepTedxCase(speaker.name)}</span>
           </figcaption>
         </figure>
 
@@ -231,7 +240,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
             >
               Tickets
             </Button>
-            <Button href="/#speakers" variant="ghost" size="lg">
+            <Button href="/speakers" variant="ghost" size="lg">
               All speakers
             </Button>
           </div>
@@ -268,7 +277,7 @@ function Unannounced({ index, settings }: { index: number; settings: Settings })
             <Button href={settings.newsletterUrl || '/#newsletter'} size="lg">
               Get notified
             </Button>
-            <Button href="/#speakers" variant="ghost" size="lg">
+            <Button href="/speakers" variant="ghost" size="lg">
               All speakers
             </Button>
           </div>

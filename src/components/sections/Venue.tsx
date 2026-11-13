@@ -3,6 +3,7 @@ import { formatCoordinate } from '@/lib/links';
 import { seatsLabel } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { VenueMotion } from '@/motion/sections/VenueMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
@@ -37,11 +38,22 @@ function Reticle() {
           );
         })}
       </g>
-      <g className="fill-white/60" style={{ font: '9px ui-monospace, monospace', letterSpacing: '0.12em' }}>
-        <text x="160" y="28" textAnchor="middle">N</text>
-        <text x="296" y="163" textAnchor="middle">E</text>
-        <text x="160" y="300" textAnchor="middle">S</text>
-        <text x="24" y="163" textAnchor="middle">W</text>
+      {/* Cardinal letters sit inside the bezel (its long ticks run r 136-150),
+          centred on their axis, and knock the crosshair out behind them with a
+          black stroke painted under the fill. */}
+      <g
+        className="fill-white/60"
+        stroke="#000"
+        strokeWidth="5"
+        paintOrder="stroke"
+        dominantBaseline="central"
+        textAnchor="middle"
+        style={{ font: '9px ui-monospace, monospace' }}
+      >
+        <text x="160" y="124">N</text>
+        <text x="196" y="160">E</text>
+        <text x="160" y="196">S</text>
+        <text x="124" y="160">W</text>
       </g>
       <circle cx="160" cy="160" r="14" stroke="var(--color-accent)" strokeWidth="1" />
       <circle cx="160" cy="160" r="4" fill="var(--color-accent)" />
@@ -99,7 +111,7 @@ export function Venue({ settings }: { settings: Settings }) {
                   </p>
                   {coords.note ? (
                     <p data-cursor="loupe" className="fine-print mt-3 text-mute">
-                      {coords.note}
+                      {keepTedxCase(coords.note)}
                     </p>
                   ) : null}
                 </>
@@ -127,7 +139,7 @@ export function Venue({ settings }: { settings: Settings }) {
               </address>
               {settings.venueAddressLabel ? (
                 <span data-cursor="loupe" className="fine-print mt-3 block text-subtle">
-                  {settings.venueAddressLabel}
+                  {keepTedxCase(settings.venueAddressLabel)}
                 </span>
               ) : null}
             </dd>

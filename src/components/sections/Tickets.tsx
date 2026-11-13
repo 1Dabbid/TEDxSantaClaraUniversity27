@@ -4,6 +4,7 @@ import { getFaq } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
 import { WatchLive } from '@/components/ui/WatchLive';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { keepTedxCase } from '@/components/ui/KeepCase';
 import { ClauseNo, StatusRegister } from '@/components/print/Print';
 import { TicketsMotion } from '@/motion/sections/TicketsMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
@@ -46,7 +47,7 @@ const COPY: Record<TicketState, Copy> = {
   closed: {
     title: 'Ticket sales are closed.',
     subtitle: 'Thank you.',
-    body: 'To everyone who will be in the room: see you there. Talks are recorded and published on the TEDx YouTube channel after the event.',
+    body: 'To everyone who will be in the room: see you there. Talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
   },
 };
 
@@ -162,7 +163,7 @@ function SpeakerApplications({ settings }: { settings: Settings }) {
       ? 'Applications are open. Tell us the idea you would put on the red circle.'
       : state === 'closed'
         ? 'Applications are closed for this event. Thank you to everyone who applied.'
-        : 'Applications have not opened yet. The mailing list hears first.';
+        : 'Applications have not opened yet.';
   return (
     <div aria-labelledby="apply-title" role="group" className="mt-24 border-t border-white/15 pt-10 sm:mt-32 sm:pt-12">
       <div className="grid gap-8 md:grid-cols-12 md:items-end">
@@ -173,7 +174,7 @@ function SpeakerApplications({ settings }: { settings: Settings }) {
           </h3>
           <p className="mt-4 max-w-lg text-mute">{copy}</p>
           {state === 'open' && settings.speakerApplicationsDeadline ? (
-            <p className="fine-print mt-3 text-white">Deadline: {settings.speakerApplicationsDeadline}</p>
+            <p className="fine-print mt-3 text-white">Deadline: {keepTedxCase(settings.speakerApplicationsDeadline)}</p>
           ) : null}
         </div>
         <div className="flex flex-col gap-6 md:col-span-5 md:items-end">
@@ -222,10 +223,12 @@ export async function Tickets({ settings }: { settings: Settings }) {
           <p
             aria-hidden="true"
             className="-ml-[0.04em] leading-[0.82] font-semibold tracking-[-0.06em] whitespace-nowrap tabular-nums"
-            style={{ fontSize: 'calc(100cqi / 4.5)' }}
+            style={{ fontSize: 'calc(100cqi / 4.8)' }}
           >
             {pad(1)}
-            <span data-seat-dash className="mx-[0.14em] inline-block h-[0.035em] w-[0.7em] bg-white/50 align-middle" />
+            {/* Clear air on both sides: tabular "1" sits centred in a wide advance,
+                and the tight tracking pulls the bar toward it. */}
+            <span data-seat-dash className="mx-[0.24em] inline-block h-[0.035em] w-[0.62em] bg-white/50 align-middle" />
             <span data-seat-count>{pad(seats)}</span>
           </p>
           </div>

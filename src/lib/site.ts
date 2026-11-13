@@ -6,6 +6,8 @@ export const SITE_NAME = 'TEDxSantaClaraUniversity';
 export const CLUB_URL = 'https://tedxscu.com';
 /** TED's page about the TEDx program (linked from the footer). */
 export const TEDX_PROGRAM_URL = 'https://www.ted.com/about/programs-initiatives/tedx-program';
+/** TED's home page (linked from the footer's "About TED" block). */
+export const TED_URL = 'https://www.ted.com';
 /**
  * TEDx rules cap a standard licence at 100 attendees. Upper bound and default of
  * the "Seat capacity" field (Event basics); the site always reads the field
@@ -13,7 +15,27 @@ export const TEDX_PROGRAM_URL = 'https://www.ted.com/about/programs-initiatives/
  */
 export const TEDX_MAX_CAPACITY = 100;
 
-type Place = Pick<Settings, 'venueName' | 'venueCampus'>;
+/**
+ * Whether search engines may index this build. Vercel sets `VERCEL_ENV` to
+ * `production`, `preview` or `development`; only `production` is indexable, so
+ * preview URLs never compete with the real site. Builds outside Vercel (no
+ * `VERCEL_ENV`, e.g. `npm run build && npm run start` locally or in CI) count as
+ * production. Read at build time. See docs/DEPLOY.md.
+ */
+export function isIndexable(env: string | undefined = process.env.VERCEL_ENV): boolean {
+  return env === undefined || env === '' || env === 'production';
+}
+
+/** Cuts text to at most `max` characters at a word boundary, adding "…" when shortened. */
+export function clip(text: string, max: number): string {
+  const t = text.trim().replace(/\s+/g, ' ');
+  if (t.length <= max) return t;
+  const cut = t.slice(0, max - 1);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s,;:.–—-]+$/, '')}…`;
+}
+
+type Place =Pick<Settings, 'venueName' | 'venueCampus'>;
 
 /** "Locatelli Student Activity Center, Santa Clara University" (campus omitted when blank). */
 export function venueLine(s: Place): string {

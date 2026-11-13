@@ -59,24 +59,24 @@ export function Hero({ settings }: { settings: Settings }) {
         className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-black via-black/70 to-transparent"
       />
       <div data-hero className="shell flex flex-1 flex-col justify-end pb-10 pt-10 sm:pb-16 sm:pt-16">
-        <p className="fine-print">
+        {/* The h1 holds the visible event-name line and the theme; the scroll-out
+            (data-hero-title) still moves only the theme, as before. */}
+        <h1 id="hero-title">
+        <span className="fine-print block">
           <span className="hero-type" style={{ '--steps': settings.eventName.length + caption.length + 3 } as CSSProperties}>
             <span className="tracking-normal normal-case text-white">{settings.eventName}</span>
             <span aria-hidden="true"> · </span>
             <span className="sr-only">, </span>
             {caption}
           </span>
-        </p>
+        </span>
 
-        <h1
-          id="hero-title"
+        <span
           data-hero-title
-          className="hero-title mt-5 origin-[0%_100%] font-bold leading-[0.86] tracking-[-0.06em] sm:mt-6 sm:text-display sm:leading-[0.88] sm:font-semibold"
+          className="hero-title mt-5 block origin-[0%_100%] font-bold leading-[0.86] tracking-[-0.06em] sm:mt-6 sm:text-display sm:leading-[0.88] sm:font-semibold"
           style={{ '--hero-em': fitEm.toFixed(3) } as CSSProperties}
         >
-          <span className="sr-only">
-            {settings.eventName}: {settings.themeName}
-          </span>
+          <span className="sr-only">: {settings.themeName}</span>
           <span aria-hidden="true">
             {words.map((word, w) => (
               <span key={w}>
@@ -95,18 +95,22 @@ export function Hero({ settings }: { settings: Settings }) {
             <span aria-hidden="true">1</span>
             <span className="sr-only"> (see note 1)</span>
           </a>
+        </span>
         </h1>
 
-        <div data-hero-body>
+        {/* Phones: the buttons come straight after the tagline (CSS order), so the
+            name, theme, date, venue and both actions fit the first screen even
+            at 360x740. The facts have nothing focusable: tab order is unchanged. */}
+        <div data-hero-body className="flex flex-col">
           <p
             data-hero-seq
             style={seq(0)}
-            className="mt-6 max-w-[17rem] text-lg text-balance text-mute sm:max-w-xl sm:text-2xl sm:leading-snug"
+            className="mt-6 max-w-[12.75rem] text-lg text-balance text-mute min-[400px]:max-w-[15rem] sm:max-w-xl sm:text-2xl sm:leading-snug"
           >
             {settings.themeTagline}
           </p>
 
-          <div className="hero-facts relative mt-7 max-w-[15.5rem] sm:mt-12 sm:max-w-[min(54rem,56vw)]">
+          <div className="hero-facts relative mt-7 max-w-[15.5rem] max-sm:order-2 sm:mt-12 sm:max-w-[min(54rem,56vw)]">
             <span aria-hidden="true" className="hero-rule absolute inset-x-0 top-0 h-px origin-left bg-white/15" />
             <dl data-hero-seq style={seq(1)} className="grid grid-cols-1 gap-y-3.5 pt-5 sm:grid-cols-3 sm:gap-6 sm:pt-6">
               <div>
@@ -132,17 +136,17 @@ export function Hero({ settings }: { settings: Settings }) {
             </dl>
           </div>
 
-          <div data-hero-seq style={seq(2)} className="mt-7 flex flex-wrap items-center gap-3 sm:mt-10">
-            <Button href={cta.href} size="lg" aria-label={cta.ariaLabel}>
+          <div data-hero-seq style={seq(2)} className="mt-7 flex flex-wrap items-center gap-3 max-sm:order-1 sm:mt-10">
+            <Button href={cta.href} size="lg" aria-label={cta.ariaLabel} className="max-sm:px-6">
               Tickets
             </Button>
-            <Button href="#speakers" variant="ghost" size="lg">
+            <Button href="#speakers" variant="ghost" size="lg" className="max-sm:bg-black/75 max-sm:px-6">
               Speakers
             </Button>
             <WatchLive url={settings.livestreamUrl} size="lg" className="sm:ml-3" />
           </div>
 
-          <div className="mt-8 flex items-end justify-between gap-8 sm:mt-12">
+          <div className="mt-8 flex items-end justify-between gap-8 max-sm:order-3 sm:mt-12">
             <p id="hero-note" data-hero-seq style={seq(3)} className="fine-print max-w-md">
               <span className="text-accent">1.</span> Terms and conditions apply. They are the whole point.
             </p>

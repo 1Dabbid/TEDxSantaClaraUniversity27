@@ -6,7 +6,7 @@ import { publishedSpeakers, settle } from './helpers';
 test.use({ reducedMotion: 'reduce' });
 
 const speaker = publishedSpeakers()[0]?.slug;
-const routes = ['/', '/partners', ...(speaker ? [`/speakers/${speaker}`] : [])];
+const routes = ['/', '/partners', '/speakers', ...(speaker ? [`/speakers/${speaker}`] : [])];
 
 for (const route of routes) {
   test(`axe: ${route}`, async ({ page }) => {

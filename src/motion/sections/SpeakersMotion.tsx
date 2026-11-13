@@ -47,8 +47,11 @@ function setup({ gsap, root }: MotionKit) {
         scrollTrigger: { trigger: root, start: 'top 90%', end: 'top top', scrub: 0.6 },
       },
     );
+    // Never leave a focused link inside it invisible: Tab can land on the
+    // applications link before (or while) the entrance plays.
+    let showMeta = () => {};
     if (meta) {
-      gsap.from(meta, {
+      const enter = gsap.from(meta, {
         opacity: 0,
         y: 18,
         duration: 1.1,
@@ -56,6 +59,11 @@ function setup({ gsap, root }: MotionKit) {
         ease: 'expo.out',
         scrollTrigger: { trigger: root, start: 'top 45%', once: true },
       });
+      showMeta = () => {
+        enter.scrollTrigger?.kill();
+        enter.progress(1);
+      };
+      meta.addEventListener('focusin', showMeta);
     }
 
     const pad = () => {
@@ -77,6 +85,15 @@ function setup({ gsap, root }: MotionKit) {
       tl.fromTo(head, { y: 0 }, { y: () => lift(), duration: STRIP_IN_END - STRIP_IN, ease: 'power2.inOut' }, STRIP_IN);
     }
     tl.fromTo(strip, { y: 90, opacity: 0 }, { y: 0, opacity: 1, duration: STRIP_IN_END - STRIP_IN, ease: 'power2.out' }, STRIP_IN);
+    // While the strip is invisible its cards must not catch the pointer (the
+    // loupe over empty black, a click on nothing opening a speaker page).
+    // Focus is unaffected: Tab still reaches the cards and scrolls them in.
+    tl.fromTo(
+      strip,
+      { pointerEvents: 'none' },
+      { pointerEvents: 'auto', duration: 0.001, immediateRender: true },
+      STRIP_IN + (STRIP_IN_END - STRIP_IN) * 0.4,
+    );
     tl.fromTo(track, { x: 0 }, { x: () => endX(), duration: TRAVEL_END - TRAVEL_START }, TRAVEL_START);
     tl.to({}, { duration: 0.001 }, 1);
 
@@ -115,6 +132,7 @@ function setup({ gsap, root }: MotionKit) {
     strip.addEventListener('scroll', onScroll);
 
     return () => {
+      meta?.removeEventListener('focusin', showMeta);
       track.removeEventListener('focusin', onFocusIn);
       strip.removeEventListener('scroll', onScroll);
     };
