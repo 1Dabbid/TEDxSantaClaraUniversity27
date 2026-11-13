@@ -74,7 +74,11 @@ test.describe('mobile menu', () => {
       await page.mouse.move(600, 400);
       await page.mouse.wheel(0, 1200);
       await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(200);
-      await page.locator('main a[href]').first().click({ trial: true, timeout: 2_000 });
+      const hit = await page.evaluate(() => {
+        const el = document.elementFromPoint(window.innerWidth / 2, window.innerHeight / 2);
+        return Boolean(el && el.closest('#main, footer') && !el.closest('[inert]'));
+      });
+      expect(hit, 'the page under the pointer takes clicks').toBe(true);
     });
   });
 });

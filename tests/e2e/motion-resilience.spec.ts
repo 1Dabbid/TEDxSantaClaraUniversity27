@@ -8,7 +8,7 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 /** Fails the lazily loaded chunk that carries gsap, whatever its hashed name. Resolves once it has failed. */
-async function failGsapChunk(page: Page): Promise<Promise<string>> {
+async function failGsapChunk(page: Page): Promise<{ failed: Promise<string> }> {
   let failed!: (url: string) => void;
   const done = new Promise<string>((r) => (failed = r));
   await page.route(/\/_next\/static\/chunks\/.*\.js(\?.*)?$/, async (route) => {
@@ -20,7 +20,8 @@ async function failGsapChunk(page: Page): Promise<Promise<string>> {
     }
     return route.fulfill({ response: res, body });
   });
-  return done;
+  // Wrapped: an async function returning a bare promise would wait for it.
+  return { failed: done };
 }
 
 /** Reveal targets and every element a section moment animates, with anything hidden on them. */
@@ -72,7 +73,7 @@ const hiddenMoments = (page: Page) =>
 
 for (const path of ['/', '/partners']) {
   test(`gsap chunk fails to load on ${path}: everything is visible within 1s`, async ({ page }) => {
-    const failed = await failGsapChunk(page);
+    const { failed } = await failGsapChunk(page);
     await page.goto(path, { waitUntil: 'load' });
     await failed;
     // Within 1s of the failure (the CSS failsafe alone would take 3s).
