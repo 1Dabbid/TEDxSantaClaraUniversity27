@@ -3,7 +3,7 @@ import { extname, join } from 'node:path';
 import { ImageResponse } from 'next/og';
 import { getSettings, getSpeakers } from '@/lib/content';
 import { SITE_NAME } from '@/lib/site';
-import { ogFonts } from '../../_og/fonts';
+import { ogFonts } from '../../../_og/fonts';
 
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';

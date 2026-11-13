@@ -47,14 +47,14 @@ Search the codebase for `Fine Print`, `fine print`, `2027`, `04.23`, `Locatelli`
 | `src/components/sections/Hero.tsx` | the footnote marker and note "1. Terms and conditions apply. They are the whole point."; "Scroll to read the fine print". (Venue campus and seat count come from content.) |
 | `src/components/sections/Theme.tsx` | "Read the fine print."; the caption "Fig. 1 The fine print, engraved. Read it closely."; § 1.x clause numbering of the story. |
 | `src/components/sections/Speakers.tsx` | the redacted-dossier voice: `STATUS` ("Clause pending", "Withheld", "Redacted"…), the six `FOOTNOTES` jokes, "§ 2.x" clause numbers, "Names withheld until the…" |
-| `src/app/speakers/[slug]/page.tsx` | unannounced page: "Dossier", "Withheld", redaction bars, "Redacted pursuant to § 2 (Speakers)…" |
+| `src/app/(site)/speakers/[slug]/page.tsx` | unannounced page: "Dossier", "Withheld", redaction bars, "Redacted pursuant to § 2 (Speakers)…" |
 | `src/components/sections/Schedule.tsx`, `Venue.tsx`, `Tickets.tsx`, `Faq.tsx` | clause numbers (§ 3.x, 4.x, 5.x, 7.xx), "TBC" redaction rows. Seat counts and the Tickets ruler follow **Seat capacity**. |
 | `src/components/sections/Team.tsx` | the signature-page voice: "The undersigned.", "…and to read every clause.", "For TEDxSantaClaraUniversity", "Unsigned · name to follow", "NN of NN signed". |
 | `src/components/sections/Newsletter.tsx` | "Don't miss the fine print." |
 | `src/components/Footer.tsx` | "End of document / Signed and dated", "§ A–§ D" headings; the giant date (`04.23.27`) is computed from the event date. Keep the license line and the "What is TEDx?" text. |
 | `src/app/not-found.tsx` | "Error 404 · Clause not found", "Void where prohibited", "This clause does not exist.", "Nothing in the agreement was lost." |
-| `src/app/error.tsx`, `src/app/global-error.tsx` | "Error · Clause unreadable" on the error pages (`global-error.tsx` is self-contained with inline styles because it replaces the whole document). |
-| `src/app/partners/page.tsx` | the description in `generateMetadata` and copy saying this is "the first mainstage" (true only in 2027), "Put your name in the fine print.", "Party of the first part", "The facts on which this agreement rests.", "The first signature is still open", "Signed so far.", ledger/clause numbering. |
+| `src/app/(site)/error.tsx`, `src/app/global-error.tsx` | "Error · Clause unreadable" on the error pages (`global-error.tsx` is self-contained with inline styles because it replaces the whole document). |
+| `src/app/(site)/partners/page.tsx` | the description in `generateMetadata` and copy saying this is "the first mainstage" (true only in 2027), "Put your name in the fine print.", "Party of the first part", "The facts on which this agreement rests.", "The first signature is still open", "Signed so far.", ledger/clause numbering. |
 | `src/motion/MotionRoot.tsx` | the page-transition caption "§ continuing…". |
 | `src/motion/sections/TeamMotion.tsx`, `ThemeMotion.tsx` | animated "NN of NN signed" counter; theme clause counter "1.x(a)". |
 | `src/components/print/Print.tsx`, `src/components/ui/SectionLabel.tsx`, `src/lib/links.ts` (`clause()`) | the reusable "fine print" primitives: clause numbers, TBA marker, redaction bars, crop marks. Keep them if the new design reuses them; otherwise stop using them. |

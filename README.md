@@ -39,12 +39,16 @@ Pages read content only through `src/lib/content.ts` (Keystatic's reader, at bui
 
 ```
 src/
-  app/                  routes: /, /partners, /speakers, /speakers/[slug], /keystatic, /api/keystatic,
-                        sitemap.ts, robots.ts (noindex on Vercel previews), manifest.ts, icons (icon.svg,
+  app/                  layout.tsx: minimal root layout (document, font, metadata) shared by site and admin
+  app/(site)/           the public pages, under the site chrome (components/SiteShell.tsx): /, /partners,
+                        /speakers, /speakers/[slug] (+ its opengraph-image.tsx), error.tsx (page error boundary)
+  app/                  outside the group: /keystatic, /api/keystatic (no site chrome or CSS, so Keystatic's
+                        popovers paint above the form), sitemap.ts, robots.ts (noindex on Vercel previews), manifest.ts, icons (icon.svg,
                         favicon.ico, apple-icon.png; rasters from scripts/generate-icons.mjs),
-                        opengraph-image.tsx and speakers/[slug]/opengraph-image.tsx (built at build time), not-found.tsx,
-                        error.tsx (page error boundary), global-error.tsx (self-contained, root layout failures)
-  components/           Header, Footer, MobileMenu, Logo, SkipLink, ChromeGate (no chrome on /keystatic), nav.ts
+                        opengraph-image.tsx (built at build time), not-found.tsx (renders SiteShell itself: a 404
+                        is outside every route group), global-error.tsx (self-contained, root layout failures)
+  components/           SiteShell (site CSS, header, footer, scene gate, smooth scroll, motion root), Header, Footer,
+                        MobileMenu, Logo, SkipLink, nav.ts
   components/sections/  Hero, Theme, Speakers, Schedule, Venue, Tickets, PartnerBand (not a scene section), Team, Faq, Newsletter
   components/print/     the "fine print" primitives: clause numbers, TBA marker, status register, crop marks, JSON-LD
   lib/                  content.ts (loader), quality.ts (tiers), site.ts (constants), dates.ts (fixed-timezone dates), jsonld.ts, links.ts, tickets.ts, admin.ts (whether /keystatic exists)
@@ -58,11 +62,11 @@ src/
 
 ### Scene contracts (`src/scene/`)
 
-- `scrollState.ts`: a plain mutable singleton (no React renders): `progress` (page 0..1), `sections[id]` for each entry of `SECTION_IDS` (`hero, theme, speakers, schedule, venue, tickets, team, faq, newsletter`; 0 when the section top meets the viewport bottom, 1 when its bottom meets the viewport top), `pointer` (-1..1, y up), `velocity`. `src/motion/SmoothScroll.tsx` is its only writer; sections are found by `[data-section="<id>"]`. The order of sections in `src/app/page.tsx` must match `SECTION_IDS`. Sections follow content state (docs/EDITING.md, "What appears when"): Speakers and Schedule shrink to a short "to be announced" beat, and Team renders nothing until a name is public, so its progress stays 0 and `journey()` skips it.
+- `scrollState.ts`: a plain mutable singleton (no React renders): `progress` (page 0..1), `sections[id]` for each entry of `SECTION_IDS` (`hero, theme, speakers, schedule, venue, tickets, team, faq, newsletter`; 0 when the section top meets the viewport bottom, 1 when its bottom meets the viewport top), `pointer` (-1..1, y up), `velocity`. `src/motion/SmoothScroll.tsx` is its only writer; sections are found by `[data-section="<id>"]`. The order of sections in `src/app/(site)/page.tsx` must match `SECTION_IDS`. Sections follow content state (docs/EDITING.md, "What appears when"): Speakers and Schedule shrink to a short "to be announced" beat, and Team renders nothing until a name is public, so its progress stays 0 and `journey()` skips it.
 - `SceneCanvas.tsx`: the single fixed, full-viewport, `aria-hidden`, `pointer-events: none` canvas. DPR `[1,2]` on high, `[1,1.5]` on low. Never import it statically: `SceneLoader` loads it with `next/dynamic({ ssr: false })` after `load` + idle.
 - `Experience.tsx`: the scene itself (microphone, rug, spotlight, 100 seats, one scroll-driven camera); keeps its default export and `quality` prop. It steps resolution and post-processing down by itself when the frame rate stays low.
 - **Tuning points**: `choreography.ts` is the camera choreography as data (`DESKTOP_SHOTS`, `PORTRAIT_SHOTS`, `AWAY_SHOT`: one shot per point of the scroll journey, where section k spans J = k..k+1). `engraving.ts` is the text laser-etched around the microphone (event name, theme, date, venue, license line, numbered clauses). Both are meant to be edited.
-- `SceneGate` (`src/motion/SceneGate.tsx`, in the root layout) decides whether the scene exists: mounted on `/` when `useSceneEnabled()`; on other routes only if the home page was already shown in this visit (then the canvas is hidden and paused, so going back home is instant). A cold load of `/partners` or a speaker page never downloads three.js.
+- `SceneGate` (`src/motion/SceneGate.tsx`, in `SiteShell`) decides whether the scene exists: mounted on `/` when `useSceneEnabled()`; on other routes only if the home page was already shown in this visit (then the canvas is hidden and paused, so going back home is instant). A cold load of `/partners` or a speaker page never downloads three.js.
 - Readability never depends on the canvas: sections carry their own scrims (`scrim-*`, `hero-scrim`, `theme-scrim`, … in `globals.css`).
 
 ### Still frames (`src/components/SceneStills.tsx`, `public/stills/`)
