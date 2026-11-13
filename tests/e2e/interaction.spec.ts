@@ -1,0 +1,165 @@
+import { expect, test, type Page } from '@playwright/test';
+import { horizontalOverflow, settle, watchProblems } from './helpers';
+
+const canvas = (page: Page) => page.locator('canvas');
+const motionOn = (page: Page) => page.evaluate(() => document.documentElement.classList.contains('motion'));
+const smoothScroll = (page: Page) => page.evaluate(() => document.documentElement.dataset.smoothScroll ?? null);
+
+test.describe('mobile menu', () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test('opens, traps focus, closes on Escape', async ({ page }) => {
+    await page.goto('/');
+    await settle(page, 100);
+    const toggle = page.getByRole('button', { name: 'Open menu' });
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await toggle.click();
+
+    const close = page.getByRole('button', { name: 'Close menu' });
+    await expect(close).toHaveAttribute('aria-expanded', 'true');
+    const panel = page.locator('[data-menu-panel]');
+    await expect(panel).toBeVisible();
+    const links = panel.locator('a[href]');
+    const count = await links.count();
+    expect(count).toBeGreaterThan(2);
+    // Focus starts on the first link.
+    await expect(links.first()).toBeFocused();
+
+    // Tab around the ring (toggle + links) twice: focus never leaves it.
+    const inRing = () =>
+      page.evaluate(() => {
+        const a = document.activeElement;
+        return Boolean(a && (a.closest('[data-menu-panel]') || a.getAttribute('aria-controls')));
+      });
+    for (let i = 0; i < (count + 1) * 2; i++) {
+      await page.keyboard.press('Tab');
+      expect(await inRing(), `focus after ${i + 1} Tab presses`).toBe(true);
+    }
+    for (let i = 0; i < count + 1; i++) {
+      await page.keyboard.press('Shift+Tab');
+      expect(await inRing(), `focus after ${i + 1} Shift+Tab presses`).toBe(true);
+    }
+    // The page behind is inert while the menu is open.
+    expect(await page.locator('#main').evaluate((m) => m.parentElement?.hasAttribute('inert'))).toBe(true);
+
+    await page.keyboard.press('Escape');
+    await expect(panel).toBeHidden();
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await expect(toggle).toBeFocused();
+    expect(await page.locator('#main').evaluate((m) => m.parentElement?.hasAttribute('inert'))).toBe(false);
+  });
+});
+
+test.describe('reduced motion', () => {
+  test.use({ reducedMotion: 'reduce' });
+
+  test('no canvas, nothing hidden for motion, native scroll', async ({ page }) => {
+    await page.goto('/');
+    await settle(page, 800);
+    expect(await motionOn(page)).toBe(false);
+    await expect(canvas(page)).toHaveCount(0);
+    expect(await smoothScroll(page)).toBeNull();
+    // Every reveal target is fully visible as rendered.
+    const hidden = await page.locator('[data-reveal], [data-hero-seq], .hero-word').evaluateAll((els) =>
+      els
+        .filter((el) => {
+          const s = getComputedStyle(el);
+          return s.visibility === 'hidden' || Number(s.opacity) < 0.99;
+        })
+        .map((el) => el.outerHTML.slice(0, 80)),
+    );
+    expect(hidden).toEqual([]);
+    // Native scroll: a scroll lands immediately, no smoothing.
+    await page.evaluate(() => window.scrollTo(0, 900));
+    expect(await page.evaluate(() => Math.round(window.scrollY))).toBe(900);
+  });
+
+  test('FAQ clauses toggle from the keyboard', async ({ page }) => {
+    await page.goto('/');
+    const details = page.locator('#faq details').first();
+    const summary = details.locator('summary');
+    await summary.focus();
+    await expect(details).not.toHaveAttribute('open');
+    await page.keyboard.press('Enter');
+    await expect(details).toHaveAttribute('open', '');
+    await expect(details.locator('.faq-answer')).toBeVisible();
+    await page.keyboard.press('Space');
+    await expect(details).not.toHaveAttribute('open');
+  });
+});
+
+test.describe('motion on', () => {
+  test('default: smooth scroll and motion, no scene on a software GPU', async ({ page }) => {
+    const problems = watchProblems(page);
+    await page.goto('/');
+    await settle(page, 1500);
+    expect(await motionOn(page)).toBe(true);
+    expect(await smoothScroll(page)).toBe('true');
+    // Headless Chromium renders WebGL with SwiftShader: sceneEnabled() keeps three.js away.
+    await expect(canvas(page)).toHaveCount(0);
+    expect(problems.console).toEqual([]);
+  });
+
+  test('?quality=static: no canvas, no motion', async ({ page }) => {
+    await page.goto('/?quality=static');
+    await settle(page, 1500);
+    expect(await motionOn(page)).toBe(false);
+    expect(await smoothScroll(page)).toBeNull();
+    await expect(canvas(page)).toHaveCount(0);
+  });
+
+  test('?quality=low: the canvas mounts without console errors', async ({ page }) => {
+    const problems = watchProblems(page);
+    await page.goto('/?quality=low');
+    await expect(canvas(page)).toHaveCount(1, { timeout: 20_000 });
+    await expect(page.locator('.scene-canvas')).toHaveAttribute('aria-hidden', 'true');
+    // Let it render a few frames on the software rasterizer.
+    await page.waitForTimeout(1500);
+    expect(problems.console).toEqual([]);
+    expect(problems.failed).toEqual([]);
+  });
+});
+
+/**
+ * The click is dispatched with HTMLElement.click(): a Playwright pointer click
+ * would first scroll the (sticky, possibly slid-away) header link into view and
+ * change the very position under test.
+ */
+for (const reducedMotion of ['no-preference', 'reduce'] as const) {
+  test(`page transition / -> /partners -> back restores scroll (${reducedMotion === 'reduce' ? 'reduced motion' : 'motion on'})`, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion });
+    await page.goto('/');
+    await settle(page, 300);
+    const target = 1800;
+    await page.evaluate((y) => window.scrollTo(0, y), target);
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY))).toBe(target);
+    await page.waitForTimeout(300);
+
+    await page.evaluate(() => document.querySelector<HTMLAnchorElement>('header a[href="/partners"]')?.click());
+    await page.waitForURL('**/partners');
+    await expect(page.locator('h1')).toContainText(/./);
+    await expect.poll(() => page.evaluate(() => Math.round(window.scrollY)), { timeout: 5_000 }).toBeLessThan(5);
+    await page.waitForTimeout(800);
+
+    await page.goBack();
+    await page.waitForURL((u) => u.pathname === '/');
+    await expect
+      .poll(() => page.evaluate(() => Math.round(window.scrollY)), { timeout: 5_000 })
+      .toBeGreaterThan(target - 40);
+    expect(await page.evaluate(() => Math.round(window.scrollY))).toBeLessThan(target + 40);
+  });
+}
+
+test.describe('no horizontal overflow', () => {
+  for (const width of [320, 390, 768, 1440]) {
+    for (const route of ['/', '/partners']) {
+      test(`${route} at ${width}px`, async ({ page }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await page.goto(route);
+        await settle(page, 600);
+        expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+        expect(await horizontalOverflow(page)).toEqual([]);
+      });
+    }
+  }
+});
