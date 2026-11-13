@@ -38,8 +38,11 @@ export function Newsletter({ settings }: { settings: Settings }) {
         <div data-reveal="fade">
           <SectionLabel>Stay informed</SectionLabel>
         </div>
-        <SectionTitle id="newsletter" className="max-w-[14ch] text-[clamp(3rem,10vw,9.5rem)]! leading-[0.9]!">
-          <span data-reveal="lines" className="block">
+        {/* A fade, not a line split: the heading holds the note link, and a split is
+            reverted by replacing its markup, which would drop keyboard focus from the
+            link if it lands there mid-reveal. */}
+        <SectionTitle id="newsletter" reveal={false} className="max-w-[14ch] text-[clamp(3rem,10vw,9.5rem)]! leading-[0.9]!">
+          <span data-reveal="fade" className="block">
             Don’t miss the fine print.
             <a
               href="#newsletter-note"
