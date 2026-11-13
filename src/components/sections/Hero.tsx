@@ -99,12 +99,12 @@ export function Hero({ settings }: { settings: Settings }) {
           <p
             data-hero-seq
             style={seq(0)}
-            className="mt-6 max-w-xl text-lg text-balance text-mute sm:text-2xl sm:leading-snug"
+            className="mt-6 max-w-[17rem] text-lg text-balance text-mute sm:max-w-xl sm:text-2xl sm:leading-snug"
           >
             {settings.themeTagline}
           </p>
 
-          <div className="hero-facts relative mt-7 max-w-[15.5rem] sm:mt-12 sm:max-w-[min(56rem,60vw)]">
+          <div className="hero-facts relative mt-7 max-w-[15.5rem] sm:mt-12 sm:max-w-[min(54rem,56vw)]">
             <span aria-hidden="true" className="hero-rule absolute inset-x-0 top-0 h-px origin-left bg-white/15" />
             <dl data-hero-seq style={seq(1)} className="grid grid-cols-1 gap-y-3.5 pt-5 sm:grid-cols-3 sm:gap-6 sm:pt-6">
               <div>

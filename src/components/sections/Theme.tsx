@@ -130,7 +130,7 @@ export function Theme({ settings }: { settings: Settings }) {
               </li>
             </ol>
             <p data-theme-foot className="fine-print mt-2 text-[0.5625rem] tracking-[0.18em]">
-              <span className="text-accent">*</span> Read in full before proceeding. The details are binding.
+              <span className="text-[#ff4d63]">*</span> Read in full before proceeding. The details are binding.
             </p>
           </div>
         </div>

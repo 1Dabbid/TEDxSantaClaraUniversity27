@@ -10,8 +10,8 @@ const STAGE = '(min-width: 1024px) and (min-height: 44rem)';
    at about 0.46 of the runway (section progress 0.5), so the strip only rises
    once the stage moment has had its hold. */
 const STRIP_IN = 0.42;
-const STRIP_IN_END = 0.52;
-const TRAVEL_START = 0.46;
+const STRIP_IN_END = 0.5;
+const TRAVEL_START = 0.5;
 const TRAVEL_END = 0.96;
 
 /**
@@ -90,7 +90,7 @@ function setup({ gsap, root }: MotionKit) {
       let x = Math.min(Math.max(curX, maxLeft - natural), minLeft - natural);
       x = Math.min(0, Math.max(ex, x));
       let t = ex === 0 ? TRAVEL_START : TRAVEL_START + (x / ex) * (TRAVEL_END - TRAVEL_START);
-      t = Math.max(t, STRIP_IN_END + 0.005);
+      t = Math.max(t, STRIP_IN_END);
       if (Math.abs(t - tl.progress()) < 0.002) return;
       const y = st.start + t * (st.end - st.start);
       const lenis = lenisRef.current;

@@ -34,7 +34,7 @@ export function Schedule({ schedule, settings }: { schedule: ScheduleData; setti
           {settings.endTime ? <> · Ends {settings.endTime}</> : null}
         </p>
 
-        <div className="relative mt-16 lg:mt-20 lg:max-w-[36rem]" data-timeline>
+        <div className="relative mt-16 lg:mt-20 lg:max-w-[32rem]" data-timeline>
           {/* The hairline: drawn top to bottom by scroll. */}
           <span
             aria-hidden="true"

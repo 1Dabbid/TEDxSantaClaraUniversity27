@@ -299,9 +299,9 @@ html:not(.motion) .reading-progress {
 .hero-scrim {
   background: linear-gradient(
     to right,
-    rgb(0 0 0 / 0.84),
-    rgb(0 0 0 / 0.66) 38%,
-    rgb(0 0 0 / 0.22) 60%,
+    rgb(0 0 0 / 0.86),
+    rgb(0 0 0 / 0.76) 44%,
+    rgb(0 0 0 / 0.34) 60%,
     rgb(0 0 0 / 0) 72%
   );
 }
@@ -309,7 +309,7 @@ html:not(.motion) .reading-progress {
   .hero-scrim {
     background:
       linear-gradient(to bottom, rgb(0 0 0 / 0.5), rgb(0 0 0 / 0) 40%),
-      linear-gradient(to right, rgb(0 0 0 / 0.86), rgb(0 0 0 / 0.74) 52%, rgb(0 0 0 / 0.24) 76%, rgb(0 0 0 / 0) 90%);
+      linear-gradient(to right, rgb(0 0 0 / 0.88), rgb(0 0 0 / 0.8) 58%, rgb(0 0 0 / 0.3) 80%, rgb(0 0 0 / 0) 92%);
   }
 }
 .scroll-cue-line {
@@ -481,7 +481,7 @@ html:not(.motion) .reading-progress {
 /* Readability behind the theme text. Not pinned (phones, short viewports) the
    text runs the full width, so a moderate wash with a darker head and foot. */
 .theme-scrim {
-  background: linear-gradient(to bottom, rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.66) 40%, rgb(0 0 0 / 0.72) 75%, rgb(0 0 0 / 0.86));
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.86), rgb(0 0 0 / 0.76) 40%, rgb(0 0 0 / 0.8) 75%, rgb(0 0 0 / 0.88));
 }
 .theme-scrim-stack {
   opacity: 0;
@@ -550,14 +550,35 @@ html:not(.motion) .reading-progress {
      where the engraving is brightest, stays open. */
   html.motion .theme-scrim {
     background:
-      radial-gradient(ellipse 62% 36% at 26% 90%, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.8) 55%, rgb(0 0 0 / 0) 100%),
-      radial-gradient(ellipse 22% 14% at 90% 14%, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0) 100%),
+      radial-gradient(ellipse 72% 44% at 28% 88%, rgb(0 0 0 / 0.94), rgb(0 0 0 / 0.86) 60%, rgb(0 0 0 / 0) 100%),
       linear-gradient(to right, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.5) 32%, rgb(0 0 0 / 0.16) 50%, rgb(0 0 0 / 0) 57%);
   }
   /* Settles in behind the growing phrases (ThemeMotion), so the big type never
      competes with the engraved letters behind it. Left/centre only. */
   html.motion .theme-scrim-stack {
-    background: radial-gradient(ellipse 46% 42% at 28% 47%, rgb(0 0 0 / 0.6), rgb(0 0 0 / 0) 100%);
+    background: radial-gradient(ellipse 46% 42% at 28% 47%, rgb(0 0 0 / 0.66), rgb(0 0 0 / 0) 100%);
+  }
+  /* The clause counter sits top right, over the engraving: its own small scrim. */
+  html.motion .theme-counter {
+    position: relative;
+    isolation: isolate;
+  }
+  html.motion .theme-counter::before {
+    content: '';
+    position: absolute;
+    inset: -1.5rem -2rem;
+    z-index: -1;
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.85), rgb(0 0 0 / 0.65) 60%, rgb(0 0 0 / 0));
+  }
+  /* Portrait tablets: the push-in frames the engraving across the whole width,
+     so the phrases take the full width over a stronger, wider scrim. */
+  @media (max-aspect-ratio: 9/10) {
+    html.motion .theme-stack {
+      right: clamp(1.25rem, 4vw, 3.5rem);
+    }
+    html.motion .theme-scrim-stack {
+      background: radial-gradient(ellipse 85% 34% at 45% 47%, rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.6) 60%, rgb(0 0 0 / 0));
+    }
   }
   /* While the heading is up, the camera is still pushing in past the bright
      grille: a local scrim behind the heading only (it leaves with it). */
@@ -633,6 +654,13 @@ html:not(.motion) .reading-progress {
 .speaker-card a:focus-visible {
   outline: none;
 }
+/* Phones: the spotlight cone fills most of the portrait frame and is brighter
+   than anything behind the desktop strip, so the glass is a little denser. */
+@media (max-width: 639.98px) {
+  html.motion .speaker-card {
+    background-image: linear-gradient(to bottom, rgb(0 0 0 / 0.74), rgb(0 0 0 / 0.7));
+  }
+}
 @media (hover: hover) and (pointer: fine) {
   html.motion .speaker-card:hover,
   html.motion .speaker-card:focus-within {
@@ -675,6 +703,19 @@ html:not(.motion) .reading-progress {
   }
   html.motion .speakers-head-inner {
     padding-top: calc(var(--header-h) + 2.5rem);
+  }
+  /* On shorter screens the rug rises toward the caption: a local scrim behind it. */
+  html.motion .speakers-meta {
+    position: relative;
+    isolation: isolate;
+  }
+  html.motion .speakers-meta::before {
+    content: '';
+    position: absolute;
+    inset: -2rem -4rem -2rem -3rem;
+    z-index: -1;
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.66) 65%, rgb(0 0 0 / 0));
+    pointer-events: none;
   }
   html.motion .speakers-strip {
     position: absolute;
@@ -726,11 +767,12 @@ html:not(.motion) .reading-progress {
     padding-bottom: 2.5rem;
     background: linear-gradient(
       to bottom,
-      rgb(0 0 0 / 0.78),
-      rgb(0 0 0 / 0.5) 30%,
+      rgb(0 0 0 / 0.88),
+      rgb(0 0 0 / 0.66) 30%,
       rgb(0 0 0 / 0) 46%,
-      rgb(0 0 0 / 0) 62%,
-      rgb(0 0 0 / 0.7) 84%
+      rgb(0 0 0 / 0) 60%,
+      rgb(0 0 0 / 0.8) 80%,
+      rgb(0 0 0 / 0.86)
     );
   }
   html.motion .speakers-meta {
@@ -745,16 +787,18 @@ html:not(.motion) .reading-progress {
 /* The orbiting rug carries the frame: the timeline is a column on the left with
    a scrim behind that column only; phones get a light wash. */
 .schedule-scrim {
-  background: linear-gradient(to bottom, rgb(0 0 0 / 0.72), rgb(0 0 0 / 0.6) 50%, rgb(0 0 0 / 0.72));
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.84), rgb(0 0 0 / 0.78) 50%, rgb(0 0 0 / 0.84));
 }
 @media (min-width: 1024px) {
   .schedule-scrim {
+    /* Right edge of the 32rem timeline column, in px from the viewport left. */
+    --col-end: calc(max(0px, (100vw - 88rem) / 2) + clamp(1.25rem, 4vw, 3.5rem) + 32rem);
     background: linear-gradient(
       to right,
       rgb(0 0 0 / 0.88),
-      rgb(0 0 0 / 0.8) 40%,
-      rgb(0 0 0 / 0.4) 52%,
-      rgb(0 0 0 / 0) 64%
+      rgb(0 0 0 / 0.82) calc(var(--col-end) + 1rem),
+      rgb(0 0 0 / 0.35) calc(var(--col-end) + 7rem),
+      rgb(0 0 0 / 0) calc(var(--col-end) + 15rem)
     );
   }
 }

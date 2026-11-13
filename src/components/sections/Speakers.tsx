@@ -85,7 +85,7 @@ function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
       >
         <div className="flex items-baseline justify-between gap-4">
           <span className="fine-print text-white">{clause.replace(' ', '\u00a0')}</span>
-          <span className="fine-print text-right text-mute">{STATUS[index % STATUS.length]}</span>
+          <span className="fine-print text-right text-[#d0d0d0]">{STATUS[index % STATUS.length]}</span>
         </div>
 
         <div aria-hidden="true" className="speaker-body mt-6 sm:mt-auto">
@@ -119,7 +119,7 @@ function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
               <span className="sr-only">, speaker {index + 1}</span>
             </Link>
           </h3>
-          <p className="mt-2 font-mono text-[0.5625rem] leading-[1.6] tracking-[0.04em] text-mute">
+          <p className="mt-2 font-mono text-[0.5625rem] leading-[1.6] tracking-[0.04em] text-[#d0d0d0]">
             {FOOTNOTES[index % FOOTNOTES.length]}
           </p>
         </div>
@@ -147,9 +147,9 @@ function SpeakerCard({ speaker, index }: { speaker: Speaker; index: number }) {
             {speaker.name}
           </Link>
         </h3>
-        {speaker.role ? <p className="mt-1 text-sm text-mute">{speaker.role}</p> : null}
+        {speaker.role ? <p className="mt-1 text-sm text-[#d0d0d0]">{speaker.role}</p> : null}
         {speaker.talkTitle ? <p className="mt-4 text-white">“{speaker.talkTitle}”</p> : null}
-        <p className="mt-5 border-t border-white/10 pt-4 font-mono text-[0.5625rem] tracking-[0.04em] text-mute">
+        <p className="mt-5 border-t border-white/10 pt-4 font-mono text-[0.5625rem] tracking-[0.04em] text-[#d0d0d0]">
           {clause}. Read the full clause on the speaker page.
         </p>
       </div>
