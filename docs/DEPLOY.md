@@ -38,7 +38,7 @@ The repo's default branch is currently `claude/keen-tesla-m8scyh`. Vercel uses t
 
 ## c. The canonical URL
 
-There is **no environment variable** for it: the code does not read `NEXT_PUBLIC_SITE_URL` or similar. The canonical address is the constant `SITE_URL = 'https://fineprint.tedxscu.com'` in `src/lib/site.ts`, used for canonical links, Open Graph and share previews (`metadataBase`), `robots.txt`, `sitemap.xml` and the structured data. If the domain ever changes, edit that one line (and update the Keystatic GitHub App's callback URL, step d.8).
+The canonical address is used for canonical links, Open Graph and share previews (`metadataBase`), `robots.txt`, `sitemap.xml` and the structured data. It is the environment variable **`SITE_URL`** when set at build time (Vercel > Project > **Settings > Environment Variables** > `SITE_URL` = `https://<subdomain>.tedxscu.com`, Production, then redeploy), otherwise the default `DEFAULT_SITE_URL = 'https://fineprint.tedxscu.com'` in `src/lib/site.ts`. Write a plain `https://` origin with no path or trailing slash; anything else falls back to the default. If the domain ever changes, set or change `SITE_URL` (and update the Keystatic GitHub App's callback URL, step d.8).
 
 ### Search engines and preview URLs
 

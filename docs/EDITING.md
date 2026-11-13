@@ -156,6 +156,14 @@ TED requires every TEDx site to show its standard "About TEDx" text (it explains
 
 Only the Director of Compliance (or the licence holder) should change these. The FAQ answer "What is TEDx?" points visitors to these footer texts instead of repeating them; keep it that way.
 
+### Change the theme's headings and short lines (Theme copy)
+
+**The event > Theme copy (headings and short lines)** holds the short lines that belong to this year's theme rather than to the facts: the footnote and scroll hint on the first screen, the Theme section heading and its footnote, the caption of the engraved microphone, the "to be announced" lines for Speakers and Schedule, the closing mailing-list heading, the partner invitation on the home page, the Partners page heading, introduction, description and first card, the 404 page, the footer sign-off and the word shown while a page changes. Each field says where it appears.
+
+- Every field starts with this year's wording. Leave a field **blank** to go back to that wording, except the two footnotes and the Partners page's first card, which a blank **hides**.
+- In the partner texts you can write `{eventName}`, `{capacity}`, `{date}`, `{venue}` and `{campus}`, as in FAQ answers.
+- Write the name as **TEDxSantaClaraUniversity** (or `{eventName}`), never shortened. Keep lines short: they are headings and captions, not paragraphs.
+
 ### Change the number of seats
 
 **The event > Event basics > Seat capacity (a whole number from 1 to 100)** (100 by default; it cannot be left empty). TEDx rules cap a standard licence at **100 attendees**, so the admin will not accept more than 100; lower it only if the room is smaller. This one number drives every seat count on the site: the hero, Venue, the Tickets ruler and counter (one tick per seat), the Partners page, the share image and search descriptions. In FAQ answers, write `{capacity}` where the number belongs (e.g. "Attendance is limited to {capacity} people") and the site fills it in. (The 3D room behind the page always shows 100 seats; that is decoration and does not change.)

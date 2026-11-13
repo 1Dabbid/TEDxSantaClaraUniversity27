@@ -135,7 +135,7 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
           <div className="speakers-head-inner shell">
             <SectionLabel index={2}>Speakers</SectionLabel>
             <div data-speakers-title className="origin-[0%_100%]">
-              <SectionTitle id="speakers">{any ? 'Meet the speakers.' : 'Speakers to be announced.'}</SectionTitle>
+              <SectionTitle id="speakers">{any ? 'Meet the speakers.' : settings.copy.speakersEmptyHeading}</SectionTitle>
             </div>
             <div data-speakers-meta className="speakers-meta mt-6 flex flex-col items-start gap-y-3 sm:mt-8">
               <p className="max-w-[34rem] text-lg text-mute">

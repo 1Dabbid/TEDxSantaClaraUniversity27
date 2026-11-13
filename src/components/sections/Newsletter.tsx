@@ -40,7 +40,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
         </div>
         <SectionTitle id="newsletter" className="max-w-[14ch] text-[clamp(3rem,10vw,9.5rem)]! leading-[0.9]!">
           <span data-reveal="lines" className="block">
-            Don’t miss the fine print.
+            {settings.copy.newsletterHeading}
             <a
               href="#newsletter-note"
               className="relative ml-[0.08em] align-super font-mono text-[0.22em] font-normal tracking-normal text-accent no-underline after:absolute after:-inset-3 after:content-[''] hover:text-white"

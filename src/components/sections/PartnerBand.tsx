@@ -1,6 +1,5 @@
 import type { Settings } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
-import { seatsLabel } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { Arrow } from '@/components/print/Print';
@@ -30,12 +29,10 @@ export function PartnerBand({ settings }: { settings: Settings }) {
               data-reveal="lines"
               className="mt-6 text-title font-semibold tracking-tight text-balance"
             >
-              Help make the first one happen.
+              {settings.copy.partnerBandHeading}
             </h2>
             <p data-reveal="fade" className="mt-5 max-w-xl text-lg text-mute">
-              {settings.eventName} is student-run and this is its first mainstage event: one evening,{' '}
-              {seatsLabel(settings.capacity)}, talks recorded and submitted for publication on the TEDx Talks YouTube
-              channel. We are inviting a small number of partners to support it.
+              {settings.copy.partnerBandBody}
             </p>
           </div>
           <div className="flex flex-col items-start gap-4 md:col-span-5 md:items-end">

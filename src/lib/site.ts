@@ -1,6 +1,26 @@
 import type { Settings } from './content';
 
-export const SITE_URL = 'https://fineprint.tedxscu.com';
+/** This edition's address, used when the SITE_URL environment variable is not set. */
+export const DEFAULT_SITE_URL = 'https://fineprint.tedxscu.com';
+
+/**
+ * The canonical origin (canonical links, share previews, robots.txt, sitemap,
+ * structured data). Set SITE_URL at build time (Vercel > Settings > Environment
+ * Variables, e.g. `https://seconddraft.tedxscu.com`) to change it without editing
+ * code; anything that is not a plain https:// origin falls back to DEFAULT_SITE_URL.
+ */
+export function siteUrlFrom(value: string | undefined): string {
+  const v = (value ?? '').trim().replace(/\/+$/, '');
+  try {
+    const u = new URL(v);
+    if (u.protocol === 'https:' && u.origin === v) return v;
+  } catch {
+    // not a URL: use the default
+  }
+  return DEFAULT_SITE_URL;
+}
+
+export const SITE_URL = siteUrlFrom(process.env.SITE_URL);
 /**
  * The licensed event name, exactly as TED issued it. It is a constant, not
  * content: TEDx rules require the full name, never shortened or restyled, and it
@@ -75,6 +95,22 @@ export function venueLine(s: Place): string {
 /** "100 seats" */
 export function seatsLabel(capacity: number): string {
   return `${capacity} ${capacity === 1 ? 'seat' : 'seats'}`;
+}
+
+/**
+ * The fact lines engraved on the 3D microphone, built from content in the same
+ * capitals as src/scene/engraving.ts (THEME, DATE_LINE, VENUE_LINE, SEATS_LINE):
+ * "FINE PRINT", "FRIDAY · APRIL 23 · 2027", "LOCATELLI STUDENT ACTIVITY CENTER",
+ * "100 SEATS". Not used by the scene yet: see docs/NEXT-YEAR.md ("3D engraving").
+ */
+export function engravingLines(s: Pick<Settings, 'themeName' | 'dateLong' | 'venueName' | 'capacity'>) {
+  const upper = (t: string) => t.toLocaleUpperCase('en-US');
+  return {
+    theme: upper(s.themeName),
+    dateLine: upper(s.dateLong.split(/,\s*/).join(' · ')),
+    venueLine: upper(s.venueName),
+    seatsLine: upper(seatsLabel(s.capacity)),
+  };
 }
 
 /**

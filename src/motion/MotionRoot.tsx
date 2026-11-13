@@ -52,7 +52,8 @@ if (typeof window !== 'undefined' && document.documentElement.classList.contains
 
 const useIsoLayoutEffect = typeof window === 'undefined' ? useEffect : useLayoutEffect;
 
-export default function MotionRoot() {
+/** `caption`: the curtain's word between "§" and "…" (Theme copy, passed in by SiteShell). */
+export default function MotionRoot({ caption = 'continuing' }: { caption?: string }) {
   const quality = useQuality();
   const pathname = usePathname();
   const router = useRouter();
@@ -124,7 +125,7 @@ export default function MotionRoot() {
       <div ref={curtainRef} className="curtain" aria-hidden="true" inert>
         <div className="shell flex h-full flex-col justify-end pb-[max(2.5rem,env(safe-area-inset-bottom))] sm:pb-14">
           <p data-curtain-caption className="fine-print text-mute">
-            <span className="text-white">§</span>&nbsp;continuing<span className="text-accent">…</span>
+            <span className="text-white">§</span>&nbsp;{caption}<span className="text-accent">…</span>
           </p>
           <span aria-hidden="true" className="curtain-rule mt-4 block h-px w-full max-w-md bg-accent" />
         </div>

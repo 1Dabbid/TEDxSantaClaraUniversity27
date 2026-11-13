@@ -9,12 +9,14 @@ import {
   isValidSlug,
   normalizeLink,
   requiredText,
+  resolveThemeCopy,
   SLUG_MESSAGE,
   TIME_PATTERN,
 } from './content-checks';
 import { checkImage } from './content-images';
 import { formatCalendarDate } from './dates';
 import { EMAIL_PATTERN, SITE_NAME, TED_LANGUAGE_DEFAULTS, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './site';
+import type { ThemeCopy } from './theme-copy';
 
 /**
  * Typed content loader. Components never import Keystatic directly; they get
@@ -318,6 +320,8 @@ export type Settings = {
   socials: Socials;
   accentColor: string;
   sections: SectionVisibility;
+  /** Theme copy (The event > Theme copy): short theme-specific lines, defaults in src/lib/theme-copy.ts. */
+  copy: ThemeCopy;
 };
 
 export type Speaker = {
@@ -414,12 +418,13 @@ function coordinates(lat: string, lng: string, note: string) {
 }
 
 export const getSettings = cache(async (): Promise<Settings> => {
-  const [s, venue, tickets, contact, sections] = await Promise.all([
+  const [s, venue, tickets, contact, sections, themeCopy] = await Promise.all([
     readSingleton('settings'),
     readSingleton('venue'),
     readSingleton('tickets'),
     readSingleton('contact'),
     readSingleton('sections'),
+    readSingleton('themeCopy'),
   ]);
   if (!s) throw new Error('content/settings.yaml is missing (Event basics in the admin). Restore it from the GitHub history.');
   const rawDate = str(s.dateISO);
@@ -473,6 +478,15 @@ export const getSettings = cache(async (): Promise<Settings> => {
     venueCoordinates: coordinates(str(venue?.latitude), str(venue?.longitude), str(venue?.coordinatesNote)),
     mapUrl: link(venue?.mapUrl, 'content/venue.yaml', 'Map link'),
     venueNotes,
+
+    // Theme copy (content/theme-copy.yaml); blank lines get the defaults in src/lib/theme-copy.ts.
+    copy: resolveThemeCopy(themeCopy, {
+      capacity: String(capacityOf(s.capacity)),
+      date: formatCalendarDate(dateISO, 'long'),
+      venue: venueName,
+      campus: venueCampus || venueName,
+      eventName: SITE_NAME,
+    }),
 
     ticketState: tickets?.ticketState ?? 'coming-soon',
     ticketUrl: link(tickets?.ticketUrl, T, 'Ticket link'),

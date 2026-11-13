@@ -66,7 +66,7 @@ export default async function SpeakersPage() {
           data-reveal="lines"
           className="mt-6 text-[clamp(3.25rem,9.6vw,8.75rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance"
         >
-          {anyAnnounced ? 'Speakers' : 'Speakers to be announced.'}
+          {anyAnnounced ? 'Speakers' : settings.copy.speakersEmptyHeading}
         </h1>
         {anyAnnounced ? (
           <ul aria-label="Speakers" className="mt-14 grid grid-cols-1 gap-3 sm:mt-16 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3">

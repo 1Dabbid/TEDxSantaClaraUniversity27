@@ -15,6 +15,13 @@
  * Image checks, which read files, are in content-images.ts.
  */
 
+import {
+  THEME_COPY_DEFAULTS,
+  THEME_COPY_OPTIONAL_FIELDS,
+  THEME_COPY_PLACEHOLDER_FIELDS,
+  type ThemeCopy,
+} from './theme-copy';
+
 // ---------------------------------------------------------------------------
 // Warnings
 // ---------------------------------------------------------------------------
@@ -159,6 +166,45 @@ export function fillPlaceholders(text: string, values: Record<FaqPlaceholder, st
     return whole;
   });
   return { text: out, unknown };
+}
+
+// ---------------------------------------------------------------------------
+// Theme copy
+// ---------------------------------------------------------------------------
+
+/**
+ * Theme copy (content/theme-copy.yaml) with the built-in defaults filled in. A
+ * blank or missing line falls back to THEME_COPY_DEFAULTS, except the optional
+ * ones (the footnotes, the partners edition card), which an editor may blank on
+ * purpose to hide them (a blank value in an existing file; a missing file still
+ * gets every default). Placeholders are filled like FAQ answers; an unknown one
+ * is shown as typed, with a warning.
+ */
+export function resolveThemeCopy(
+  raw: Partial<Record<keyof ThemeCopy, string | null | undefined>> | null | undefined,
+  values: Record<FaqPlaceholder, string>,
+): ThemeCopy {
+  const optional = new Set<string>(THEME_COPY_OPTIONAL_FIELDS);
+  const placeholders = new Set<string>(THEME_COPY_PLACEHOLDER_FIELDS);
+  const out = {} as ThemeCopy;
+  for (const key of Object.keys(THEME_COPY_DEFAULTS) as (keyof ThemeCopy)[]) {
+    const value = raw?.[key];
+    let text = (value ?? '').trim();
+    if (!text && !(optional.has(key) && raw && typeof value === 'string')) text = THEME_COPY_DEFAULTS[key];
+    if (placeholders.has(key)) {
+      const r = fillPlaceholders(text, values);
+      for (const u of r.unknown) {
+        contentWarning(
+          'content/theme-copy.yaml',
+          key,
+          `${u} is not a known placeholder (use {capacity}, {date}, {venue}, {campus} or {eventName}); it is shown as typed.`,
+        );
+      }
+      text = r.text;
+    }
+    out[key] = text;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
