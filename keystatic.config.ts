@@ -250,6 +250,12 @@ export default config({
           label: 'Show the speaker applications band (under Tickets)',
           defaultValue: true,
         }),
+        showYearRound: fields.checkbox({
+          label: 'Show the “All year, not one night” card on the Partners page',
+          description:
+            'Only turn on if TED has confirmed the club’s year-round events may use the TEDx name. The licence covers the mainstage event; general-meeting events are not automatically TEDx events.',
+          defaultValue: false,
+        }),
       },
     }),
 

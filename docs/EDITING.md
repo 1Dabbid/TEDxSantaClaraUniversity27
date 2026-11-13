@@ -79,6 +79,10 @@ Tiers and benefits first, then the partner:
 
 The whole section can be hidden in **Contact & site > Show / hide sections > Show the Team section on the home page**.
 
+### The "All year, not one night" card (Partners page)
+
+**Contact & site > Show / hide sections > Show the “All year, not one night” card on the Partners page** is off by default. Only turn it on if TED has confirmed the club's year-round events may use the TEDx name: the licence covers the mainstage event, and general-meeting events are not automatically TEDx events.
+
 ### Edit the FAQ
 
 1. **The event > FAQ > Questions**: each item has a **Question** and an **Answer** (plain text, line breaks are kept). Write `{capacity}` for the seat count so it always matches **Seat capacity**.

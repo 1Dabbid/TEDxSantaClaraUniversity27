@@ -56,7 +56,8 @@ function LoopMark() {
   );
 }
 
-const reasons = (capacity: number): { figure: ReactNode; title: string; body: string }[] => [
+/** The year-round card only shows when Show / hide sections > showYearRound is ticked (default off). */
+const reasons = (capacity: number, showYearRound: boolean): { figure: ReactNode; title: string; body: string }[] => [
   {
     figure: '1st',
     title: 'The first mainstage.',
@@ -72,11 +73,15 @@ const reasons = (capacity: number): { figure: ReactNode; title: string; body: st
     title: 'Talks that travel.',
     body: 'Talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
   },
-  {
-    figure: <LoopMark />,
-    title: 'All year, not one night.',
-    body: 'Beyond the mainstage, TEDxSantaClaraUniversity runs general-meeting events throughout the year.',
-  },
+  ...(showYearRound
+    ? [
+        {
+          figure: <LoopMark />,
+          title: 'All year, not one night.',
+          body: 'Beyond the mainstage, TEDxSantaClaraUniversity runs general-meeting events throughout the year.',
+        },
+      ]
+    : []),
 ];
 
 const RULES = [
@@ -376,7 +381,9 @@ export default async function PartnersPage() {
       : cta.href;
   const lastLetter = String.fromCharCode(64 + Math.max(tiers.length, 1));
   const anyTerms = tiers.some((t) => t.amount || t.slots);
-  const REASONS = reasons(settings.capacity);
+  const REASONS = reasons(settings.capacity, settings.sections.showYearRound);
+  // Four facts: 2 x 2 then a row of four. Three (year-round card off): one row of three from md up.
+  const four = REASONS.length === 4;
 
   return (
     <div id="prospectus" className="relative isolate">
@@ -441,13 +448,22 @@ export default async function PartnersPage() {
           Recitals.
           <span className="text-mute"> The facts on which this agreement rests.</span>
         </h2>
-        <ol data-reveal="stagger" className="mt-14 grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-4">
+        <ol
+          data-reveal="stagger"
+          className={`mt-14 grid border-t border-white/15 ${four ? 'sm:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}
+        >
           {REASONS.map((r, i) => (
             <li
               key={r.title}
-              className={`grid grid-cols-[5.25rem_minmax(0,1fr)] content-start gap-x-4 border-b border-white/15 py-8 sm:flex sm:flex-col sm:py-10 lg:border-b-0 ${
-                i % 2 === 1 ? 'sm:border-l sm:pl-8' : 'sm:pr-8'
-              } ${i > 0 ? 'lg:border-l lg:pl-8' : ''} ${i < REASONS.length - 1 ? 'lg:pr-8' : 'lg:pr-0'}`}
+              className={`grid grid-cols-[5.25rem_minmax(0,1fr)] content-start gap-x-4 border-b border-white/15 py-8 ${
+                four
+                  ? `sm:flex sm:flex-col sm:py-10 lg:border-b-0 ${i % 2 === 1 ? 'sm:border-l sm:pl-8' : 'sm:pr-8'} ${
+                      i > 0 ? 'lg:border-l lg:pl-8' : ''
+                    } ${i < REASONS.length - 1 ? 'lg:pr-8' : 'lg:pr-0'}`
+                  : `md:flex md:flex-col md:border-b-0 md:py-10 ${i > 0 ? 'md:border-l md:pl-8' : ''} ${
+                      i < REASONS.length - 1 ? 'md:pr-8' : 'md:pr-0'
+                    }`
+              }`}
             >
               <span className="fine-print col-span-2 text-mute">Whereas ({String.fromCharCode(97 + i)})</span>
               <span

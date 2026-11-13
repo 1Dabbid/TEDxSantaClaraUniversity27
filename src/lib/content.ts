@@ -43,6 +43,8 @@ export type SectionVisibility = {
   showTeam: boolean;
   showFaq: boolean;
   showSpeakerApplications: boolean;
+  /** Partners page "All year, not one night" card. Off unless TED confirmed year-round use of the name. */
+  showYearRound: boolean;
 };
 
 export type Settings = {
@@ -245,6 +247,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
       showTeam: sections?.showTeam ?? true,
       showFaq: sections?.showFaq ?? true,
       showSpeakerApplications: sections?.showSpeakerApplications ?? true,
+      showYearRound: sections?.showYearRound ?? false,
     },
   };
 });
