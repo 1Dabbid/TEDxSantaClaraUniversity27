@@ -88,3 +88,12 @@ test.describe('the admin is switched off in a production build without GitHub mo
     expect(update.status()).toBe(404);
   });
 });
+
+test('speaker share images exist only for known speakers', async ({ request }) => {
+  const [first] = publishedSpeakers();
+  const real = await request.get(`/speakers/${first.slug}/opengraph-image`);
+  expect(real.status()).toBe(200);
+  expect(real.headers()['content-type']).toContain('image/png');
+  // Unknown slugs are not generated on demand (dynamicParams = false).
+  expect((await request.get('/speakers/random-slug/opengraph-image')).status()).toBe(404);
+});

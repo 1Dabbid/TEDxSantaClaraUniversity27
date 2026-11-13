@@ -10,6 +10,9 @@ export const contentType = 'image/png';
 const settings = await getSettings();
 export const alt = `A speaker at ${SITE_NAME}: ${settings.themeName}, ${settings.dateLong}.`;
 
+// Only the speakers known at build time: an unknown slug is a 404, never a freshly generated (and cached) image.
+export const dynamicParams = false;
+
 export async function generateStaticParams() {
   const speakers = await getSpeakers();
   return speakers.map((s) => ({ slug: s.slug }));
