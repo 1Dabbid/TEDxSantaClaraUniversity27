@@ -1,12 +1,12 @@
 import Link from 'next/link';
 import type { Settings } from '@/lib/content';
-import { getFaq, getTeam, getTedLanguage, paragraphs } from '@/lib/content';
+import { getTedLanguage, paragraphs } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
 import { CLUB_URL, TED_URL, TEDX_PROGRAM_URL } from '@/lib/site';
 import { FooterMotion } from '@/motion/sections/FooterMotion';
 import { Logo } from './Logo';
 import { EventName, Tedx } from './ui/KeepCase';
-import { navItems } from './nav';
+import { navItems, navVisibility } from './nav';
 
 const SOCIAL_LABELS: Record<keyof Settings['socials'], string> = {
   instagram: 'Instagram',
@@ -32,11 +32,8 @@ function dateParts(iso: string) {
  */
 export async function Footer({ settings }: { settings: Settings }) {
   // Same visibility rule as the header: never link to a section that is not rendered.
-  const [team, faq, ted] = await Promise.all([getTeam(), getFaq(), getTedLanguage()]);
-  const nav = navItems({
-    team: settings.sections.showTeam && team.length > 0,
-    faq: settings.sections.showFaq && faq.length > 0,
-  });
+  const [visible, ted] = await Promise.all([navVisibility(), getTedLanguage()]);
+  const nav = navItems(visible);
   const socials = (Object.keys(SOCIAL_LABELS) as (keyof Settings['socials'])[]).filter((k) => settings.socials[k]);
   const partner = partnerCta(settings);
   const parts = dateParts(settings.dateISO);

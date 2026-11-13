@@ -42,7 +42,7 @@ function wordEm(word: string): number {
  * facts stack in a narrow left column so the lower right stays open for the
  * mic, with a local scrim behind the text only.
  */
-export function Hero({ settings }: { settings: Settings }) {
+export function Hero({ settings, speakersAnnounced }: { settings: Settings; speakersAnnounced: boolean }) {
   const cta = ticketCta(settings);
   const caption = `${settings.dateISO.slice(0, 4)} theme`;
   const words = settings.themeName.split(/\s+/).filter(Boolean);
@@ -140,9 +140,23 @@ export function Hero({ settings }: { settings: Settings }) {
             <Button href={cta.href} size="lg" aria-label={cta.ariaLabel} className="max-sm:px-6">
               Tickets
             </Button>
-            <Button href="#speakers" variant="ghost" size="lg" className="max-sm:bg-black/75 max-sm:px-6">
-              Speakers
-            </Button>
+            {/* Second action: the lineup once there is one; until then the mailing list,
+                which is where every announcement goes first. */}
+            {speakersAnnounced ? (
+              <Button href="#speakers" variant="ghost" size="lg" className="max-sm:bg-black/75 max-sm:px-6">
+                Speakers
+              </Button>
+            ) : (
+              <Button
+                href={settings.newsletterUrl || '#newsletter'}
+                variant="ghost"
+                size="lg"
+                data-hero-updates
+                className="max-sm:bg-black/75 max-sm:px-6"
+              >
+                Get updates
+              </Button>
+            )}
             <WatchLive url={settings.livestreamUrl} size="lg" className="sm:ml-3" />
           </div>
 

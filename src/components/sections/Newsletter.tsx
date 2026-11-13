@@ -26,13 +26,17 @@ export function Newsletter({ settings }: { settings: Settings }) {
   const ig = settings.socials.instagram;
   const handle = ig ? instagramHandle(ig) : null;
   const host = hostOf(settings.newsletterUrl);
+  const appsOpen =
+    settings.sections.showSpeakerApplications &&
+    settings.speakerApplicationsState === 'open' &&
+    Boolean(settings.speakerApplicationsUrl);
 
   return (
-    <SectionShell id="newsletter" scrim="solid" className="py-32 sm:py-48">
+    <SectionShell id="newsletter" scrim="solid" className="py-24 sm:py-36">
       <NewsletterMotion />
       <div className="shell">
         <div data-reveal="fade">
-          <SectionLabel index={8}>Stay informed</SectionLabel>
+          <SectionLabel>Stay informed</SectionLabel>
         </div>
         <SectionTitle id="newsletter" className="max-w-[14ch] text-[clamp(3rem,10vw,9.5rem)]! leading-[0.9]!">
           <span data-reveal="lines" className="block">
@@ -51,7 +55,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
         </p>
 
         {/* Signature line: the line itself is the call to action. */}
-        <div className="mt-16 sm:mt-24">
+        <div className="mt-12 sm:mt-20">
           {open ? (
             <a
               href={settings.newsletterUrl}
@@ -111,7 +115,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
           )}
         </div>
 
-        <div className="mt-20 grid gap-8 border-t border-white/15 pt-6 sm:grid-cols-2 sm:mt-28">
+        <div className="mt-16 grid gap-8 border-t border-white/15 pt-6 sm:grid-cols-2 sm:mt-24">
           <p id="newsletter-note" data-cursor="loupe" className="fine-print max-w-md text-mute">
             <span className="text-accent">1.</span> The list is only used for <EventName /> event news. You can
             unsubscribe at any time.
@@ -121,6 +125,14 @@ export function Newsletter({ settings }: { settings: Settings }) {
               <li>
                 <a href={ig} target="_blank" rel="noopener noreferrer" className="link-draw inline-block py-1.5 text-white">
                   Instagram {handle ? <span className="tracking-normal normal-case">{handle}</span> : null}
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+              </li>
+            ) : null}
+            {appsOpen ? (
+              <li>
+                <a href={settings.speakerApplicationsUrl} target="_blank" rel="noopener noreferrer" className="link-draw inline-block py-1.5 text-white">
+                  Apply to speak
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </li>

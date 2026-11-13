@@ -1,110 +1,75 @@
 import Image from 'next/image';
-import type { TeamMember } from '@/lib/content';
-import { getSettings } from '@/lib/content';
+import type { Settings, TeamMember } from '@/lib/content';
 import { SectionLabel } from '@/components/ui/SectionLabel';
-import { ClauseNo } from '@/components/print/Print';
-import { EventName } from '@/components/ui/KeepCase';
 import { TeamMotion } from '@/motion/sections/TeamMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
-const pad2 = (n: number) => String(n).padStart(2, '0');
+/** Same rule as the nav: the section exists only when it is switched on and at least one name is public. */
+export function teamVisible(settings: Settings, team: TeamMember[]): boolean {
+  return settings.sections.showTeam && team.some((m) => m.name);
+}
 
-/**
- * One signatory: clause number in the margin, a signature space with its
- * cross, the hairline, and the role typed beneath it. Until a name is public
- * the space stays blank and the line reads as unsigned.
- */
-function SignatureBlock({ member, index }: { member: TeamMember; index: number }) {
-  const signed = Boolean(member.name);
+/** One signatory: the name over a hairline, the role typed beneath it. */
+function Signature({ member }: { member: TeamMember }) {
   return (
-    <li data-sign data-signed={signed ? '' : undefined}>
-      {/* Phones: the clause number sits on the signature line itself; wider: above it. */}
-      <ClauseNo className="hidden sm:block">6.{index + 1}</ClauseNo>
-      <div>
-        <div data-sign-mark className="relative flex h-14 items-end gap-4 pb-3 sm:mt-3 sm:h-20">
-          <ClauseNo className="w-12 shrink-0 pb-px sm:hidden">6.{index + 1}</ClauseNo>
-          {signed ? (
-            <>
-              {member.photo ? (
-                <Image
-                  src={member.photo}
-                  alt=""
-                  width={64}
-                  height={64}
-                  className="size-12 shrink-0 rounded-full object-cover grayscale sm:size-14"
-                />
-              ) : null}
-              <p className="text-2xl leading-tight font-light tracking-tight text-balance text-white sm:text-3xl">
-                {member.name}
-              </p>
-            </>
-          ) : (
-            <span aria-hidden="true" className="font-mono text-sm leading-none text-subtle">
-              ✕
-            </span>
-          )}
-        </div>
-        <div data-sign-line aria-hidden="true" className={`h-px ${signed ? 'bg-white/60' : 'bg-white/30'}`} />
-        <p data-sign-text className="mt-3 text-base leading-snug font-medium text-balance text-white">{member.role}</p>
-        <p data-sign-text className="fine-print mt-1 text-mute">
-          {signed ? (
-            <>
-              For <EventName />
-            </>
-          ) : (
-            'Unsigned · name to follow'
-          )}
-        </p>
+    <li data-sign>
+      <div data-sign-mark className="flex h-14 items-end gap-4 pb-3 sm:h-16">
+        {member.photo ? (
+          <Image
+            src={member.photo}
+            alt=""
+            width={64}
+            height={64}
+            className="size-11 shrink-0 rounded-full object-cover grayscale sm:size-12"
+          />
+        ) : null}
+        <p className="text-2xl leading-tight font-light tracking-tight text-balance text-white">{member.name}</p>
       </div>
+      <div data-sign-line aria-hidden="true" className="h-px bg-white/50" />
+      <p data-sign-text className="mt-3 text-base leading-snug text-balance text-mute">
+        {member.role}
+      </p>
     </li>
   );
 }
 
-export async function Team({ team }: { team: TeamMember[] }) {
-  const settings = await getSettings();
-  if (!settings.sections.showTeam || team.length === 0) return null;
-  const signedCount = team.filter((m) => m.name).length;
+/**
+ * The organizing team. Hidden until at least one board member has agreed to be
+ * named (People > Team > Show name publicly), so the home page never shows a
+ * list of empty signature lines. Only named members are listed.
+ */
+export function Team({ team, settings }: { team: TeamMember[]; settings: Settings }) {
+  if (!teamVisible(settings, team)) return null;
+  const named = team.filter((m) => m.name);
+  const more = named.length < team.length;
 
   return (
-    <SectionShell id="team" scrim="solid" className="py-32 sm:py-44">
+    <SectionShell id="team" scrim="solid" className="py-24 sm:py-32">
       <TeamMotion />
       <div className="shell">
-        <div className="grid gap-10 md:grid-cols-12 md:items-end">
+        <div className="grid gap-8 md:grid-cols-12 md:items-end">
           <div className="md:col-span-7">
             <div data-reveal="fade">
-              <SectionLabel index={6}>Team</SectionLabel>
+              <SectionLabel>Team</SectionLabel>
             </div>
             <SectionTitle id="team">
               <span data-reveal="lines" className="block">
-                The undersigned.
+                Organized by students.
               </span>
             </SectionTitle>
           </div>
           <p data-reveal="fade" className="max-w-md text-lg text-mute md:col-span-5">
-            {settings.eventName} is organized independently by a board at Santa Clara University. Each
-            signature is added as its member is announced.
+            {settings.eventName} is planned and run by a student board at {settings.venueCampus || 'Santa Clara University'}.
+            {more ? ' More of the board will be introduced here.' : null}
           </p>
         </div>
 
-        <div className="mt-20 flex flex-wrap items-baseline justify-between gap-x-10 gap-y-3 border-t border-white/15 pt-5 sm:mt-28">
-          <p data-reveal="fade" className="fine-print max-w-xl text-mute">
-            In witness whereof, the board below has agreed to organize <EventName name={settings.eventName} /> on{' '}
-            <time dateTime={settings.dateISO}>{settings.dateLong}</time>, and to read every clause.
-          </p>
-          {/* The visible counter ticks as the lines are drawn (TeamMotion); the sr-only copy is the final value. */}
-          <p className="fine-print text-mute tabular-nums">
-            <span className="sr-only">
-              {signedCount} of {team.length} signed
-            </span>
-            <span aria-hidden="true" data-sign-count>
-              {pad2(signedCount)} of {pad2(team.length)} signed
-            </span>
-          </p>
-        </div>
-
-        <ul data-sign-list className="mt-10 grid gap-y-9 sm:mt-14 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-16 lg:grid-cols-3 lg:gap-x-16">
-          {team.map((m, i) => (
-            <SignatureBlock key={m.slug} member={m} index={i} />
+        <ul
+          data-sign-list
+          className="mt-14 grid gap-y-9 border-t border-white/15 pt-10 sm:grid-cols-2 sm:gap-x-10 sm:gap-y-12 lg:grid-cols-3 lg:gap-x-16"
+        >
+          {named.map((m) => (
+            <Signature key={m.slug} member={m} />
           ))}
         </ul>
       </div>

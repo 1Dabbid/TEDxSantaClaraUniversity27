@@ -20,8 +20,3 @@ export function formatCoordinate(value: number, axis: 'lat' | 'lng'): string {
   const hemi = axis === 'lat' ? (value >= 0 ? 'N' : 'S') : value >= 0 ? 'E' : 'W';
   return `${Math.abs(value).toFixed(4)}° ${hemi}`;
 }
-
-/** Zero-padded clause number: 7, 3 -> "7.03". */
-export function clause(section: number, n: number, pad = 2): string {
-  return `${section}.${String(n).padStart(pad, '0')}`;
-}

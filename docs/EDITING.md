@@ -23,7 +23,23 @@ The left-hand menu has four groups: **The event**, **People**, **Partners**, **C
 - If a change does not appear after five minutes, the build probably failed: tell the web team, or check the Vercel dashboard (Deployments).
 - Anything you leave blank is shown as a tidy **"To be announced"** (or simply hidden). Never put guesses on the site.
 
-## 3. Recipes
+## 3. What appears when
+
+The home page shows what is true today and grows by itself as you publish. You never switch a section on for an announcement; ticking the content's own box is enough.
+
+| Part of the home page | While nothing is published | Once you publish |
+| --- | --- | --- |
+| **Speakers** | One heading, "Speakers to be announced", and one panel: **Join the mailing list** and how to apply to speak. No placeholder cards. | Ticking **Announced** on a speaker shows their card (linked to their page). Slots still unannounced appear as a single "more speakers to be announced" card. |
+| **Schedule** | A short note: date, "Running order to follow". Not in the menu. | Ticking **Show the running order** shows the full timeline and adds **Schedule** to the menu. |
+| **Speaker applications** | Shown inside the Speakers panel: "not open yet". | **Open** + a link: an **Apply to speak** button under the Speakers heading and in the closing links. |
+| **Tickets** | "Not on sale yet", with the mailing list button. | **On sale** + a link: **Get tickets** everywhere. |
+| **Team** | Hidden (not on the page, not in the menu). | Appears as soon as one person has **Show name publicly** ticked and a name; only named people are listed. |
+| **Partners** | A short text invitation on the home page (never names or logos) linking to `/partners`. On `/partners`, **Current partners** is hidden. | **Published** partners appear on `/partners` only. |
+| **Hero buttons** | **Tickets** and **Get updates** (mailing list). | Once a speaker is announced: **Tickets** and **Speakers**. |
+
+Unannounced speakers still have a page (`/speakers/speaker-01` and so on) so an old link never breaks, but nothing on the site links to it and search engines are told to ignore it.
+
+## 4. Recipes
 
 ### Announce a speaker
 
@@ -43,7 +59,7 @@ To remove a slot entirely, untick **Published**.
 
 1. **The event > Schedule**.
 2. Under **Running order**, add one item per moment: **Time** (e.g. 5:30 PM), **Title**, **Description (optional)**, **Kind** (Talk, Break, Doors, Other). Drag items to reorder.
-3. Tick **Show the running order** and **Save**. While it is unticked, the site shows "schedule coming soon".
+3. Tick **Show the running order** and **Save**. While it is unticked, the site shows a short "running order to follow" note and the menu has no Schedule link.
 
 Doors, talks and end time for the whole evening are in **The event > Event basics**: **Doors open at**, **Talks start at**, **Event ends at** (written like 5:30 PM). Search engines are given the evening's start (**Talks start at**, or **Doors open at** while that is blank) and end time in California time; while no time is set they only see the date.
 
@@ -51,7 +67,7 @@ Doors, talks and end time for the whole evening are in **The event > Event basic
 
 1. **The event > Tickets & speaker applications**.
 2. **Ticket link**: the ticketing page (must start with `https://`).
-3. Optional: **Ticket checkout embed link (optional)**, only if the ticketing service gives you an "embed" link. Leave blank if unsure. If the embedded checkout stays blank on the live site, tell the web team: some services need one more allowed address (`CSP_FRAME_SRC` on Vercel).
+3. Optional: **Ticket checkout embed link (optional)**, only if the ticketing service gives you an "embed" link. Leave blank if unsure. If the embedded checkout stays blank on the live site, tell the web team: some services need one more allowed address (`CSP_FRAME_SRC` on Vercel). The embedded checkout is never allowed to take over the whole page: if the service wants to switch to its own full page (for a payment step, say), that step opens in a new tab instead, and buyers come back to this tab afterwards.
 4. **Price note**: one short sentence, e.g. "Tickets will cost no more than $100." Our cap is **$100**; confirm the limit for our licence tier with the licence holder. Do not call it a TED rule on the site.
 5. **Ticket price in US dollars (optional)**: just the number, e.g. `25` (`0` if free). The admin will not accept more than 100. Search engines show it in event listings; visitors read the Price note.
 6. **Tickets on sale from (optional)**: the first day of sales (pick the date).
@@ -66,8 +82,8 @@ Search engines only receive ticket details (price, sale start, link) while the s
 1. **The event > Tickets & speaker applications**.
 2. **Speaker application link**: the form.
 3. **Application deadline (optional)**: written as you want it shown, e.g. January 15, 2027.
-4. Set **Speaker applications** to **Open** and **Save**. The "Apply to speak" button only appears when the status is Open and the link is filled in.
-5. The band itself can be switched off in **Contact & site > Show / hide sections > Show the speaker applications band (under Tickets)**.
+4. Set **Speaker applications** to **Open** and **Save**. The "Apply to speak" button (under the Speakers heading, and in the closing links at the bottom of the home page) only appears when the status is Open and the link is filled in.
+5. All speaker-application wording can be switched off in **Contact & site > Show / hide sections > Show speaker applications (in the Speakers section)**.
 
 ### Add a sponsor (partner)
 
@@ -82,9 +98,9 @@ Tiers and benefits first, then the partner:
 
 1. **People > Team**: one entry per board role (**Role**).
 2. Fill in **Name (optional)** and optionally **Photo (optional)**.
-3. Tick **Show name publicly** (ask the person first) and **Save**. Without the tick only the role is shown.
+3. Tick **Show name publicly** (ask the person first) and **Save**.
 
-The whole section can be hidden in **Contact & site > Show / hide sections > Show the Team section on the home page**.
+The Team section stays hidden until at least one person has a public name; then it lists the named people only (with their role), and **Team** appears in the menu. The whole section can also be switched off in **Contact & site > Show / hide sections > Show the Team section on the home page (it appears once at least one name is public)**.
 
 ### The "All year, not one night" card (Partners page)
 
@@ -133,7 +149,7 @@ Only the Director of Compliance (or the licence holder) should change these. The
 - **The event > Event basics**: **Event name**, **Theme name**, **Theme tagline** (also used in search results and link previews), **Theme story**, **Event date** (YYYY-MM-DD), times (**Doors open at**, **Talks start at**, **Event ends at**), **Seat capacity**, **Accent colour**. The description of the share image (read aloud by screen readers when the link is shared) is written automatically from the theme name, date and venue.
 - **The event > Venue & directions**: building, **Campus** (shown under the building name in the hero and wherever the venue is written out), address, **Map link**, coordinates, and **Getting there (directions, parking, accessibility)** notes.
 
-## 4. Image sizes
+## 5. Image sizes
 
 | Image | Size | Format |
 | --- | --- | --- |
@@ -143,7 +159,7 @@ Only the Director of Compliance (or the licence holder) should change these. The
 
 Use plain file names without spaces (e.g. `jane-doe.jpg`). The site resizes and compresses photos automatically; a huge file only slows down saving.
 
-## 5. TEDx rules: what NOT to do
+## 6. TEDx rules: what NOT to do
 
 - Always write the name in full: **TEDxSantaClaraUniversity**. Never "TEDxSCU", "TEDx Santa Clara" or similar.
 - Never alter, recolour, stretch or re-create the TEDx logo, and never put it next to another logo. The site already places it correctly.

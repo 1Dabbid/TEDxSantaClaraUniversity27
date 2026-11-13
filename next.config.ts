@@ -36,6 +36,23 @@ function frameOrigins(): string[] {
 
 const frames = frameOrigins();
 
+/**
+ * Keystatic storage mode, decided once at build time and inlined into both the
+ * server and the admin's browser bundle as `process.env.KEYSTATIC_GITHUB_MODE`
+ * (read by keystatic.config.ts; the secrets themselves never reach the browser).
+ * GitHub mode needs all four variables. Under `next dev` the app slug alone is
+ * enough, so Keystatic's GitHub App setup flow (/keystatic/setup) can run before
+ * the other three exist. See src/lib/admin.ts and docs/DEPLOY.md.
+ */
+const keystaticGithubMode =
+  Boolean(
+    process.env.NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG &&
+      process.env.KEYSTATIC_GITHUB_CLIENT_ID &&
+      process.env.KEYSTATIC_GITHUB_CLIENT_SECRET &&
+      process.env.KEYSTATIC_SECRET,
+  ) ||
+  (process.env.NODE_ENV === 'development' && Boolean(process.env.NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG));
+
 const csp = (directives: Record<string, string[]>) =>
   Object.entries(directives)
     .map(([k, v]) => (v.length ? `${k} ${v.join(' ')}` : k))
@@ -118,6 +135,7 @@ const noStore = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  env: { KEYSTATIC_GITHUB_MODE: keystaticGithubMode ? '1' : '' },
   poweredByHeader: false,
   // `ANALYZE=1 next build` emits browser source maps so first-load chunks can be attributed per module.
   productionBrowserSourceMaps: process.env.ANALYZE === '1',
@@ -149,6 +167,16 @@ const nextConfig: NextConfig = {
       {
         source: '/:dir(brand|images)/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
+      },
+      // Static uploads and assets, opened directly: an uploaded SVG (sponsor logos may be SVG)
+      // must never run script or load anything on the site's origin, so these files get a
+      // sandboxed, script-free policy that replaces the site CSP. It does not affect <img>,
+      // <picture>, next/image or the share images, which do not apply a file's own CSP.
+      {
+        source: '/:dir(brand|images|stills|icons)/:path*',
+        headers: [
+          { key: 'Content-Security-Policy', value: "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'; sandbox" },
+        ],
       },
     ];
   },

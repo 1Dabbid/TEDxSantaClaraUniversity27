@@ -2,9 +2,8 @@ import Link from 'next/link';
 import { Button } from './ui/Button';
 import { Logo } from './Logo';
 import { MobileMenu } from './MobileMenu';
-import { navItems } from './nav';
+import { navItems, navVisibility } from './nav';
 import type { Settings } from '@/lib/content';
-import { getFaq, getTeam } from '@/lib/content';
 import { ticketCta } from '@/lib/tickets';
 
 /**
@@ -15,12 +14,8 @@ import { ticketCta } from '@/lib/tickets';
  */
 export async function Header({ settings }: { settings: Settings }) {
   const cta = ticketCta(settings);
-  const [team, faq] = await Promise.all([getTeam(), getFaq()]);
-  // Same conditions the sections use to render themselves (Team.tsx, Faq.tsx).
-  const items = navItems({
-    team: settings.sections.showTeam && team.length > 0,
-    faq: settings.sections.showFaq && faq.length > 0,
-  });
+  // Same conditions the sections use to render themselves (Schedule, Team, Faq).
+  const items = navItems(await navVisibility());
   return (
     <header
       data-site-header

@@ -50,7 +50,11 @@ The production deployment is also reachable at its `*.vercel.app` address, which
 
 Without this, `/keystatic` only works on someone's computer with `npm run dev`. With it, editors sign in with GitHub on the live site and every save is a commit.
 
-How the code decides: `keystatic.config.ts` switches storage from local files to GitHub (`1Dabbid/TEDxSantaClaraUniversity27`) when `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` is set. The other three variables are read by Keystatic's API route.
+How the code decides (`src/lib/admin.ts`, `keystatic.config.ts`, `next.config.ts`):
+
+- **`npm run dev`**: the admin always works. Without the variables it edits the files on that computer (local mode).
+- **Any deployment or production build** (`npm run build`, every Vercel production and preview deployment): the admin exists **only when all four variables below are set**. Storage is then GitHub (`1Dabbid/TEDxSantaClaraUniversity27`) and editors must sign in with GitHub. With any variable missing, the admin is **switched off**: `/keystatic` and `/api/keystatic/*` answer **404**. (Keystatic's local mode has no sign-in of its own; on a deployed site it would let anyone read and change files, so it never runs outside `npm run dev`.)
+- The decision is made **at build time**: `NEXT_PUBLIC_*` values are baked into the build, and GitHub storage is chosen when the build sees all four. After adding or changing a variable on Vercel you must **redeploy** (step d.9); an existing deployment keeps answering 404.
 
 | Variable | What it is |
 | --- | --- |
@@ -59,22 +63,36 @@ How the code decides: `keystatic.config.ts` switches storage from local files to
 | `KEYSTATIC_SECRET` | a random string of at least 32 characters, encrypts the sign-in cookie (secret!) |
 | `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG` | the GitHub App's URL name (from `github.com/apps/<slug>`) |
 
-The GitHub App is created once, by the **repo owner (`1Dabbid`)**, through Keystatic's setup flow on a local computer. The flow only works in development mode (`npm run dev`); a production build refuses to start the API without the variables.
+The GitHub App is created once, by the **repo owner (`1Dabbid`)**, through Keystatic's setup flow on a local computer. The flow only works in development mode (`npm run dev`): a production build without all four variables has no admin at all (404).
 
 1. Clone the repo, run `npm ci`.
-2. Create a file named `.env` in the project folder containing one line: `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG=pending`. (A placeholder: it only switches the admin into GitHub mode so the setup page appears.)
+2. Create a file named `.env` in the project folder containing one line: `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG=pending`. (A placeholder: under `npm run dev` the app slug alone switches the admin into GitHub mode so the setup page appears. A production build ignores a slug without the other three.)
 3. Run `npm run dev` and open **http://localhost:3000/keystatic/setup**. You should see **Keystatic Setup** ("Keystatic doesn't have the required config.").
 4. **Deployed App URL**: `https://fineprint.tedxscu.com`. **GitHub organization**: leave blank (the repo belongs to a personal account). Click **Create GitHub App**.
 5. GitHub opens a pre-filled "Create GitHub App" page (permissions: repository contents read & write, metadata read, pull requests read; callback URLs for localhost, 127.0.0.1 and the deployed URL). Keep the suggested name or rename it (e.g. "TEDxSantaClaraUniversity Keystatic") and confirm.
 6. GitHub sends you back to localhost. Keystatic **appends the four variables to `.env`** and shows "You've installed Keystatic!". Click **Install GitHub App**, choose **Only select repositories** > `TEDxSantaClaraUniversity27` > **Install**.
 7. Open `.env`, **delete the `NEXT_PUBLIC_KEYSTATIC_GITHUB_APP_SLUG=pending` line** at the top (the generated block below has the real slug). Restart `npm run dev`, open `http://localhost:3000/keystatic` and check that **Log in with GitHub** works.
-8. In Vercel: Project > **Settings > Environment Variables**, add the four variables with the values from `.env`, for the **Production** environment only. (Preview URLs are not in the GitHub App's callback list, so sign-in would fail there anyway.) If the domain ever changes, add the new `https://<domain>/api/keystatic/github/oauth/callback` under the app's **Callback URL** at github.com > Settings > Developer settings > GitHub Apps.
-9. **Redeploy** (Deployments > the latest production deployment > **…** > **Redeploy**): `NEXT_PUBLIC_` variables are baked in at build time, so an existing build does not see them.
+8. In Vercel: Project > **Settings > Environment Variables**, add the four variables with the values from `.env`, for the **Production** environment only. Recommended: leave them off **Preview** (and Development). Preview deployments then have no admin at all (`/keystatic` is a 404 there), which is intended: preview URLs are not in the GitHub App's callback list, so sign-in would fail anyway, and the client secret stays out of every branch build. Keep Vercel **Deployment Protection** (Project > **Settings > Deployment Protection** > Vercel Authentication, at least for Preview deployments) switched on so unreleased previews are not public **(verify on first deploy)**. If the domain ever changes, add the new `https://<domain>/api/keystatic/github/oauth/callback` under the app's **Callback URL** at github.com > Settings > Developer settings > GitHub Apps.
+9. **Redeploy** (Deployments > the latest production deployment > **…** > **Redeploy**): `NEXT_PUBLIC_` variables and the storage mode are baked in at build time, so an existing build does not see them and keeps answering 404 on `/keystatic`. Afterwards `https://fineprint.tedxscu.com/keystatic` shows **Log in with GitHub**.
 10. Never commit `.env` (it is in `.gitignore`). If a secret leaks: GitHub App settings > generate a new client secret, and replace `KEYSTATIC_SECRET` with a new random string; update Vercel and redeploy.
 
 **Who can edit**: anyone with a GitHub account who has **Write** access to the repo. The owner invites them: GitHub > repo > **Settings > Collaborators > Add people** > role Write. They then sign in at `https://fineprint.tedxscu.com/keystatic`. Each save appears in the repo history under their name. Remove access the same way at the end of the year. If someone sees "Repo not found", they either lack write access or the GitHub App is not installed on the repo.
 
 Saves go to the repo's **default branch** (`main`), which Vercel deploys: live in about a minute or two.
+
+### Security checklist
+
+Go through this once after step d, and again whenever the team changes hands.
+
+- [ ] **GitHub App is private**: github.com > Settings > Developer settings > GitHub Apps > the Keystatic app > **Advanced / Make private**, so it reads "Only on this account" under *Where can this GitHub App be installed?* **(verify on first deploy)**.
+- [ ] **Installed only on this repository**: github.com > Settings > Applications > Installed GitHub Apps > the app > **Configure** > *Only select repositories* > `TEDxSantaClaraUniversity27` and nothing else.
+- [ ] **No localhost callback URLs on the production app**: in the app's settings, remove the `http://localhost:3000/...` and `http://127.0.0.1:3000/...` callback URLs the setup flow added, leaving only `https://fineprint.tedxscu.com/api/keystatic/github/oauth/callback`. (For local GitHub-mode testing, create a separate development app instead.)
+- [ ] **Protect the default branch**: repo > Settings > Branches (or Rules > Rulesets) > a rule for `main` that blocks force pushes and deletion. Keystatic saves are ordinary commits by collaborators, so do not require pull requests unless editors are expected to open them.
+- [ ] **Only collaborators with Write access can edit content**: the admin can only commit as the signed-in GitHub user, so the repo's collaborator list *is* the editor list. Review it (repo > Settings > Collaborators) at the start and end of each year.
+- [ ] **`KEYSTATIC_SECRET` is at least 32 random characters** (e.g. `openssl rand -hex 32`), never a word or a reused password. Rotate it, together with the GitHub App's client secret, if either may have leaked (step d.10).
+- [ ] **The four Keystatic variables are set for Production only**, Deployment Protection is on for previews, and `/keystatic` on a preview URL answers 404.
+- [ ] **Never set `ANALYZE=1` on Vercel**: it publishes browser source maps of the whole site. It is only for local bundle analysis.
+- [ ] Know the residual risk: the signed-in editor's GitHub access token is kept in a cookie that the admin's own JavaScript must read (`keystatic-gh-access-token`, a Keystatic design decision), so script running on this origin could read it. The site therefore allows no third-party scripts, uploads under `/images`, `/brand`, `/stills` and `/icons` are served with a sandboxed, script-free Content-Security-Policy, and speaker and team photos must be JPG, PNG, WebP or AVIF (the build rejects anything else). Sponsor logos may be SVG; they are only shown through `<img>`, which never runs script.
 
 ## e. Post-deploy checklist
 

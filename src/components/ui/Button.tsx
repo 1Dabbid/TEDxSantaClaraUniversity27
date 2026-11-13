@@ -38,8 +38,15 @@ type ButtonAsLink = CommonProps & { href: string; external?: boolean } & Omit<
   >;
 
 /**
+ * Protocol-relative URLs (`//host/path`; browsers read `/\\host` the same way) leave
+ * the site even though they start with a slash.
+ */
+const PROTOCOL_RELATIVE = /^[/\\]{2}/;
+
+/**
  * Primary (red) or ghost button. Renders a Next <Link> for internal hrefs and
- * a plain <a> for external ones. `data-magnetic` opts it into the magnetic hover
+ * a plain <a> for external ones (http(s), mailto, tel and protocol-relative `//host`
+ * links; web links open in a new tab). `data-magnetic` opts it into the magnetic hover
  * of the motion engine (fine pointers only, off in static quality).
  */
 export function Button({
@@ -54,9 +61,11 @@ export function Button({
 }: ButtonAsLink) {
   const cls = `${base} ${variants[variant]} ${sizes[size]} ${className}`;
   const magneticProps = magnetic ? { 'data-magnetic': '' } : {};
-  const isExternal = external ?? /^(https?:|mailto:|tel:)/.test(href);
+  const offSite = PROTOCOL_RELATIVE.test(href);
+  // A protocol-relative href is external even if a caller passed external={false}.
+  const isExternal = offSite || (external ?? /^(https?:|mailto:|tel:)/i.test(href));
   if (isExternal) {
-    const newTab = /^https?:/.test(href);
+    const newTab = offSite || /^https?:/i.test(href);
     return (
       <a
         href={href}

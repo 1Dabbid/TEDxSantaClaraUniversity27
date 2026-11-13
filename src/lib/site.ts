@@ -16,6 +16,13 @@ export const TED_URL = 'https://www.ted.com';
 export const TEDX_MAX_CAPACITY = 100;
 
 /**
+ * A plain email address, or blank. Used by the admin's email fields and again by
+ * the content loader. No whitespace, `?`, `&` or `#` anywhere, so a value can never
+ * add headers to the `mailto:` links built from it (e.g. `a@b.co?bcc=x@evil.com`).
+ */
+export const EMAIL_PATTERN = /^$|^[^\s@?&#]+@[^\s@?&#]+\.[^\s@?&#]+$/;
+
+/**
  * Whether search engines may index this build. Vercel sets `VERCEL_ENV` to
  * `production`, `preview` or `development`; only `production` is indexable, so
  * preview URLs never compete with the real site. Builds outside Vercel (no

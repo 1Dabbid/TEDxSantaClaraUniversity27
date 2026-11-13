@@ -100,6 +100,23 @@ test.describe('motion on', () => {
     expect(problems.console).toEqual([]);
   });
 
+  test('a malformed URL hash does not throw', async ({ page }) => {
+    const problems = watchProblems(page);
+    // %E0%A4%A is an incomplete escape: decodeURIComponent throws a URIError on it.
+    await page.goto('/#%E0%A4%A');
+    await settle(page, 1500);
+    expect(await motionOn(page)).toBe(true);
+    // The same hash arriving later (hashchange) is handled as well.
+    await page.evaluate(() => {
+      location.hash = '#speakers';
+    });
+    await page.evaluate(() => {
+      location.hash = '#%E0%A4%A';
+    });
+    await page.waitForTimeout(500);
+    expect(problems.console).toEqual([]);
+  });
+
   test('?quality=static: no canvas, no motion', async ({ page }) => {
     await page.goto('/?quality=static');
     await settle(page, 1500);

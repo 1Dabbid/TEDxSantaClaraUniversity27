@@ -2,6 +2,9 @@ items:
   - question: What is TEDx?
     answer: |-
       TEDxSantaClaraUniversity is an independently organized TEDx event, operated under license from TED. TED's official description of the TEDx program and of TED is printed under “About TEDx” and “About TED” at the bottom of every page.
+  - question: Who organizes it?
+    answer: |-
+      A team of Santa Clara University students. It is the first TEDxSantaClaraUniversity mainstage event.
   - question: When and where is TEDxSantaClaraUniversity?
     answer: |-
       Friday, April 23, 2027, at the Locatelli Student Activity Center on the Santa Clara University campus. Doors and running times will be announced with the schedule.
@@ -11,12 +14,15 @@ items:
   - question: How many people can attend?
     answer: |-
       Attendance is limited to {capacity} people.
+  - question: Will the talks be online?
+    answer: |-
+      The talks are recorded and submitted for publication on the TEDx Talks YouTube channel.
   - question: How can I apply to speak?
     answer: |-
       Speaker applications are coming soon. When they open, the link will appear on this site and go out to the mailing list.
   - question: How can my organization become a partner?
     answer: |-
-      We are inviting a small number of founding partners to support the event. Visit the Partners page to see the partnership tiers and get in touch.
+      We are inviting a small number of partners to support the event. The Partners page explains what partnership means under TEDx rules and how to get in touch.
   - question: Is the event accessible?
     answer: |-
       We want everyone to be able to take part. If you have accessibility needs or questions, contact the team and we will do our best to accommodate you. Full venue accessibility details will be published before the event.
