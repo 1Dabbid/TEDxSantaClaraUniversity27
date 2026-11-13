@@ -79,7 +79,7 @@ export default async function SpeakersPage() {
           ]}
         >
           {anyAnnounced ? null : (
-            <Button href={settings.newsletterUrl || '/#newsletter'} size="lg">
+            <Button href={settings.newsletterUrl || '/#newsletter'} variant="ghost" size="lg">
               Join the mailing list
             </Button>
           )}

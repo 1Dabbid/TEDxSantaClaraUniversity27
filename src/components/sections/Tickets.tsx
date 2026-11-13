@@ -3,7 +3,6 @@ import type { Settings, TicketState } from '@/lib/content';
 import { getFaq } from '@/lib/content';
 import { ticketSaleLine } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
-import { TextLink } from '@/components/ui/TextLink';
 import { WatchLive } from '@/components/ui/WatchLive';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { ClauseNo, StatusRegister } from '@/components/print/Print';
@@ -92,12 +91,12 @@ function SeatStrip({ seats, filled }: { seats: number; filled: boolean }) {
   );
 }
 
-/** The mailing list, as a text link: the hero and the closing section carry it as a button. */
+/** The mailing list as an outlined pill: the red one is the closing section's (and "Get tickets" once on sale). */
 function NewsletterLink({ settings, label }: { settings: Settings; label: string }) {
   return (
-    <TextLink href={settings.newsletterUrl || '#newsletter'} className="text-lg">
+    <Button href={settings.newsletterUrl || '#newsletter'} variant="ghost" size="lg">
       {label}
-    </TextLink>
+    </Button>
   );
 }
 

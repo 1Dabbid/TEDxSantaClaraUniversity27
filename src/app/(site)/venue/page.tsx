@@ -186,7 +186,7 @@ export default async function VenuePage() {
         >
           {/* The address (in the intro) and the map come first: they are why most visitors open this page. */}
           {settings.mapUrl ? (
-            <Button href={settings.mapUrl} size="lg" className="w-full sm:w-auto sm:min-w-72">
+            <Button href={settings.mapUrl} variant="ghost" size="lg" className="w-full sm:w-auto sm:min-w-72">
               Open in Maps
               <span className="sr-only">: {venueLine(settings)}</span>
               <Arrow

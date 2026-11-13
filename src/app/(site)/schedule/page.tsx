@@ -85,7 +85,7 @@ export default async function SchedulePage() {
                 <div className="mt-10">
                   <p className="fine-print text-mute">Hear it first</p>
                   <div className="mt-4">
-                    <Button href={listHref} size="lg">
+                    <Button href={listHref} variant="ghost" size="lg">
                       Join the mailing list
                     </Button>
                   </div>

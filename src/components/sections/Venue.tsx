@@ -1,10 +1,10 @@
 import type { Settings } from '@/lib/content';
 import { formatCoordinate } from '@/lib/links';
 import { seatsLabel } from '@/lib/site';
-import { TextLink } from '@/components/ui/TextLink';
+import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { keepTedxCase } from '@/components/ui/KeepCase';
-import { ClauseNo, CropMarks, Tba } from '@/components/print/Print';
+import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { VenueMotion } from '@/motion/sections/VenueMotion';
 import { MoreLink } from '@/components/pages/MoreLink';
 import { SectionShell, SectionTitle } from './SectionShell';
@@ -69,9 +69,13 @@ export function Venue({ settings }: { settings: Settings }) {
   const a = settings.venuePostalAddress;
   const cityLine = [a.city, [a.region, a.postalCode].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   const mapLink = settings.mapUrl ? (
-    <TextLink href={settings.mapUrl} className="mt-2">
+    <Button href={settings.mapUrl} variant="ghost" className="mt-4">
       Open in Maps<span className="sr-only">: {settings.venueName}</span>
-    </TextLink>
+      <Arrow
+        dir="up-right"
+        className="transition-transform duration-500 ease-[var(--ease-cinema)] group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
+      />
+    </Button>
   ) : null;
 
   return (
