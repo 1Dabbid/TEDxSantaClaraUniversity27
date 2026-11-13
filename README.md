@@ -65,6 +65,24 @@ src/
 - `SceneGate` (`src/motion/SceneGate.tsx`, in the root layout) decides whether the scene exists: mounted on `/` when `useSceneEnabled()`; on other routes only if the home page was already shown in this visit (then the canvas is hidden and paused, so going back home is instant). A cold load of `/partners` or a speaker page never downloads three.js.
 - Readability never depends on the canvas: sections carry their own scrims (`scrim-*`, `hero-scrim`, `theme-scrim`, … in `globals.css`).
 
+### Still frames (`src/components/SceneStills.tsx`, `public/stills/`)
+
+Visitors who never get the live canvas (no JavaScript, reduced motion, Save-Data, no WebGL, a software renderer) see still frames of the same shots instead: hero microphone, engraved macro, the rug in its spotlight, the schedule orbit, the room of seats. They are server-rendered `<picture>` elements (AVIF + WebP, landscape and portrait), driven by CSS only:
+
+- **Default**: one fixed stack under the sections' scrims. Each section's still cross-fades in as the section reaches mid-viewport (scroll-driven animations on named view timelines, set in the "Scene stills" block of `globals.css`). A still below the hero stays `display: none`, so its lazy image is not requested, until its section enters the viewport.
+- **Reduced motion**, and browsers without scroll-driven animations when motion is off: no stack; each section carries its still as a background plate (`::before`, top of the section, fading out). Without scroll-driven animations and with motion on, only the hero still shows.
+- **Live scene**: `SceneGate` sets `html.scene-pending` as soon as it knows the scene will load (the other stills are then never requested) and `html.scene-live` once the canvas has drawn, finished its fade-in and its exposure has settled; the stack then fades out (400 ms) and is removed. Context loss brings the stills back.
+- Save-Data (with JavaScript): the hero still only (`html.save-data`). Print: hidden. Home page only.
+
+**Regenerate them whenever the scene changes** (`src/scene/**`: shots, materials, lighting, engraving) and commit the images; the build itself never needs a GPU:
+
+```bash
+npm run build
+PW_CHROMIUM_PATH=/path/to/chromium npm run stills     # starts `next start` on :3121 if nothing answers there
+```
+
+`scripts/capture-stills.mjs` opens `/?quality=high&perf=off&scene-debug=1&snap=1` (landscape 1600x900, high tier) and `/?quality=low&…` (portrait, 390x780 at DPR 2 = 780x1560, low tier) in one headless Chromium, hides all DOM, scrolls to each shot's journey position (`SHOTS` at the top of the script, J as in `choreography.ts`), waits until the frame has settled and is not black (SwiftShader is slow: several minutes in all), then encodes with `sharp` (bundled with Next.js) at the highest quality under the per-file budget. Options: `STILLS_ONLY=theme,portrait`, `STILLS_RAW=<dir>` + `STILLS_RESUME=1` to keep captures already made, `STILLS_ENCODE_ONLY=1` to re-encode, a `darken` factor per shot if text contrast over a frame needs it, `STILLS_URL` for a server you started yourself. If a shot moves to another J, update `SHOTS`; if the output size changes, update `SceneStills.tsx`.
+
 ### Motion engine (`src/motion/`)
 
 - `html.motion` is set by an inline script before first paint (JS on, no reduced motion, no Save-Data, not on `/keystatic`) and removed by `MotionRoot` if the tier resolves to `static`. All pre-reveal CSS is scoped to `html.motion`.

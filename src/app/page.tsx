@@ -1,3 +1,4 @@
+import { SceneStills } from '@/components/SceneStills';
 import { Faq, Hero, Newsletter, Schedule, Speakers, Team, Theme, Tickets, Venue } from '@/components/sections';
 import { getFaq, getSchedule, getSettings, getSpeakers, getTeam } from '@/lib/content';
 import { eventJsonLd, jsonLdString } from '@/lib/jsonld';
@@ -17,6 +18,7 @@ export default async function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdString(eventJsonLd(settings, speakers)) }}
       />
+      <SceneStills />
       {/* Order must match SECTION_IDS in src/scene/scrollState.ts */}
       <Hero settings={settings} />
       <Theme settings={settings} />
