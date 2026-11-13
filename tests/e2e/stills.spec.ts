@@ -113,6 +113,33 @@ test.describe('scene stills', () => {
     await expect(stack(page)).toHaveCount(0);
   });
 
+  test('a scene that fails to load leaves the page and the stills intact', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    let blocked = 0;
+    // Abort the chunk that carries three.js, as a flaky network or a redeploy would.
+    await page.route('**/_next/static/chunks/**', async (route) => {
+      const res = await route.fetch();
+      if ((await res.text()).includes('WebGLRenderer')) {
+        blocked++;
+        await route.abort('failed');
+      } else {
+        await route.fulfill({ response: res });
+      }
+    });
+    await page.goto('/?quality=low');
+    await expect.poll(() => blocked, { timeout: 20_000 }).toBeGreaterThan(0);
+    await page.waitForTimeout(1500);
+    await expect(page).not.toHaveTitle(/Something went wrong/);
+    await expect(page.locator('#main')).toHaveCount(1);
+    await expect(page.locator('header.site-header')).toBeVisible();
+    await expect(page.locator('canvas')).toHaveCount(0);
+    await expect(stack(page)).toBeVisible();
+    await expect(layer(page, 'hero')).toBeVisible();
+    await expect(page.locator('html')).not.toHaveClass(/scene-(live|pending)/);
+    expect(errors.filter((e) => !/chunk|Loading|fetch/i.test(e))).toEqual([]);
+  });
+
   test('live scene (?quality=high): the stills fade out once the canvas has drawn, the rest are never requested', async ({ page }) => {
     test.setTimeout(120_000);
     const requested = stillRequests(page);

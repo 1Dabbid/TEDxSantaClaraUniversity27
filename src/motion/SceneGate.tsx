@@ -1,7 +1,7 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useSceneEnabled } from '@/lib/quality';
 
 // Not even the loader is in the first-load bundle: it (and next/dynamic) is fetched only when the
@@ -22,7 +22,26 @@ const SceneLoader = lazy(() => import('@/scene/SceneLoader'));
  * Pausing uses the canvas' R3F root (frameloop 'never'), so the scene code in
  * src/scene is untouched. @react-three/fiber is imported lazily, only once the
  * scene chunk has already loaded it.
+ *
+ * The scene is decoration: if it fails (a chunk that does not load on a flaky
+ * network or after a redeploy, WebGL context creation failing although the probe
+ * passed), SceneBoundary catches the error, the scene stays down for the rest of
+ * the visit and the still frames (SceneStills) stay up. Nothing reaches the
+ * route's or the global error page.
  */
+
+class SceneBoundary extends Component<{ onFail: () => void; children: ReactNode }, { failed: boolean }> {
+  state = { failed: false };
+  static getDerivedStateFromError() {
+    return { failed: true };
+  }
+  componentDidCatch() {
+    this.props.onFail();
+  }
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
 
 const FLAG = 'fp:home-visited';
 
@@ -47,10 +66,11 @@ async function whenLive(container: HTMLElement, cancelled: () => boolean, timeou
   while (!cancelled() && performance.now() - t0 < timeout) {
     canvas = container.querySelector('canvas');
     if (canvas) {
-      const { _roots } = (await import('@react-three/fiber')) as unknown as {
+      const fiber = (await import('@react-three/fiber').catch(() => null)) as unknown as {
         _roots: Map<Element, { store: { getState: () => R3FState } }>;
-      };
-      state = _roots.get(canvas)?.store.getState();
+      } | null;
+      if (!fiber) return null;
+      state = fiber._roots.get(canvas)?.store.getState();
       if (state && state.gl.info.render.frame > 1) break;
     }
     await sleep(150);
@@ -73,8 +93,8 @@ async function whenLive(container: HTMLElement, cancelled: () => boolean, timeou
 async function setPaused(container: HTMLElement | null, paused: boolean, saved: { current: string }) {
   const canvas = container?.querySelector('canvas');
   if (!canvas) return;
-  const { _roots } = (await import('@react-three/fiber')) as unknown as { _roots: FiberRoots };
-  const state = _roots.get(canvas)?.store.getState();
+  const fiber = (await import('@react-three/fiber').catch(() => null)) as unknown as { _roots: FiberRoots } | null;
+  const state = fiber?._roots.get(canvas)?.store.getState();
   if (!state) return;
   if (paused) {
     if (state.frameloop !== 'never') saved.current = state.frameloop;
@@ -93,7 +113,9 @@ export default function SceneGate() {
   if (onHome && !seen) setSeen(true);
   const ref = useRef<HTMLDivElement>(null);
   const saved = useRef('always');
-  const sceneOk = useSceneEnabled();
+  // A failed scene stays down for the rest of the visit (the stills cover it).
+  const [failed, setFailed] = useState(false);
+  const sceneOk = useSceneEnabled() && !failed;
 
   useEffect(() => {
     if (!onHome) return;
@@ -111,9 +133,24 @@ export default function SceneGate() {
     if (!el || !seen) return;
     void setPaused(el, !onHome, saved);
     if (onHome) return;
-    const mo = new MutationObserver(() => void setPaused(el, true, saved));
+    const pause = () => void setPaused(el, true, saved);
+    const mo = new MutationObserver(pause);
     mo.observe(el, { childList: true, subtree: true });
-    return () => mo.disconnect();
+    // Coming back to the tab must not wake the hidden canvas: re-assert the pause after
+    // anything else that reacts to the same event (the scene has its own wake-up handler).
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const onVis = () => {
+      if (document.hidden) return;
+      pause();
+      clearTimeout(t);
+      t = setTimeout(pause, 100);
+    };
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      mo.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
+      clearTimeout(t);
+    };
   }, [onHome, seen, sceneOk]);
 
   // Still frames (SceneStills, home page) stand in for the canvas until it is live:
@@ -157,9 +194,11 @@ export default function SceneGate() {
   if (!seen || !sceneOk) return null;
   return (
     <div ref={ref} className="scene-gate" data-hidden={onHome ? undefined : ''} aria-hidden="true">
-      <Suspense fallback={null}>
-        <SceneLoader />
-      </Suspense>
+      <SceneBoundary onFail={() => setFailed(true)}>
+        <Suspense fallback={null}>
+          <SceneLoader />
+        </Suspense>
+      </SceneBoundary>
     </div>
   );
 }
