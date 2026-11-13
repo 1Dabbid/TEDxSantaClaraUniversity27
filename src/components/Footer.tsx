@@ -156,8 +156,8 @@ export async function Footer({ settings }: { settings: Settings }) {
             <ul className="mt-3 text-sm">
               <li>
                 <a href={CLUB_URL} className={linkCls} {...ext}>
-                  tedxscu.com
-                  <span className="sr-only"> (TEDxSantaClaraUniversity club site, opens in a new tab)</span>
+                  TEDxSantaClaraUniversity club site
+                  <NewTab />
                 </a>
               </li>
               {socials.map((k) => (
