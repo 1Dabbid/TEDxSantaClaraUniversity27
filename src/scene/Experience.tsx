@@ -10,6 +10,7 @@ import {
   HalfFloatType,
   Object3D,
   PlaneGeometry,
+  Quaternion,
   Vector3,
   WebGLRenderTarget,
   UnsignedByteType,
@@ -42,6 +43,9 @@ import Seats from './Seats';
 import Stage, { reflected } from './Stage';
 import Venue from './Venue';
 import { SECTION_IDS, scrollState, type SectionId } from './scrollState';
+import { MIC_AXIS } from './layout';
+
+const Y_AXIS = new Vector3(0, 1, 0);
 
 type Tier = 'high' | 'low';
 
@@ -85,6 +89,8 @@ function createState() {
     out: createRigOut(),
     keyA: new Vector3(),
     keyB: new Vector3(),
+    qa: new Quaternion(),
+    qb: new Quaternion(),
     perfT: 0,
     perfFrames: 0,
     perfBad: 0,
@@ -445,7 +451,11 @@ export default function Experience({
     shared.uCone.value = look.cone;
     shared.uTime.value = t;
     scene.environmentIntensity = o.env;
-    scene.environmentRotation.set(0, Math.sin(t * 0.045) * 0.3 + o.envRot + envOffset, 0);
+    // The studio strips turn slowly about the vertical (idle life) and, per shot, about the barrel:
+    // the camera never circles the mic, so the streak is walked round the barrel instead.
+    fs.qa.setFromAxisAngle(Y_AXIS, Math.sin(t * 0.045) * 0.3);
+    fs.qb.setFromAxisAngle(MIC_AXIS, o.envRot + envOffset);
+    scene.environmentRotation.setFromQuaternion(fs.qa.multiply(fs.qb));
 
     // Haze card behind the subject, facing the camera.
     const h = hazeRef.current;

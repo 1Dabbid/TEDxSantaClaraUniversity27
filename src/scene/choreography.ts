@@ -244,7 +244,8 @@ const MACRO = {
   haze: 0,
   motes: 1,
   vignette: 0.85,
-  envRot: 0.6,
+  // The studio strips walk round the barrel (choreography never circles it): the streak lands left of the facing line.
+  envRot: -1.1,
   env: 0.22,
   scrim: 0.55,
   scrimEdge: 0.9,
@@ -258,7 +259,7 @@ const STAGE_LOOK = { fov: 32, exposure: 1, dof: 0.1, drift: 0.006, parallax: 0.0
 
 const ANCHOR: readonly [number, number] = [0.68, 0.42];
 /** In the macro the barrel slides right so its engraved column clears the theme headline (left edge past ~58%). */
-const ANCHOR_MACRO: readonly [number, number] = [0.93, 0.5];
+const ANCHOR_MACRO: readonly [number, number] = [0.8, 0.5];
 
 export const DESKTOP_SHOTS: Shot[] = [
   { at: 0, aim: { mic: 0.095 }, dist: 0.4, anchor: [0.68, 0.4], ...HERO_LOOK },
