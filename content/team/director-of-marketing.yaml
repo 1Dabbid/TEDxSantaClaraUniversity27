@@ -1,5 +1,8 @@
 role: Director of Marketing
-name: ''
-showName: false
+name: Kavya Gangasani
+showName: true
+major: Biology
+classYear: 2030
+linkedin: https://www.linkedin.com/in/kavya-gangasani-7a060a33a/
 photo: null
-order: 4
+order: 5

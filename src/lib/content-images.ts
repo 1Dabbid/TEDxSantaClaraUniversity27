@@ -1,4 +1,4 @@
-import { closeSync, openSync, readSync, statSync } from 'node:fs';
+import { closeSync, existsSync, openSync, readSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { contentWarning } from './content-checks';
 
@@ -105,4 +105,20 @@ export function checkImage(
     );
   }
   return p;
+}
+
+/** File names a dropped-in team photo may have, in order of preference. */
+export const TEAM_PHOTO_FILES = ['photo.jpg', 'photo.jpeg', 'photo.png', 'photo.webp'] as const;
+
+/**
+ * A team photo placed by hand at the path the admin's Photo field writes to
+ * (public/images/team/<slug>/photo.jpg), for when the YAML does not name it yet.
+ * Returns its public path, or '' when there is none.
+ */
+export function findTeamPhoto(slug: string, publicDir: string = join(process.cwd(), 'public')): string {
+  for (const name of TEAM_PHOTO_FILES) {
+    const rel = `/images/team/${slug}/${name}`;
+    if (existsSync(join(publicDir, rel))) return rel;
+  }
+  return '';
 }

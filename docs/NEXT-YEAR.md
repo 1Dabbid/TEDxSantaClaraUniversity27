@@ -32,7 +32,7 @@ All of these are in the admin; each field explains itself. See `docs/EDITING.md`
 | **Contact, newsletter & socials** | Check the emails and links; empty **Livestream link** unless the new event is streamed. |
 | **Speakers** | Untick **Announced** on every slot, empty the fields, slugs back to `speaker-01`… |
 | **Schedule** | Untick **Show the running order**; clear the items. |
-| **Team** | The new board; untick **Show name publicly** until each person agrees. |
+| **Team** | The new board; untick **Show name publicly** until each person agrees. Replace or clear **Major**, **Class year**, **LinkedIn profile** and **Photo** for every role, and delete last year's photo files in `public/images/team/<slug>/` (entries are per role, so a photo left there would appear next to the new person's name). |
 | **Partner tiers** | **Tier name** and **Description**: 2027's are theme puns ("Fine Print Supporter", "Bold Print Partner"). The slug (the file name, e.g. `fine-print-supporter`) is never shown to visitors, so it can stay; delete and re-create a tier only if you want it renamed too, then fix the tiers chosen under **Partner benefits** and **Partners**. |
 | **Partners (logos)** | Untick **Published** or delete: partnerships are per event. |
 | **FAQ** | Read every answer. Use `{date}`, `{venue}`, `{campus}`, `{capacity}`, `{eventName}` instead of typing those facts. 2027's "Who organizes it?" answer says this is "the first {eventName} since 2020": change it (the event is no longer a return). |

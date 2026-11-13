@@ -1,6 +1,15 @@
 import { collection, config, fields, singleton } from '@keystatic/core';
 import { HTTPS_URL_MESSAGE, HTTPS_URL_PATTERN, SLUG_MESSAGE, SLUG_PATTERN, TIME_PATTERN } from './src/lib/content-checks';
-import { BENEFIT_GROUP_LABEL, EMAIL_PATTERN, SCHEDULE_KIND_LABEL, SITE_NAME, TED_TEXT_MIN_LENGTH, TEDX_MAX_CAPACITY } from './src/lib/site';
+import {
+  BENEFIT_GROUP_LABEL,
+  CLASS_YEAR_MAX,
+  CLASS_YEAR_MIN,
+  EMAIL_PATTERN,
+  SCHEDULE_KIND_LABEL,
+  SITE_NAME,
+  TED_TEXT_MIN_LENGTH,
+  TEDX_MAX_CAPACITY,
+} from './src/lib/site';
 import { THEME_COPY_DEFAULTS as COPY } from './src/lib/theme-copy';
 
 /**
@@ -562,12 +571,28 @@ export default config({
         name: fields.text({ label: 'Name (optional)', description: 'Only shown when “Show name publicly” is ticked.' }),
         showName: fields.checkbox({
           label: 'Show name publicly',
-          description: 'Ask the person first. Unticked = only the role is shown.',
+          description:
+            'Ask the person first. Unticked = only the role is shown, on /team only. Ticked: the name and the details below appear on the home page and /team.',
           defaultValue: false,
         }),
+        major: fields.text({
+          label: 'Major (optional)',
+          description: 'As it should appear, e.g. Mechanical Engineering. Minors can be left out to keep it short.',
+          validation: { length: { max: 80 } },
+        }),
+        classYear: fields.integer({
+          label: 'Class year (optional)',
+          description: 'The graduation year as four digits, e.g. 2029. Shown as “Class of 2029”. Leave blank to hide.',
+          validation: { min: CLASS_YEAR_MIN, max: CLASS_YEAR_MAX },
+        }),
+        linkedin: urlField(
+          'LinkedIn profile (optional)',
+          'The person’s own LinkedIn page, e.g. https://www.linkedin.com/in/their-name. Opens in a new tab. Never add a personal email address or phone number anywhere on the site.',
+        ),
         photo: fields.image({
           label: 'Photo (optional)',
-          description: 'Square headshot: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG). Only shown together with the name.',
+          description:
+            'Square headshot: JPG or PNG under 2 MB (not HEIC, not PDF, not SVG), about 600×600 px. Shown in black and white, only together with the name. Without a photo the site shows the person’s initials.',
           directory: 'public/images/team',
           publicPath: '/images/team/',
         }),

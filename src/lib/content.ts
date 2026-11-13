@@ -13,10 +13,12 @@ import {
   SLUG_MESSAGE,
   TIME_PATTERN,
 } from './content-checks';
-import { checkImage } from './content-images';
+import { checkImage, findTeamPhoto } from './content-images';
 import { formatCalendarDate } from './dates';
 import {
   BENEFIT_GROUP_LABEL,
+  CLASS_YEAR_MAX,
+  CLASS_YEAR_MIN,
   type BenefitGroup,
   EMAIL_PATTERN,
   SITE_NAME,
@@ -50,7 +52,7 @@ import type { ThemeCopy } from './theme-copy';
 const LOADER_CHECKED = new Set([
   'mapUrl', 'ticketUrl', 'ticketEmbedUrl', 'speakerApplicationsUrl', 'newsletterUrl', 'livestreamUrl',
   'instagram', 'linkedin', 'youtube', 'tiktok', 'link', 'url',
-  'doorsTime', 'talksTime', 'endTime', 'dateISO', 'aboutTedx', 'aboutTed', 'contactEmail', 'partnershipsEmail',
+  'doorsTime', 'talksTime', 'endTime', 'dateISO', 'aboutTedx', 'aboutTed', 'contactEmail', 'partnershipsEmail', 'classYear',
 ]);
 
 type FieldNode = {
@@ -361,7 +363,14 @@ export type FaqItem = { question: string; answer: string };
 export type TeamMember = {
   slug: string;
   role: string;
+  /** null while the person has not agreed to be named; the fields below are then empty too. */
   name: string | null;
+  /** "Mechanical Engineering", '' when not given. */
+  major: string;
+  /** 2029 (shown as "Class of 2029"), or null. */
+  classYear: number | null;
+  /** Their LinkedIn profile (https), '' when not given. */
+  linkedin: string;
   photo: string | null;
   order: number;
 };
@@ -596,16 +605,38 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
     .map((i, n) => ({ question: fill(i.question, n + 1), answer: fill(i.answer, n + 1) }));
 });
 
+/** A class year such as 2029, or null (hidden) with a warning when it is not a plausible year. */
+function classYearOf(v: number | null | undefined, file: string): number | null {
+  if (v === null || v === undefined) return null;
+  if (Number.isInteger(v) && v >= CLASS_YEAR_MIN && v <= CLASS_YEAR_MAX) return v;
+  contentWarning(file, 'Class year', `"${v}" is not a four-digit year like 2029, so the class year is hidden.`);
+  return null;
+}
+
+/**
+ * The board. Name, details and photo only for people who agreed to be named
+ * (Show name publicly + a name); everyone else is just their role. No email
+ * address or phone number is ever part of a team member.
+ *
+ * Photo: the uploaded Photo field, or, when it is empty, a file dropped in at
+ * the path the admin itself would use: public/images/team/<slug>/photo.jpg (or
+ * .jpeg, .png, .webp). Either way it goes through the same image checks.
+ */
 export const getTeam = cache(async (): Promise<TeamMember[]> => {
   const entries = await readCollection('team');
   return entries
     .map(({ slug, entry }) => {
       const visible = entry.showName && Boolean(str(entry.name));
+      const file = entryFile('team', slug);
+      const photo = str(entry.photo) || findTeamPhoto(slug);
       return {
         slug,
         role: entry.role,
         name: visible ? str(entry.name) : null,
-        photo: visible ? checkImage(entry.photo, { file: entryFile('team', slug), field: 'Photo' }) : null,
+        major: visible ? str(entry.major) : '',
+        classYear: visible ? classYearOf(entry.classYear, file) : null,
+        linkedin: visible ? link(entry.linkedin, file, 'LinkedIn profile') : '',
+        photo: visible ? checkImage(photo, { file, field: 'Photo' }) : null,
         order: entry.order ?? 0,
       };
     })

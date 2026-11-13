@@ -45,7 +45,7 @@ The home page shows what is true today and grows by itself as you publish. You n
 | **Schedule** | A short note: date, "Running order to follow". Not in the menu. | Ticking **Show the running order** shows the full timeline and adds **Schedule** to the menu. |
 | **Speaker applications** | Shown in the Speakers section: "Applications are not open yet". | **Open** + a link: an **Apply to speak** button under the Speakers heading and in the closing links at the bottom of the home page (with the deadline, if filled in). **Closed**: "Applications for this event are closed." |
 | **Tickets** | "Not on sale yet.", with the mailing list button. | **On sale** + a link: **Get tickets** everywhere. |
-| **Team** | Hidden (not on the page, not in the menu). | Appears as soon as one person has **Show name publicly** ticked and a name; only named people are listed. |
+| **Team** | Hidden (not on the page, not in the menu). | Appears as soon as one person has **Show name publicly** ticked and a name: a compact roster of the named people (initials or photo, name, role). |
 | **Partners** | A short text invitation on the home page (never names or logos) linking to `/partners`. On `/partners`, **Current partners** is hidden. | **Published** partners appear on `/partners` only. |
 | **Hero buttons** | **Tickets** and **Get updates** (mailing list). | Once a speaker is announced: **Tickets** and **Speakers**. |
 
@@ -57,10 +57,10 @@ Besides the home page (the scroll story), each topic has its own page with an ad
 | --- | --- | --- |
 | **/venue** | The street address and **Open in Maps** at the top, the coordinates, and Directions, Parking and Accessibility with one line saying the details follow (Directions points to the address; Accessibility to the contact email). The times show as one line, "Doors and talk times to follow". | Each **Getting there** note you fill in (**Venue & directions**) appears under its title; **Doors open at**, **Talks start at**, **Event ends at** appear at the top. |
 | **/schedule** | The date, "Running order to follow" and the mailing list button. | The full running order (**Show the running order**). |
-| **/team** | Every board role from **People > Team**, as a plain list of roles. | Names and photos for people with **Show name publicly** ticked. Turning off the Team switch, or removing every role, removes the page. |
+| **/team** | Every board role from **People > Team**, as a plain list of roles. | For people with **Show name publicly** ticked: name, role, photo (or initials), major, class year and LinkedIn link. Turning off the Team switch, or removing every role, removes the page. |
 | **/faq** | Every question. Each has its own link (e.g. `/faq#tickets-on-sale`, made from the question's words): send it to someone and the answer opens. Rewording a question changes its link. Turning off the FAQ switch removes the page. | |
 
-Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The whole team", "All 9 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
+Menus: at the top of the home page the links scroll to the sections (Schedule and Team only once their home sections show); on every other page the links open the topic pages, Schedule and Team included whenever their page exists. The footer always links the pages. Each home section ends with a small link to its page ("Venue details", "Full schedule", "The team", "All 9 questions" (when there are more than the five shown at home), and "All speakers" once a speaker is announced).
 
 Unannounced speakers still have a page (`/speakers/speaker-01` and so on) so an old link never breaks, but nothing on the site links to it and search engines are told to ignore it.
 
@@ -127,13 +127,16 @@ Tiers and benefits first, then the partner:
 4. **Partners > Partners (logos)** > **Add**: **Organization name** (leave the **File name (slug)** under it as generated), **Tier** (again listed by page address, e.g. `cornerstone-partner`), **Logo**, **Website** (full address starting with `https://`). The logo is shown at most 24px tall and 72px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED's prohibited sponsors. Sponsors can never be speakers.
 5. Tick **Published** only once the partnership is signed and the logo approved, then **Save**. Partners appear on `/partners` only, never on the home page.
 
-### Show team names
+### Show team names and details
 
-1. **People > Team**: one entry per board role (**Role**; leave the **File name (slug)** under it as generated).
-2. Fill in **Name (optional)** and optionally **Photo (optional)**.
-3. Tick **Show name publicly** (ask the person first) and **Save**.
+1. **People > Team**: one entry per board role (**Role**, e.g. "President"; leave the **File name (slug)** under it as generated). **Order** sets the order on the site (1 first).
+2. Fill in **Name (optional)**, then the optional details: **Major (optional)** (e.g. "Mechanical Engineering"; minors can be left out), **Class year (optional)** (four digits, e.g. 2029, shown as "Class of 2029") and **LinkedIn profile (optional)** (the full address starting with `https://`, e.g. `https://www.linkedin.com/in/their-name`). Never add a personal email address or phone number anywhere on the site.
+3. **Photo (optional)**: upload a square headshot (see image sizes below). Until there is one, the site shows the person's initials in a small circle, in the same place.
+4. Tick **Show name publicly** (ask the person first) and **Save**.
 
-The Team section stays hidden until at least one person has a public name; then it lists the named people only (with their role), and **Team** appears in the menu. The whole section can also be switched off in **Contact & site > Show / hide sections > Show the Team section on the home page (it appears once at least one name is public)**.
+The home page shows a compact roster (initials or photo, name, role) and a link, "The team", to **/team**, which adds the major, class year and a LinkedIn link (it opens in a new tab and is announced to screen readers as "<name> on LinkedIn (opens in a new tab)"). The Team section stays hidden until at least one person has a public name; then it lists the named people only, and **Team** appears in the menu. The whole section can also be switched off in **Contact & site > Show / hide sections > Show the Team section on the home page (it appears once at least one name is public)**.
+
+**Adding photos without the admin.** A photo can also be put straight into the repository, at `public/images/team/<file name>/photo.jpg` (or `photo.png`, `photo.webp`), where `<file name>` is the entry's **File name (slug)**: `president`, `vp-of-production`, `vp-of-finance`, `director-of-compliance`, `director-of-marketing`, `director-of-creative`, `director-of-speakers`, `director-of-partnerships`, `director-of-community`. The file name must be lowercase `photo` and the folder must match the slug exactly. The site picks it up on the next build when the **Photo** field is empty; it is the same place the admin's upload writes to.
 
 ### The "All year, not one night" card (Partners page)
 
@@ -198,7 +201,7 @@ Only the Director of Compliance (or the licence holder) should change these. The
 | Image | Size | Format |
 | --- | --- | --- |
 | Speaker **Portrait** | 4:5 portrait, about 1200 × 1500 px | JPG or PNG, under 2 MB |
-| Team **Photo (optional)** | square, about 600 × 600 px | JPG or PNG, under 2 MB |
+| Team **Photo (optional)** | square, about 600 × 600 px, face centred (it is cropped to a circle) | JPG or PNG, under 2 MB |
 | Partner **Logo** | white or light version on a transparent background, wide rather than tall; it is shown at most 24px tall and 72px wide; always smaller than the event logo | SVG (best) or PNG at least 216 px wide, under 2 MB |
 
 Keep every photo under 2 MB; JPG or PNG (not HEIC, not PDF). iPhone photos are often HEIC: export or share them as JPG first ("Most Compatible" in the camera settings). A file of the wrong type is left out (the page shows "Portrait to follow") and a file over 2 MB is flagged in the build log. Use plain file names without spaces (e.g. `jane-doe.jpg`). The site resizes and compresses photos for visitors automatically.
