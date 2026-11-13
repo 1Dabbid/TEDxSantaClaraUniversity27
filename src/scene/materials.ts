@@ -157,6 +157,8 @@ type Patch = {
    * scene environment is used, so a per-material 0 would be ignored.
    */
   noEnv?: boolean;
+  /** Height (m) over which this surface's floor reflection fades out (1/e); defaults to REFL_FADE. */
+  reflFade?: number;
 };
 
 function patch(material: MeshStandardMaterial, key: string, p: Patch) {
@@ -180,7 +182,7 @@ function patch(material: MeshStandardMaterial, key: string, p: Patch) {
       // above the floor, like a reflection in a satin finish: contact is sharp and full, a metre up is gone.
       .replace(
         '#include <dithering_fragment>',
-        `#include <dithering_fragment>\nif (cameraPosition.y < 0.0) gl_FragColor.rgb *= exp(-max(vWorld.y, 0.0) / ${REFL_FADE.toFixed(2)});`,
+        `#include <dithering_fragment>\nif (cameraPosition.y < 0.0) gl_FragColor.rgb *= exp(-max(vWorld.y, 0.0) / ${(p.reflFade ?? REFL_FADE).toFixed(3)});`,
       )
       .replace('material.sheenColor = sheenColor;', 'material.sheenColor = sheenColor * sheenMul;');
     if (p.noEnv) shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_maps>', '');
@@ -192,6 +194,13 @@ function patch(material: MeshStandardMaterial, key: string, p: Patch) {
 const lin = (hex: string) => new Color(hex);
 /** Height (m) over which a surface's floor reflection fades out (1/e). */
 const REFL_FADE = 0.3; // Color() converts sRGB hex to linear working space
+/**
+ * The microphone and its stand fade out of the floor reflection much sooner. The stand stands in
+ * the middle of the rug, and cut pile does not mirror: what the deck beyond the rug would show is
+ * the upper tube and the mic, 1.5 m from the foot, a pale stripe below the rug that reads as a drip
+ * from the stand. With a short fade only what is near the floor reflects (the cable on the deck).
+ */
+const STAND_REFL_FADE = 0.08;
 
 /* ------------------------------------------------------------------------- */
 /* Microphone                                                                */
@@ -228,6 +237,7 @@ export function createBodyMaterial(cheap: boolean) {
         clearcoatRoughness: 0.2,
       });
   patch(m, `mic-body-${cheap ? 1 : 0}`, {
+    reflFade: STAND_REFL_FADE,
     uniforms,
     vertexHead: 'varying vec3 vTanV; varying vec3 vBitV;',
     vertexBody: `
@@ -365,6 +375,7 @@ export function createGrilleMaterial(cheap: boolean) {
   };
   const m = new MeshStandardMaterial({ color: lin('#6d7178'), metalness: 1, roughness: 0.12, envMapIntensity: 0.24 });
   patch(m, `mic-grille-${cheap ? 1 : 0}`, {
+    reflFade: STAND_REFL_FADE,
     uniforms,
     fragmentHead: `uniform float uGC; uniform float uGR; uniform float uSquash; uniform float uPitch; uniform float uWire; uniform float uAmp; uniform float uInner; uniform vec3 uFoam;`,
     fragmentBody: `
@@ -453,6 +464,7 @@ export function createNickelMaterial(cheap: boolean) {
   const params = { color: lin('#cfc6b6'), metalness: 1, roughness: 0.14, envMapIntensity: 1.35 };
   const m = new MeshStandardMaterial(params);
   patch(m, `nickel-${cheap ? 1 : 0}`, {
+    reflFade: STAND_REFL_FADE,
     uniforms: {},
     fragmentBody: `
       float fy = fwidth(vObj.y);
@@ -471,6 +483,7 @@ export function createNickelMaterial(cheap: boolean) {
 export function createPolishedMaterial() {
   const m = new MeshStandardMaterial({ color: lin('#d4d6da'), metalness: 1, roughness: 0.1, envMapIntensity: 1.3 });
   patch(m, 'chrome', {
+    reflFade: STAND_REFL_FADE,
     uniforms: {},
     fragmentBody: `
       totalEmissiveRadiance += uRimColor * rimTerm(normal, 0.3) * 0.6;
@@ -498,6 +511,7 @@ const GLSL_BOUNCE = /* glsl */ `
 export function createHardwareMaterial() {
   const m = new MeshStandardMaterial({ color: lin('#17171a'), metalness: 0.85, roughness: 0.36, envMapIntensity: 1.0 });
   patch(m, 'hardware', {
+    reflFade: STAND_REFL_FADE,
     uniforms: { uClip: { value: PIVOT_WORLD.clone() } },
     fragmentHead: GLSL_BOUNCE + 'uniform vec3 uClip;',
     fragmentBody: `
