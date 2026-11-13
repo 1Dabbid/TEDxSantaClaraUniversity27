@@ -36,6 +36,7 @@ import {
   createPolishedMaterial,
 } from './materials';
 import { REFLECT_LAYER } from './reflection';
+import { look } from './look';
 import { engravingRows, type EngravingFacts } from './engraving';
 import { EMPTY_MASK, createEngravingMask } from './textures';
 
@@ -364,6 +365,8 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
   const engravingKey = JSON.stringify(engraving ?? {});
   const rows = useMemo(() => engravingRows(JSON.parse(engravingKey) as Partial<EngravingFacts>), [engravingKey]);
   const maskOn = useRef<{ value: number } | null>(null);
+  /** The sleeve's turn uniform (look.turn), written every frame. */
+  const turn = useRef<{ value: number } | null>(null);
 
   const geo = useMemo(() => {
     const seg = high ? 160 : 72;
@@ -457,8 +460,13 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
     [geo, mats],
   );
 
-  // Fade the engraving in (about 1.2 s) once the mask is ready.
+  useEffect(() => {
+    turn.current = mats.body.uniforms.uTurn;
+  }, [mats]);
+
+  // Fade the engraving in (about 1.2 s) once the mask is ready; turn the sleeve with the choreography.
   useFrame((_, dt) => {
+    if (turn.current) turn.current.value = look.turn;
     if (fade.current <= 0 || fade.current >= 1 || !maskOn.current) return;
     fade.current = Math.min(1, fade.current + dt / 1.2);
     const f = fade.current;

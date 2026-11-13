@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import {
   BufferAttribute,
   BufferGeometry,
+  Color,
   CylinderGeometry,
   PlaneGeometry,
   type Mesh,
@@ -29,6 +30,16 @@ import { REFLECT_LAYER } from './reflection';
 const R = RUG_RADIUS;
 /** Makes an object visible to the floor reflection as well as the main camera. */
 export const reflected = (o: Object3D) => o.layers.enable(REFLECT_LAYER);
+
+/**
+ * Colour temperature of the spot and its shaft (look.warm: +1 warm, -1 cool):
+ * neutral, warm and cool ends for the light and for the beam. Kept subtle.
+ */
+const SPOT_TINT = { neutral: new Color('#fff2e4'), warm: new Color('#ffdcb8'), cool: new Color('#e8eeff') };
+const BEAM_TINT = { neutral: new Color('#fff8f2'), warm: new Color('#ffe7cf'), cool: new Color('#eef2ff') };
+function tint(t: typeof SPOT_TINT, w: number, out: Color) {
+  return out.copy(t.neutral).lerp(w >= 0 ? t.warm : t.cool, Math.min(1, Math.abs(w)));
+}
 
 /** Upstage curtain: distance behind the stage centre, width, height. */
 const CURTAIN = { z: -4.6, width: 34, height: 8 };
@@ -113,6 +124,7 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     if (c) {
       c.uniforms.uTime.value = t;
       c.uniforms.uIntensity.value = look.cone;
+      tint(BEAM_TINT, look.warm, c.uniforms.uColor.value as Color);
     }
     if (d) {
       d.uniforms.uTime.value = t;
@@ -122,7 +134,10 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     }
     if (cone.current) cone.current.visible = look.cone > 0.01;
     if (dust.current) dust.current.visible = look.cone * look.spot > 0.01;
-    if (spot.current) spot.current.intensity = 260 * look.spot;
+    if (spot.current) {
+      spot.current.intensity = 260 * look.spot;
+      tint(SPOT_TINT, look.warm, spot.current.color);
+    }
   });
 
   return (

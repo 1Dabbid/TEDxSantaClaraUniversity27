@@ -227,6 +227,8 @@ export function createBodyMaterial(cheap: boolean) {
     uEtch: { value: lin('#b9bbbf') },
     /** 0..1: fades the engraving in once its mask has been built. */
     uMaskOn: { value: 0 },
+    /** Turn of the sleeve (engraving, knurl, tool marks) about the mic axis, radians (look.turn). */
+    uTurn: { value: 0 },
   };
   const params = { color: lin('#2b2c31'), metalness: 1, roughness: 0.3, envMapIntensity: 1.25 };
   const m = cheap
@@ -249,10 +251,10 @@ export function createBodyMaterial(cheap: boolean) {
     fragmentHead: `
       varying vec3 vTanV; varying vec3 vBitV;
       uniform sampler2D uMask; uniform vec2 uMaskTexel; uniform vec2 uBand; uniform vec3 uKnurl;
-      uniform float uKnurlN; uniform float uDepth; uniform vec3 uEtch; uniform float uMaskOn;`,
+      uniform float uKnurlN; uniform float uDepth; uniform vec3 uEtch; uniform float uMaskOn; uniform float uTurn;`,
     fragmentBody: `
       float r = length(vObj.xz);
-      float phi = atan(vObj.x, vObj.z);
+      float phi = atan(vObj.x, vObj.z) - uTurn;
       vec3 T = normalize(vTanV);
       vec3 B = normalize(vBitV);
       vec2 sp = vec2(phi * r, vObj.y);

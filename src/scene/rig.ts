@@ -58,6 +58,8 @@ export function createRig() {
     band: new Damped(0),
     bloom: new Damped(1),
     env: new Damped(1),
+    warm: new Damped(0),
+    turn: new Damped(0),
     roll: new Damped(0),
     keyDir: new DampedVec3(),
     keyCam: new Damped(0),
@@ -174,6 +176,8 @@ export function stepRig(
     rig.band.snap(s.band);
     rig.bloom.snap(s.bloom);
     rig.env.snap(s.env);
+    rig.warm.snap(s.warm);
+    rig.turn.snap(s.turn);
     rig.envRot.snap(s.envRot);
     rig.keyDir.snap(s.keyDir);
     rig.keyCam.snap(s.keyCam);
@@ -211,6 +215,8 @@ export function stepRig(
   look.scrimEdge = Math.max(0, rig.scrimEdge.step(s.scrimEdge, 0.6, dt));
   look.band = Math.max(0, rig.band.step(s.band, 0.6, dt));
   look.bloom = rig.bloom.step(s.bloom, 0.6, dt);
+  look.warm = rig.warm.step(s.warm, 0.8, dt);
+  look.turn = rig.turn.step(s.turn, 0.5, dt);
   out.rimAng = rig.rimAng.step(s.rimAng, 0.6, dt);
   rig.keyDir.step(s.keyDir, 0.8, dt, out.keyDir);
   out.keyCam = rig.keyCam.step(s.keyCam, 0.6, dt);

@@ -6,34 +6,64 @@ import { SECTION_IDS } from './scrollState';
 /**
  * Camera choreography as data.
  *
- * THE PRINCIPLE: ONE SUBJECT, ONE AXIS.
+ * THE PRINCIPLE: ONE SUBJECT, ONE CONTINUOUS MOVE.
  *
  * The subject of the whole page is the microphone on its stand at the centre
- * of the red rug. The camera never orbits it, never swings sideways and never
- * re-aims at something else: it only travels in and out along one straight
- * dolly track through the subject (heading VIEW_AZ, a slight downward
- * elevation), with a slow crane rise only at the very end. What changes from
- * section to section is distance and light, never direction. The subject
- * keeps one place on screen (a lens shift, not a turn): on landscape about
- * two thirds across, clear of the page copy on the left; on portrait centred,
- * in the lower middle. Every frame follows from the one before, so the eye
- * never has to look for the subject again.
+ * of the red rug. It is always the subject and, once the engraving macro is
+ * over, always wholly in frame, at a screen place that changes only slowly
+ * (a lens shift, never a turn of the camera to look for it). The camera makes
+ * ONE slow move over the whole journey, the way a motion-control crane shot
+ * in a car film travels round its car: every frame follows from the one
+ * before, nothing ever cuts, whips or reverses, and while a 3D section is on
+ * screen the move never quite stops.
  *
- * When you edit the shots below, keep to that:
- * - change `dist` (in and out), `aim` (which point of the subject is held at
- *   the anchor: a point on the mic barrel, or a height on the stand line) and
- *   the light; leave the heading alone (there is no per-shot heading);
- * - keep `anchor` nearly constant (a few percent of the frame at most between
- *   neighbouring shots; the engraving macro is the one exception, where the
- *   barrel slides right to leave the headline clear);
- * - keep `dist` monotonic from the end of the macro to the end of Tickets
- *   (never push back in); a hold is two shots with the same values;
- * - spread a big change of distance over enough scroll, in steps of roughly
- *   equal ratio (the pull back out of the macro grows about 1.6-2x per step of
- *   0.0725), and bring light up after the framing has settled, not with it, so
- *   neighbouring frames always follow from each other. `__sceneSim.metrics()`
- *   (?scene-debug=1) reports heading change, lateral deviation, anchor drift,
- *   monotonicity and the largest framing jump: check them after an edit.
+ * The move, beat by beat (landscape; portrait is the same move with smaller
+ * amplitudes):
+ * 1. Hero -> Theme: push in along the camera axis to the engraved band. In
+ *    the macro the camera tracks slowly down the barrel and the barrel's
+ *    sleeve turns a few degrees on its own axis (`turn`), so the engraved rows
+ *    roll past; the object moves, the camera does not fly.
+ * 2. Theme -> Speakers: one spiral pull out. The camera retreats along the
+ *    mic while it starts to orbit (towards the grille side) and sinks to
+ *    about mic height, so the stand, the rug and the beam arrive with
+ *    parallax; the light comes up as the stage arrives.
+ * 3. Speakers -> Schedule -> Venue: the same orbit continues in the same
+ *    direction, slowly, while the camera rises steadily: low and heroic at
+ *    Speakers (the beam towering), a high crane view down on the rug at the
+ *    end of Venue. Schedule's light beat is the beam's colour temperature
+ *    going from warm to cool as the programme passes (`warm`).
+ * 4. Venue -> Tickets: still the same orbit, now pulling back and up over the
+ *    seats into the wide house view.
+ * 5. After Tickets: the lights go down; the move eases to a stop in the dark.
+ * 6. Idle: with the page at rest the frame still breathes (a few millimetres
+ *    of camera float, the dust and the haze in the beam). The static tier
+ *    (reduced motion) has no canvas at all.
+ *
+ * The camera is held on a sphere round the subject: an aim point (`aim`,
+ * held at the screen anchor), a distance (`dist`), an orbit angle (`orbit`,
+ * degrees round the vertical, 0 = the hero's heading VIEW_AZ) and an
+ * elevation (`elev`, degrees). The camera path is written as a few keys per
+ * channel (see `track()` and the *_MOVE tables below) and the shot list is
+ * sampled from them at an even spacing, so the speed of the move is decided
+ * in one place and stays even across section boundaries.
+ *
+ * When you edit the move, keep to the rules the debug simulator checks
+ * (`__sceneSim.motion()` with ?scene-debug=1; it prints pass / fail):
+ * - the orbit angle never reverses; from the end of the macro the distance to
+ *   the subject only grows; from Speakers to the end of Tickets the camera
+ *   only rises;
+ * - per filmstrip step (2.5% of the Theme..Tickets journey, J 0.125) the
+ *   view direction turns by at most MOTION_LIMITS.viewDeg and the subject
+ *   moves by at most MOTION_LIMITS.screen of the frame width, with no single
+ *   step more than about twice the median step of its beat (no stop-start at
+ *   section boundaries: the channels are monotone cubics, velocity continuous);
+ * - no run of more than MOTION_LIMITS.stillRun steps without camera change
+ *   while a 3D section is on screen;
+ * - the subject stays clear of the copy column (landscape: right of
+ *   MOTION_LIMITS.copyX of the width) and inside the frame;
+ * - light changes ride on the move (they come up after the framing has
+ *   arrived, never in one step), and nothing bright passes behind body copy
+ *   (the veils: scrim, scrimEdge, band, shade).
  *
  * Journey coordinate `J`: continuous over the home page; section k (in
  * SECTION_IDS order) spans [k, k+1) and the fraction is how far the viewport
@@ -42,12 +72,11 @@ import { SECTION_IDS } from './scrollState';
  * 225vh theme runway and the speakers stage pins at about 2.25; 2.5 is
  * speakers centred, and so on.
  *
- * Every channel (track distance, aim point, anchor, roll, light) is
- * interpolated with a monotone cubic (Fritsch-Carlson) through the shots: no
- * overshoot, velocity continuous across shots (moves flow from one section
- * into the next without a stop-start), zero velocity where two shots hold the
- * same value. The camera then follows that path with critically damped
- * springs (rig.ts).
+ * Every channel (distance, orbit, elevation, aim point, anchor, roll, light)
+ * is interpolated with a monotone cubic (Fritsch-Carlson) through the shots:
+ * no overshoot, velocity continuous across shots, zero velocity where two
+ * shots hold the same value. The camera then follows that path with
+ * critically damped springs (rig.ts).
  */
 
 export type V3 = readonly [number, number, number];
@@ -62,9 +91,16 @@ export type Aim =
 export type Shot = {
   at: number;
   aim: Aim;
-  /** Camera distance along the dolly track (m), measured from the aim's track origin. */
+  /** Camera distance (m) from the aim's track origin. */
   dist: number;
-  /** Extra camera height (m) added to the track: the crane rise at the end of the journey. */
+  /**
+   * Orbit angle round the vertical through the subject (degrees, 0 = the hero's
+   * heading VIEW_AZ; negative swings the camera round towards the grille side).
+   */
+  orbit?: number;
+  /** Elevation of the camera above the subject (degrees, default TRACK_ELEV). */
+  elev?: number;
+  /** Extra camera height (m), straight up. */
   lift?: number;
   /** Where the aim point sits on screen, [x from the left, y from the top], 0..1. Applied as a lens shift. */
   anchor: readonly [number, number];
@@ -116,6 +152,10 @@ export type Shot = {
   bloom?: number;
   /** Studio environment (reflection strips) intensity, default 1. */
   env?: number;
+  /** Colour temperature of the overhead spot and its beam: +1 warm, 0 neutral, -1 cool. */
+  warm?: number;
+  /** Turn of the barrel sleeve (engraving, knurl) about the mic axis, radians. */
+  turn?: number;
 };
 
 export type ResolvedShot = {
@@ -128,9 +168,14 @@ export type ResolvedShot = {
   dir: Vector3;
   logDist: number;
   up: Vector3;
-  /** Track: origin, log of the distance along it, crane lift. The camera is origin + TRACK * exp(logU) + lift * Y. */
+  /**
+   * Track: origin, log of the distance, orbit and elevation (radians), lift.
+   * The camera is origin + trackDir(orbit, elev) * exp(logU) + lift * Y.
+   */
   origin: Vector3;
   logU: number;
+  orbit: number;
+  elev: number;
   lift: number;
   /** Roll about the view axis (radians). */
   roll: number;
@@ -161,6 +206,8 @@ export type ResolvedShot = {
   band: number;
   bloom: number;
   env: number;
+  warm: number;
+  turn: number;
 };
 
 /**
@@ -180,26 +227,53 @@ export const RIG = {
   /** View-direction spring frequency (Hz) and damping ratio (1: critically damped). */
   targetFreq: 1.2,
   targetZeta: 1,
-  /** Bank angle per unit of lateral angular velocity (rad per rad/s), and its limit (the axis has no lateral moves). */
-  rollGain: 0.05,
-  rollMax: 0.035,
+  /**
+   * Bank angle per unit of lateral angular velocity (rad per rad/s), and its
+   * limit: a crane does not bank, so only a hint of it on a fast fling round the orbit.
+   */
+  rollGain: 0.02,
+  rollMax: 0.012,
   /** Lens-shift (screen anchor) follow time (seconds). */
   anchorFollow: 0.4,
 };
 
 /* ------------------------------------------------------------------------- */
-/* The axis                                                                  */
+/* The sphere round the subject                                              */
 /* ------------------------------------------------------------------------- */
 
 /** Point on the mic (mic-space y), in world space. */
 export const micPoint = (y: number) => micToWorld(new Vector3(0, y, 0));
 
-/** The middle of the barrel (the hero's aim): the top of the stand line and the origin of the track. */
+/** The middle of the barrel (the hero's aim): the top of the stand line and the centre of the orbit. */
 export const SPINE = micPoint(0.095);
-/** Elevation of the dolly track (radians): the camera looks a little down on the subject. */
+/** Elevation of the hero's camera axis (radians): the camera looks a little down on the subject. */
 export const TRACK_ELEV = 0.07;
-/** Unit direction of the dolly track, from the subject towards the camera. */
-export const TRACK = new Vector3(Math.sin(VIEW_AZ) * Math.cos(TRACK_ELEV), Math.sin(TRACK_ELEV), Math.cos(VIEW_AZ) * Math.cos(TRACK_ELEV));
+const DEG = Math.PI / 180;
+
+/** Unit direction from the subject towards the camera for an orbit and an elevation (radians). */
+export function trackDir(orbit: number, elev: number, out = new Vector3()): Vector3 {
+  const az = VIEW_AZ + orbit;
+  return out.set(Math.sin(az) * Math.cos(elev), Math.sin(elev), Math.cos(az) * Math.cos(elev));
+}
+/** The hero's camera axis (orbit 0). */
+export const TRACK = trackDir(0, TRACK_ELEV);
+
+/**
+ * The calm limits of the move (checked by `__sceneSim.motion()`), per
+ * filmstrip step of J 0.125 (2.5% of the Theme..Tickets journey).
+ */
+export const MOTION_LIMITS = {
+  /** Largest turn of the view direction per step (degrees). */
+  viewDeg: 3.5,
+  /** Largest move of the subject on screen per step (fraction of the frame width). */
+  screen: 0.025,
+  /** No step may be more than this many times the median step of its beat. */
+  spike: 2.2,
+  /** While a 3D section is on screen, at most this many consecutive steps without camera change. */
+  stillRun: 3,
+  /** Landscape: the subject stays right of this fraction of the width (the copy column is left of it). */
+  copyX: 0.55,
+};
 
 /** World position of an aim point. */
 export function aimPoint(aim: Aim, out = new Vector3()): Vector3 {
@@ -282,12 +356,358 @@ const PULL_DARK = { fov: 30, exposure: 1, dof: 0.3, drift: 0.004, parallax: 0.01
 /** Microphone and upper stand, the spot just beginning to warm. */
 const PULL_STAND = { fov: 31, exposure: 1, dof: 0.22, drift: 0.005, parallax: 0.016, cone: 0.03, spot: 0.15, key: 0.8, keyCam: 0.1, rim: 1.15, rimAng: -0.45, haze: 0.08, motes: 0, vignette: 0.68, env: 0.75, scrim: 0.2, scrimEdge: 0.3, bloom: 1.1 };
 
+/**
+ * Journey position at or beyond which the scene is fully dark: the end of
+ * Tickets. The text-only partner band after Tickets has no data-section, so J
+ * rests at 6 while it scrolls past; the scene is already black behind it.
+ */
+export const DARK_FROM = 6.0;
+
 /** In the macro the barrel slides right so its engraved column clears the theme headline (left edge past ~58%). */
 const ANCHOR_MACRO: readonly [number, number] = [0.8, 0.5];
 
-export const DESKTOP_SHOTS: Shot[] = [
-  { at: 0, aim: { mic: 0.095 }, dist: 0.4, anchor: [0.68, 0.4], ...HERO_LOOK },
-  { at: 0.55, aim: { mic: 0.095 }, dist: 0.4, anchor: [0.68, 0.4], ...HERO_LOOK },
+/* ------------------------------------------------------------------------- */
+/* The move: keys per channel                                                */
+/* ------------------------------------------------------------------------- */
+
+/** Keys of one channel: [J, value] pairs, J increasing. */
+type Keys = readonly (readonly [number, number])[];
+
+const trackSlopes = new WeakMap<Keys, number[]>();
+/** Monotone cubic through `keys` at J (held flat outside the keys). */
+export function track(keys: Keys, J: number): number {
+  const n = keys.length;
+  if (J <= keys[0][0] || n === 1) return keys[0][1];
+  if (J >= keys[n - 1][0]) return keys[n - 1][1];
+  let m = trackSlopes.get(keys);
+  if (!m) {
+    m = pchipSlopes(
+      keys.map((k) => k[0]),
+      keys.map((k) => k[1]),
+    );
+    trackSlopes.set(keys, m);
+  }
+  let i = 0;
+  while (i < n - 2 && J >= keys[i + 1][0]) i++;
+  const h = keys[i + 1][0] - keys[i][0];
+  return hermite(keys[i][1], keys[i + 1][1], m[i], m[i + 1], h, (J - keys[i][0]) / h);
+}
+
+/**
+ * The camera move from the end of the engraving macro to the end of the
+ * journey, one set of keys per channel, all starting at the macro's last shot:
+ * - `dist` (m, interpolated in log space) grows fast in the spiral pull out
+ *   and then keeps growing slowly to the end: it never stops;
+ * - `orbit`, `elev` (degrees) swing round and rise;
+ * - the aim slides up the barrel (`mic`, mic-space height) until `micUntil`,
+ *   then down the stand line: first so that the middle of the barrel glides
+ *   evenly to its stage place on screen (`barrelY`, fraction from the top;
+ *   the aim height follows from the distance), from the last `barrelY` key
+ *   on by height (`stand`, metres);
+ * - `ax`, `ay`: the screen anchor; `roll`: the macro's roll unwinding.
+ * `pull` is where the pull out starts and lands (its looks are chosen by it).
+ */
+type Move = {
+  pull: { from: number; to: number };
+  micUntil: number;
+  orbit: Keys;
+  elev: Keys;
+  dist: Keys;
+  mic: Keys;
+  barrelY: Keys;
+  stand: Keys;
+  ax: Keys;
+  ay: Keys;
+  roll: Keys;
+};
+
+
+/**
+ * Landscape. The orbit swings round towards the grille side in one direction
+ * only: about 15 degrees in the pull out, 45 more over Speakers, Schedule and
+ * Venue (while the camera rises from mic height, looking slightly up, to a
+ * crane view about 19 degrees down), 10 more over Tickets. The rates are kept
+ * even (about 2.5 to 3 degrees of turn per filmstrip step), so the move flows
+ * across the section boundaries.
+ */
+const DESKTOP_MOVE: Move = {
+  pull: { from: 1.66, to: 2.5 },
+  micUntil: 2.05,
+  orbit: [
+    [1.66, 0],
+    [2.5, -13],
+    [5.0, -60],
+    [5.85, -70],
+    [6.0, -70.6],
+  ],
+  elev: [
+    [1.66, TRACK_ELEV / DEG],
+    [2.25, -1.5],
+    [5.0, 18],
+    [5.85, 19],
+    [6.0, 19.05],
+  ],
+  // The pull out: about 2x per filmstrip step at its fastest, landing softly into the slow drift
+  // back of the stage beats.
+  dist: [
+    [1.66, 0.067],
+    [1.8, 0.11],
+    [2.0, 0.45],
+    [2.2, 2.0],
+    [2.4, 4.6],
+    [2.55, 5.6],
+    [2.7, 5.95],
+    [3.0, 6.3],
+    [4.0, 7.5],
+    [5.0, 9.6],
+    [5.5, 13.2],
+    [5.85, 16.3],
+    [6.0, 16.5],
+  ],
+  mic: [
+    [1.66, 0.0725],
+    [2.05, 0.1],
+  ],
+  // The barrel glides from the anchor up to about a third of the height while the stand and the
+  // rug come in below it (about 1.5% of the width per step, with the anchor's own slide).
+  barrelY: [
+    [1.85, 0.475],
+    [2.1, 0.435],
+    [2.35, 0.395],
+    [2.6, 0.352],
+    [2.85, 0.315],
+  ],
+  // Speakers: on the red circle, the stand's foot clear of the glass panel low left. Tickets: the
+  // stage rises into the upper right, above the fact list (x 0.59-0.95, y 0.24-0.56) and the numerals.
+  stand: [
+    [3.0, 1.03],
+    [4.0, 0.82],
+    [5.0, 0.62],
+    [5.85, 0.52],
+    [6.0, 0.52],
+  ],
+  // The barrel's slide right in the macro unwinds evenly (about 1.8% of the width per step).
+  ax: [
+    [1.66, ANCHOR_MACRO[0]],
+    [1.9, 0.77],
+    [2.2, 0.725],
+    [2.55, 0.69],
+    [2.9, 0.68],
+    [6.0, 0.68],
+  ],
+  ay: [
+    [1.66, ANCHOR_MACRO[1]],
+    [2.0, 0.46],
+    [2.5, 0.42],
+    [4.0, 0.42],
+    [4.5, 0.4],
+    [5.6, 0.21],
+    [6.0, 0.2],
+  ],
+  roll: [
+    [1.66, 0.55],
+    [2.4, 0],
+  ],
+};
+
+/** Portrait: the same move, smaller (about two thirds of the orbit and of the rise), the subject centred. */
+const PORTRAIT_MOVE: Move = {
+  pull: { from: 1.66, to: 2.5 },
+  micUntil: 2.05,
+  orbit: [
+    [1.66, 0],
+    [2.5, -10],
+    [5.0, -40],
+    [5.85, -46],
+    [6.0, -46.4],
+  ],
+  elev: [
+    [1.66, TRACK_ELEV / DEG],
+    [2.2, 1],
+    [5.0, 13],
+    [5.85, 14],
+    [6.0, 14.05],
+  ],
+  dist: [
+    [1.66, 0.1],
+    [1.8, 0.16],
+    [2.0, 0.62],
+    [2.2, 2.7],
+    [2.4, 6.1],
+    [2.55, 7.5],
+    [2.7, 7.95],
+    [3.0, 8.3],
+    [4.0, 9.0],
+    [5.0, 13.5],
+    [5.5, 19],
+    [5.85, 23],
+    [6.0, 23.3],
+  ],
+  mic: [
+    [1.66, 0.0725],
+    [2.05, 0.1],
+  ],
+  barrelY: [
+    [1.85, 0.56],
+    [2.1, 0.52],
+    [2.35, 0.475],
+    [2.6, 0.43],
+    [2.85, 0.39],
+  ],
+  stand: [
+    [3.0, 0.58],
+    [4.0, 0.53],
+    [5.0, 0.5],
+    [5.85, 0.45],
+    [6.0, 0.45],
+  ],
+  ax: [
+    [1.66, 0.55],
+    [2.4, 0.5],
+    [6.0, 0.5],
+  ],
+  ay: [
+    [1.66, 0.55],
+    [2.4, 0.57],
+    [6.0, 0.57],
+  ],
+  roll: [
+    [1.66, 0.55],
+    [2.4, 0],
+  ],
+};
+
+/** Look values carried by the light keys (every key spreads a full look, so every field has a value at every key). */
+type Look = Omit<Shot, 'at' | 'aim' | 'dist' | 'orbit' | 'elev' | 'lift' | 'anchor' | 'roll' | 'keyDir' | 'focus'>;
+type LightKey = { at: number } & Look;
+
+const lightTracks = new WeakMap<readonly LightKey[], Map<string, Keys>>();
+/** The look at J, every numeric field interpolated through the light keys. */
+function lightAt(keys: readonly LightKey[], J: number): Look {
+  let tracks = lightTracks.get(keys);
+  if (!tracks) {
+    tracks = new Map();
+    const fields = new Set<string>();
+    for (const k of keys) for (const f of Object.keys(k)) if (f !== 'at') fields.add(f);
+    for (const f of fields) {
+      const ks: [number, number][] = [];
+      for (const k of keys) {
+        const v = (k as unknown as Record<string, number | undefined>)[f];
+        if (typeof v === 'number') ks.push([k.at, v]);
+      }
+      tracks.set(f, ks);
+    }
+    lightTracks.set(keys, tracks);
+  }
+  const out: Record<string, number> = {};
+  for (const [f, ks] of tracks) out[f] = track(ks, J);
+  return out as unknown as Look;
+}
+
+/*
+ * The stage light along the move. The spot and its shaft come up as the pull out lands on the
+ * stage (Speakers); over Schedule the beam's colour temperature goes from warm to cool, as the
+ * programme passes; at Venue the shaft thins (the crane looks down past it, the location card and
+ * the copy sit beside it); after Tickets the lights go down.
+ */
+const STAGE_KEYS_DESKTOP: LightKey[] = [
+  { at: 2.5, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.3, cone: 0.1, key: 0.6, warm: 0.1 },
+  { at: 2.62, ...STAGE_LOOK, spot: 0.75, cone: 0.65, key: 0.55, warm: 0.15 },
+  { at: 2.75, ...STAGE_LOOK, warm: 0.2 },
+  { at: 3.1, ...STAGE_LOOK, warm: 0.45 },
+  { at: 3.9, ...STAGE_LOOK, cone: 1.45, spot: 0.95, exposure: 0.97, warm: -0.45 },
+  { at: 4.6, ...STAGE_LOOK, fov: 31, cone: 0.45, spot: 0.95, key: 0.35, vignette: 0.6, scrimEdge: 0.5, warm: -0.35 },
+  { at: 5.3, ...STAGE_LOOK, fov: 30, exposure: 0.95, cone: 0.38, spot: 0.95, key: 0.3, vignette: 0.62, scrimEdge: 0.7, warm: -0.2 },
+  { at: 5.8, ...STAGE_LOOK, fov: 30, exposure: 0.9, cone: 0.28, spot: 0.95, key: 0.3, vignette: 0.65, scrimEdge: 0.7, warm: -0.15 },
+  { at: 6.0, ...STAGE_LOOK, fov: 30, ...DARK, scrimEdge: 0.7, warm: -0.15 },
+];
+
+/** On phones the speakers and schedule copy sits over the beam: a thinner shaft, darker at the top edge, keeps it at 4.5:1. */
+const STAGE_PORTRAIT = { ...STAGE_LOOK, fov: 36, exposure: 1.0, parallax: 0, cone: 0.4, spot: 1.1, scrimEdge: 0.55 };
+const STAGE_KEYS_PORTRAIT: LightKey[] = [
+  { at: 2.5, ...STAGE_PORTRAIT, ...STAGE_WARM, cone: 0.06, warm: 0.1 },
+  { at: 2.62, ...STAGE_PORTRAIT, spot: 0.8, cone: 0.3, key: 0.55, warm: 0.15 },
+  { at: 2.75, ...STAGE_PORTRAIT, warm: 0.2 },
+  { at: 3.1, ...STAGE_PORTRAIT, warm: 0.45 },
+  { at: 3.9, ...STAGE_PORTRAIT, cone: 0.7, spot: 1.05, exposure: 0.97, warm: -0.45 },
+  { at: 4.6, ...STAGE_PORTRAIT, cone: 1.5, key: 0.3, scrimEdge: 0.6, warm: -0.35 },
+  { at: 5.3, ...STAGE_PORTRAIT, exposure: 0.95, cone: 1.6, key: 0.3, vignette: 0.64, warm: -0.2 },
+  { at: 5.8, ...STAGE_PORTRAIT, exposure: 0.88, cone: 1.6, key: 0.3, vignette: 0.66, warm: -0.15 },
+  { at: 6.0, ...STAGE_PORTRAIT, ...DARK, warm: -0.15 },
+];
+
+const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 1.15, dof: 0.6, key: 0.85, motes: 0.6, scrim: 0.35, bloom: 0.9, focus: [0.6, 0.45] as const };
+
+/** Looks along the spiral pull out, by how far through it the journey is (0 = the macro, 1 = landed on the stage). */
+function pullLook(f: number, portrait: boolean): Look & { keyDir?: V3; focus?: readonly [number, number] } {
+  const p = portrait ? { parallax: 0 } : {};
+  if (f < 0.12) return { ...(portrait ? MACRO_PORTRAIT : MACRO), keyDir: [2.0, 1.6, 0.3], dof: portrait ? 0.5 : 0.7, motes: 0.8, scrim: portrait ? 0.35 : 0.5 };
+  if (f < 0.25) return { ...PULL_BARREL, ...(portrait ? { fov: 33, exposure: 1.08, scrim: 0.35 } : {}), ...p };
+  if (f < 0.4) return { ...PULL_MIC, ...(portrait ? { fov: 34.5, scrim: 0.35 } : {}), ...p };
+  if (f < 0.52) return { ...PULL_DARK, ...(portrait ? { fov: 36 } : {}), ...p };
+  if (f < 0.64) return { ...PULL_STAND, fov: portrait ? 36 : 31, ...p };
+  const stage = portrait ? STAGE_PORTRAIT : STAGE_LOOK;
+  if (f < 0.76) return { ...stage, ...STAGE_WARM, spot: 0.18, cone: 0.05, key: 0.7, rim: 1.05 };
+  return { ...stage, ...STAGE_WARM, spot: 0.25, cone: 0.07, key: 0.65, rim: 1.0 };
+}
+
+/** Sleeve turn along the hero, the macro and the start of the pull out (radians). */
+const TURN: Keys = [
+  [0.8, 0.075],
+  [0.98, 0.07],
+  [1.66, -0.045],
+  [2.0, -0.07],
+];
+
+/** Step of the sampled shots of the move (J). */
+const MOVE_STEP = 0.0625;
+
+/**
+ * The shot list of one move, sampled from its keys at an even spacing from
+ * the macro's last shot to the end of Tickets: the spiral pull out (looks by
+ * how far it has gone), then the stage under its light keys. `variant`
+ * overrides the anchor height and barrel glide keys (a content variant).
+ */
+function moveShots(move: Move, lights: readonly LightKey[], portrait: boolean, variant: Partial<Pick<Move, 'ay' | 'barrelY'>> = {}): Shot[] {
+  const mv = { ...move, ...variant };
+  const ay = mv.ay;
+  const out: Shot[] = [];
+  const logDist: Keys = mv.dist.map(([j, d]) => [j, Math.log(d)] as const);
+  const { from, to } = mv.pull;
+  const lookAt = (J: number) => (J < to ? pullLook((J - from) / (to - from), portrait) : lightAt(lights, J));
+  // While the barrel glides to its stage place, the aim height follows from where the barrel should
+  // be on screen: it sits (anchor - barrelY) of the frame height above the aim.
+  const glideTo = mv.barrelY[mv.barrelY.length - 1][0];
+  const glideAim = (J: number) => {
+    const half = Math.tan(((lookAt(J).fov ?? 30) * DEG) / 2);
+    return SPINE.y - (track(ay, J) - track(mv.barrelY, J)) * 2 * Math.exp(track(logDist, J)) * half;
+  };
+  const stand: Keys = [[glideTo, glideAim(glideTo)], ...mv.stand.filter(([j]) => j > glideTo)];
+  for (let k = 1; ; k++) {
+    const J = +(from + k * MOVE_STEP).toFixed(4);
+    if (J > DARK_FROM + 1e-9) break;
+    out.push({
+      ...lookAt(J),
+      at: J,
+      aim: J < mv.micUntil ? { mic: track(mv.mic, J) } : { stand: J < glideTo ? glideAim(J) : track(stand, J) },
+      dist: Math.exp(track(logDist, J)),
+      orbit: track(mv.orbit, J),
+      elev: track(mv.elev, J),
+      anchor: [track(mv.ax, J), track(ay, J)],
+      roll: track(mv.roll, J),
+      turn: track(TURN, J),
+    } as Shot);
+  }
+  // After Tickets the lights stay down and the move has come to rest.
+  out.push({ ...out[out.length - 1], at: 9.5 });
+  return out;
+}
+
+/** Desktop: the hero, the push in and the engraving macro, then the move. */
+const DESKTOP_OPENING: Shot[] = [
+  { at: 0, aim: { mic: 0.095 }, dist: 0.4, anchor: [0.68, 0.4], turn: 0.08, ...HERO_LOOK },
+  // The hero is never quite still: a very slow push of a centimetre and a half over its scroll.
+  { at: 0.55, aim: { mic: 0.095 }, dist: 0.385, anchor: [0.68, 0.4], turn: 0.078, ...HERO_LOOK },
   {
     // Push in along the axis; the barrel starts to stand upright as the engraving fills the frame.
     at: 0.8,
@@ -295,6 +715,7 @@ export const DESKTOP_SHOTS: Shot[] = [
     dist: 0.14,
     anchor: [0.82, 0.46],
     roll: 0.7,
+    turn: 0.075,
     fov: 28,
     exposure: 1.05,
     dof: 0.45,
@@ -316,68 +737,27 @@ export const DESKTOP_SHOTS: Shot[] = [
     scrimEdge: 0.85,
     bloom: 1.2,
   },
-  // The macro: the same push settles on the engraving, then slides slowly down the barrel (rows go by).
-  // The barrel arrives upright (roll ~1) and the roll unwinds evenly from 1.3 until the stage shots
-  // (about 20 deg spread over a screen and a half), so the subject never spins as it recedes:
-  // __sceneSim.metrics().rollPullBack and scroll[*].maxRollRateDegS measure it.
-  { at: 0.98, aim: { mic: 0.088 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.94, keyDir: [1.1, 2.2, 0.3] },
-  { at: 1.3, aim: { mic: 0.081 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.92, keyDir: [1.5, 2.0, 0.3] },
-  { at: 1.6, aim: { mic: 0.074 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.63, keyDir: [1.8, 1.8, 0.3] },
-  { at: 1.72, aim: { mic: 0.072 }, dist: 0.067, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.51, keyDir: [2.0, 1.6, 0.3] },
-  // The pull back: straight out along the same line, the distance growing evenly in log space
-  // (eight steps of 0.0725, eased: about 1.6x at the ends, 2x in the middle) so every frame
-  // follows from the one before, over about 1.2 screens of scroll on a 1440x900 screen. The
-  // engraving recedes, the barrel stands back from upright, the whole microphone comes into frame,
-  // then its stand, then the rug, and only then does the overhead spot come up.
-  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.1054, anchor: [0.785, 0.485], ...MACRO, roll: 0.44, keyDir: [2.0, 1.6, 0.3], dof: 0.7, motes: 0.8, scrim: 0.5 },
-  { at: 1.865, aim: { mic: 0.082 }, dist: 0.1814, anchor: [0.755, 0.465], roll: 0.37, ...PULL_BARREL },
-  { at: 1.9375, aim: { mic: 0.09 }, dist: 0.3268, anchor: [0.725, 0.445], roll: 0.3, ...PULL_MIC },
-  // The whole microphone, still in the dark: only its key and rim light.
-  { at: 2.01, aim: { mic: 0.1 }, dist: 0.6445, anchor: [0.7, 0.43], roll: 0.23, ...PULL_DARK },
-  // The aim slides down the stand line in step with the distance, so the head rises on screen
-  // slowly (about 0.42 to 0.25 of the height) while the stand, then the rug, enter from below.
-  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.271, anchor: [0.685, 0.43], roll: 0.16, ...PULL_STAND, fov: 31 },
-  // The overhead spot stays low until the framing has settled: the stand and the rug arrive in
-  // the key light and a faint warm-up of the spot.
-  { at: 2.155, aim: { stand: 1.395 }, dist: 2.29, anchor: [0.68, 0.43], roll: 0.09, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.18, cone: 0.05, key: 0.7, rim: 1.05 },
-  { at: 2.2275, aim: { stand: 1.195 }, dist: 3.942, anchor: [0.68, 0.425], roll: 0.02, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.24, cone: 0.07, key: 0.65, rim: 1.0 },
-  // Speakers: locked off on the microphone on the red circle (the stand's foot about y 0.65, clear
-  // of the glass panel along the bottom, x 0.05-0.72, y 0.73-0.96). The light coming on is the event:
-  // the frame holds while the spot and its shaft fade up over the first part of the pin.
-  { at: 2.3, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.42], ...STAGE_LOOK, ...STAGE_WARM },
-  { at: 2.4, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.42], ...STAGE_LOOK, spot: 0.72, cone: 0.6, key: 0.55, haze: 0 },
-  { at: 2.5, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.42], ...STAGE_LOOK },
-  { at: 2.96, aim: { stand: 0.9 }, dist: 6.2, anchor: [0.68, 0.42], ...STAGE_LOOK },
-  // Schedule: the same frame drifts back a few percent; the light carries the change (denser haze, a little dimmer).
-  { at: 3.92, aim: { stand: 0.88 }, dist: 6.55, anchor: [0.68, 0.42], ...STAGE_LOOK, cone: 1.5, spot: 0.95, exposure: 0.97 },
-  // Venue -> Tickets: the same track backs out over the seats with a slow crane rise; the rows enter from the bottom.
-  // The stage also rises slowly on screen (lens shift, no turn) into the upper right, above the
-  // Tickets fact list (x 0.59-0.95, y 0.24-0.56 when the section is centred) and the numerals.
-  { at: 4.6, aim: { stand: 0.72 }, dist: 10.5, lift: 0.3, anchor: [0.68, 0.41], ...STAGE_LOOK, fov: 31, cone: 0.42, spot: 0.95, key: 0.35, vignette: 0.6, scrimEdge: 0.5 },
-  { at: 5.3, aim: { stand: 0.56 }, dist: 15.2, lift: 0.85, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, exposure: 0.95, cone: 0.38, spot: 0.95, key: 0.3, vignette: 0.62, scrimEdge: 0.7 },
-  // The wide room: stage small, subject still at the anchor, seats as silhouettes below. Locked off.
-  { at: 5.78, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, exposure: 0.9, cone: 0.28, spot: 0.95, key: 0.3, vignette: 0.65, scrimEdge: 0.7 },
-  // After Tickets the lights go down. No camera move.
-  { at: 6.0, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, ...DARK },
-  { at: 9.5, aim: { stand: 0.5 }, dist: 17.5, lift: 1.1, anchor: [0.68, 0.18], ...STAGE_LOOK, fov: 30, ...DARK },
+  // The macro: the same push settles on the engraving, then tracks slowly down the barrel while the
+  // sleeve turns a few degrees (the rows roll past). The barrel arrives upright (roll ~1) and the
+  // roll unwinds evenly into the pull out, so the subject never spins as it recedes.
+  { at: 0.98, aim: { mic: 0.088 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.94, turn: track(TURN, 0.98), keyDir: [1.1, 2.2, 0.3] },
+  { at: 1.3, aim: { mic: 0.081 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.9, turn: track(TURN, 1.3), keyDir: [1.5, 2.0, 0.3] },
+  { at: 1.6, aim: { mic: 0.074 }, dist: 0.066, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.63, turn: track(TURN, 1.6), keyDir: [1.8, 1.8, 0.3] },
+  { at: 1.66, aim: { mic: 0.0725 }, dist: 0.067, anchor: ANCHOR_MACRO, ...MACRO, roll: 0.55, turn: track(TURN, 1.66), keyDir: [2.0, 1.6, 0.3] },
 ];
 
-/** Portrait: the same axis, the subject centred, in the lower middle (the copy sits above it on full-width scrims). */
-const P_ANCHOR: readonly [number, number] = [0.5, 0.57];
-const MACRO_PORTRAIT = { ...MACRO, fov: 34, exposure: 1.15, dof: 0.6, key: 0.85, motes: 0.6, scrim: 0.35, bloom: 0.9, focus: [0.6, 0.45] as const };
+/** Portrait: the subject centred, in the lower middle (the copy sits above it on full-width scrims). */
 const HERO_PORTRAIT_LOOK = { fov: 34, exposure: 1.15, drift: 0.008, parallax: 0, cone: 0.02, spot: 0.15, key: 0.75, rim: 3.4, rimAng: 0.75, haze: 0.2, vignette: 0.72 };
-/** On phones the speakers and schedule copy sits over the beam: a thinner shaft, darker at the top edge, keeps it at 4.5:1. */
-const STAGE_PORTRAIT = { ...STAGE_LOOK, fov: 36, exposure: 1.0, parallax: 0, cone: 0.4, spot: 1.1, scrimEdge: 0.55 };
-
-export const PORTRAIT_SHOTS: Shot[] = [
-  { at: 0, aim: { mic: 0.1 }, dist: 0.62, anchor: [0.5, 0.66], ...HERO_PORTRAIT_LOOK },
-  { at: 0.45, aim: { mic: 0.1 }, dist: 0.62, anchor: [0.5, 0.66], ...HERO_PORTRAIT_LOOK },
+const PORTRAIT_OPENING: Shot[] = [
+  { at: 0, aim: { mic: 0.1 }, dist: 0.62, anchor: [0.5, 0.66], turn: 0.08, ...HERO_PORTRAIT_LOOK },
+  { at: 0.45, aim: { mic: 0.1 }, dist: 0.6, anchor: [0.5, 0.66], turn: 0.078, ...HERO_PORTRAIT_LOOK },
   {
     at: 0.65,
     aim: { mic: 0.09 },
     dist: 0.22,
     anchor: [0.52, 0.6],
     roll: 0.7,
+    turn: 0.075,
     fov: 32,
     exposure: 0.78,
     dof: 0.3,
@@ -397,31 +777,39 @@ export const PORTRAIT_SHOTS: Shot[] = [
     scrimEdge: 0.9,
     shade: 1,
   },
-  { at: 0.85, aim: { mic: 0.088 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.94, keyDir: [0.6, 2.3, 0.3] },
-  { at: 1.4, aim: { mic: 0.08 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.82, keyDir: [1.0, 2.2, 0.3] },
-  { at: 1.72, aim: { mic: 0.072 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.51, keyDir: [1.3, 2.0, 0.3] },
-  // The same pull back as on landscape, at portrait distances.
-  { at: 1.7925, aim: { mic: 0.075 }, dist: 0.155, anchor: [0.54, 0.56], ...MACRO_PORTRAIT, roll: 0.44, keyDir: [1.4, 1.9, 0.3], dof: 0.5 },
-  { at: 1.865, aim: { mic: 0.082 }, dist: 0.262, anchor: [0.53, 0.57], roll: 0.37, ...PULL_BARREL, fov: 33, exposure: 1.08, scrim: 0.35, parallax: 0 },
-  { at: 1.9375, aim: { mic: 0.09 }, dist: 0.463, anchor: [0.515, 0.575], roll: 0.3, ...PULL_MIC, fov: 34.5, scrim: 0.35, parallax: 0 },
-  { at: 2.01, aim: { mic: 0.1 }, dist: 0.894, anchor: [0.5, 0.575], roll: 0.23, ...PULL_DARK, fov: 36, parallax: 0 },
-  { at: 2.0825, aim: { stand: 1.5 }, dist: 1.726, anchor: P_ANCHOR, roll: 0.16, ...PULL_STAND, fov: 36, parallax: 0 },
-  { at: 2.155, aim: { stand: 1.38 }, dist: 3.051, anchor: P_ANCHOR, roll: 0.09, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.18, cone: 0.04, key: 0.7 },
-  { at: 2.2275, aim: { stand: 1.16 }, dist: 5.159, anchor: P_ANCHOR, roll: 0.02, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.24, cone: 0.05, key: 0.65 },
-  // Speakers on phones: the stand held a little low on the line so the whole microphone, its stand
-  // and most of the rug sit between the heading and the copy at the bottom; the mic head stays
-  // about 10 px tall against a narrower, dimmer shaft.
-  { at: 2.3, aim: { stand: 0.55 }, dist: 8.0, anchor: P_ANCHOR, ...STAGE_PORTRAIT, ...STAGE_WARM, cone: 0.06 },
-  { at: 2.4, aim: { stand: 0.55 }, dist: 8.0, anchor: P_ANCHOR, ...STAGE_PORTRAIT, spot: 0.8, cone: 0.3, key: 0.55 },
-  { at: 2.5, aim: { stand: 0.55 }, dist: 8.0, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
-  { at: 2.96, aim: { stand: 0.55 }, dist: 8.0, anchor: P_ANCHOR, ...STAGE_PORTRAIT },
-  { at: 3.92, aim: { stand: 0.53 }, dist: 8.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 0.7, spot: 1.05, exposure: 0.97 },
-  { at: 4.6, aim: { stand: 0.52 }, dist: 15, lift: 0.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, cone: 1.5, key: 0.3, scrimEdge: 0.6 },
-  { at: 5.3, aim: { stand: 0.48 }, dist: 21, lift: 1.1, anchor: P_ANCHOR, ...STAGE_PORTRAIT, exposure: 0.95, cone: 1.6, key: 0.3, vignette: 0.64 },
-  { at: 5.78, aim: { stand: 0.45 }, dist: 24, lift: 1.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, exposure: 0.88, cone: 1.6, key: 0.3, vignette: 0.66 },
-  { at: 6.0, aim: { stand: 0.45 }, dist: 24, lift: 1.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, ...DARK },
-  { at: 9.5, aim: { stand: 0.45 }, dist: 24, lift: 1.4, anchor: P_ANCHOR, ...STAGE_PORTRAIT, ...DARK },
+  { at: 0.85, aim: { mic: 0.088 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.94, turn: track(TURN, 0.85), keyDir: [0.6, 2.3, 0.3] },
+  { at: 1.4, aim: { mic: 0.08 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.82, turn: track(TURN, 1.4), keyDir: [1.0, 2.2, 0.3] },
+  { at: 1.66, aim: { mic: 0.0725 }, dist: 0.1, anchor: [0.55, 0.55], ...MACRO_PORTRAIT, roll: 0.55, turn: track(TURN, 1.66), keyDir: [1.3, 2.0, 0.3] },
 ];
+
+/**
+ * Speakers announced (landscape): the strip of speaker cards comes up along the lower edge early
+ * in the pin, so the pull out lands the stage a little higher on screen (the same aim, the anchor
+ * and the barrel's glide both about 7% higher) and it settles back down through Schedule.
+ */
+const DESKTOP_ANNOUNCED: Partial<Pick<Move, 'ay' | 'barrelY'>> = {
+  ay: [
+    [1.66, ANCHOR_MACRO[1]],
+    [2.0, 0.44],
+    [2.5, 0.355],
+    [3.1, 0.35],
+    [3.9, 0.415],
+    [4.1, 0.42],
+    [4.5, 0.4],
+    [5.6, 0.21],
+    [6.0, 0.2],
+  ],
+  barrelY: [
+    [1.85, 0.47],
+    [2.1, 0.42],
+    [2.35, 0.36],
+    [2.6, 0.3],
+    [2.85, 0.245],
+  ],
+};
+
+export const DESKTOP_SHOTS: Shot[] = [...DESKTOP_OPENING, ...moveShots(DESKTOP_MOVE, STAGE_KEYS_DESKTOP, false)];
+export const PORTRAIT_SHOTS: Shot[] = [...PORTRAIT_OPENING, ...moveShots(PORTRAIT_MOVE, STAGE_KEYS_PORTRAIT, true)];
 
 /** Calm, dim hero-like framing for routes without the home sections. */
 export const AWAY_SHOT: Shot = {
@@ -449,12 +837,6 @@ export const AWAY_SHOT_PORTRAIT: Shot = {
   exposure: 0.4,
 };
 
-/**
- * Journey position at or beyond which the scene is fully dark: the end of
- * Tickets. The text-only partner band after Tickets has no data-section, so J
- * rests at 6 while it scrolls past; the scene is already black behind it.
- */
-export const DARK_FROM = 6.0;
 
 /* ------------------------------------------------------------------------- */
 /* Content-dependent variants                                                */
@@ -463,29 +845,18 @@ export const DARK_FROM = 6.0;
 export type ShotOptions = {
   /** No speaker announced yet: no card strip, one panel low-left; the stage frame holds through the whole pin. */
   speakersTba: boolean;
-  /** Schedule height / a full schedule's height (0.4..1): a short schedule drifts back less. */
+  /**
+   * Schedule height / a full schedule's height (0.4..1). The move is written in
+   * journey units, so a short schedule passes the same stretch of the orbit in
+   * less scroll; the shots do not change.
+   */
   scheduleScale: number;
 };
 
 /** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
 export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
-  const base = portrait ? PORTRAIT_SHOTS : DESKTOP_SHOTS;
-  const k = Math.min(1, Math.max(0.4, opts.scheduleScale));
-  const hold = base.find((s) => s.at === 2.96);
-  // Speakers announced (landscape): when the card strip comes up along the lower edge, the frame
-  // drifts a little further back and the stage rises into the upper-middle band, on the same axis.
-  const announced = !opts.speakersTba && !portrait && hold ? { ...hold, aim: { stand: 0.6 }, dist: 7.0, anchor: [0.68, 0.36] as const } : null;
-  return base.flatMap((sh): Shot[] => {
-    // Schedule: the drift back continues from the hold that actually comes before it (never a
-    // push back in); a short schedule drifts back less.
-    if (sh.at === 3.92 && hold) {
-      const prev = announced ?? hold;
-      const drop = 'stand' in sh.aim && 'stand' in hold.aim ? hold.aim.stand - sh.aim.stand : 0;
-      return [{ ...sh, aim: 'stand' in prev.aim ? { stand: prev.aim.stand - drop } : sh.aim, anchor: prev.anchor, dist: prev.dist + (sh.dist - hold.dist) * k }];
-    }
-    if (announced && sh.at === 2.96) return [{ ...announced, at: 2.58 }, announced];
-    return [sh];
-  });
+  if (portrait || opts.speakersTba) return portrait ? PORTRAIT_SHOTS : DESKTOP_SHOTS;
+  return [...DESKTOP_OPENING, ...moveShots(DESKTOP_MOVE, STAGE_KEYS_DESKTOP, false, DESKTOP_ANNOUNCED)];
 }
 
 /* ------------------------------------------------------------------------- */
@@ -493,7 +864,7 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
 /* ------------------------------------------------------------------------- */
 
 const WORLD_UP = new Vector3(0, 1, 0);
-const rs = { f: new Vector3(), u0: new Vector3(), m: new Vector3(), c: new Vector3() };
+const rs = { f: new Vector3(), u0: new Vector3(), m: new Vector3(), c: new Vector3(), d: new Vector3() };
 
 /** Camera up for a view direction `fwd` rolled by `roll` radians (0: horizon level). */
 function upFor(fwd: Vector3, roll: number, out: Vector3): Vector3 {
@@ -515,7 +886,9 @@ export function resolveShot(s: Shot): ResolvedShot {
   const target = aimPoint(s.aim);
   const origin = trackOrigin(s.aim);
   const lift = s.lift ?? 0;
-  const pos = origin.clone().addScaledVector(TRACK, s.dist);
+  const orbit = (s.orbit ?? 0) * DEG;
+  const elev = s.elev === undefined ? TRACK_ELEV : s.elev * DEG;
+  const pos = origin.clone().addScaledVector(trackDir(orbit, elev), s.dist);
   pos.y += lift;
   const off = pos.clone().sub(target);
   const dir = off.clone().normalize();
@@ -530,6 +903,8 @@ export function resolveShot(s: Shot): ResolvedShot {
     up: upFor(fwd, roll, new Vector3()),
     origin,
     logU: Math.log(Math.max(1e-4, s.dist)),
+    orbit,
+    elev,
     lift,
     roll,
     shiftX: s.anchor[0],
@@ -558,6 +933,8 @@ export function resolveShot(s: Shot): ResolvedShot {
     band: s.band ?? 0,
     bloom: s.bloom ?? 1,
     env: s.env ?? 1,
+    warm: s.warm ?? 0,
+    turn: s.turn ?? 0,
   };
 }
 
@@ -565,6 +942,8 @@ export const resolveShots = (shots: Shot[]) => shots.map(resolveShot);
 
 const scalarKeys = [
   'logU',
+  'orbit',
+  'elev',
   'lift',
   'roll',
   'shiftX',
@@ -592,6 +971,8 @@ const scalarKeys = [
   'band',
   'bloom',
   'env',
+  'warm',
+  'turn',
 ] as const;
 const vectorKeys = ['target', 'origin', 'keyDir'] as const;
 
@@ -641,7 +1022,7 @@ function splineFor(shots: ResolvedShot[]): Spline {
 
 /** Fill the derived pose (camera, direction, distance, up) from the track channels. */
 function derivePose(out: ResolvedShot) {
-  out.pos.copy(out.origin).addScaledVector(TRACK, Math.exp(out.logU));
+  out.pos.copy(out.origin).addScaledVector(trackDir(out.orbit, out.elev, rs.d), Math.exp(out.logU));
   out.pos.y += out.lift;
   out.dir.subVectors(out.pos, out.target);
   out.logDist = Math.log(Math.max(1e-4, out.dir.length()));

@@ -1,5 +1,6 @@
 import { Vector3 } from 'three';
-import { SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
+import { MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
+import { STAND_BASE } from './layout';
 import { clearance } from './clearance';
 import { createRig, createRigOut, nearCorner, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
@@ -10,10 +11,14 @@ import { SECTION_IDS, type SectionId } from './scrollState';
  * over a list of scroll positions (or journey values), off screen and without
  * touching the live camera, and reports the pose, look values and the
  * clearance between the near plane and the scene geometry for every step.
- * `metrics()` sweeps the whole journey and reports how well the camera keeps
- * to the one axis (choreography.ts): heading change, lateral deviation from
- * the track, how far the subject drifts from its screen anchor, and whether
- * the distance to the subject only ever grows from the macro to the end.
+ * `motion()` sweeps the whole journey and checks the rules of the one
+ * continuous move (choreography.ts): per filmstrip step (J 0.125) the turn of
+ * the view direction and the move of the subject on screen against
+ * MOTION_LIMITS, spikes against the median of each beat, runs of steps
+ * without camera change, a monotonic orbit / distance / rise, and the subject
+ * in frame and clear of the copy column. It returns the numbers and a list of
+ * failures. `metrics()` reports the older path figures (heading range,
+ * anchor drift, roll across the pull back, light steps, fast-scroll rates).
  */
 
 type Layout = { tops: Partial<Record<SectionId, number>>; heights: Partial<Record<SectionId, number>>; vh: number; docH: number };
@@ -330,6 +335,215 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       scroll,
     };
   };
-  const full = { ...api, metrics };
+  const motion = (opts: { content?: Partial<ShotOptions>; step?: number } = {}) => {
+    const step = opts.step ?? 0.125;
+    const js: number[] = [];
+    for (let J = 0; J <= 6.0 + 1e-9; J += 0.001) js.push(+J.toFixed(3));
+    const F = api.run({ js, drift: false, content: opts.content });
+    const byJ = new Map(F.map((f) => [f.J.toFixed(3), f]));
+    const at = (J: number) => byJ.get(J.toFixed(3)) as Frame;
+    const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+    const portrait = aspect < 0.9;
+    const head = micPoint(0.1302);
+    const tail = micPoint(-0.044);
+    const barrel = SPINE;
+    const foot = STAND_BASE.clone();
+    const fwdOf = (f: Frame) => new Vector3(...f.tgt).sub(new Vector3(...f.pos)).normalize();
+    // Orbit angle: the camera's azimuth round the vertical through its aim point.
+    const az = (f: Frame) => Math.atan2(f.pos[0] - f.tgt[0], f.pos[2] - f.tgt[2]);
+    const scr = (f: Frame, P: Vector3) => {
+      const q = project(f, P, aspect);
+      // x and y in units of the long side.
+      return { x: q[0], y: q[1], z: q[2], lx: q[0] * Math.min(1, aspect), ly: q[1] / Math.max(1, aspect) };
+    };
+    const inFrame = (q: { x: number; y: number; z: number }) => q.z > 0 && q.x >= 0 && q.x <= 1 && q.y >= 0 && q.y <= 1;
+    // Beats: 1 hero + macro, 2 spiral pull out, 3 Speakers..Venue, 4 Tickets.
+    const beats = [
+      { id: 'b1 hero+macro', from: 0.5, to: 1.625 },
+      { id: 'b2 pull out', from: 1.625, to: 2.625 },
+      { id: 'b3 speakers-venue', from: 2.625, to: 5.0 },
+      { id: 'b4 tickets', from: 5.0, to: 6.0 },
+    ];
+    type Step = { J: number; view: number; screen: number; move: number; beat: string };
+    const steps: Step[] = [];
+    for (let J = 0.5; J <= 6.0 - step + 1e-9; J += step) {
+      const f0 = at(J);
+      const f1 = at(J + step);
+      if (!f0 || !f1) continue;
+      const view = (Math.acos(Math.min(1, fwdOf(f0).dot(fwdOf(f1)))) * 180) / Math.PI;
+      const p0 = new Vector3(...f0.pos);
+      const p1 = new Vector3(...f1.pos);
+      const d0 = p0.distanceTo(new Vector3(...f0.tgt));
+      // Camera change as an angle: travel relative to the distance to the aim, or the turn.
+      const move = Math.max(view, (Math.atan(p0.distanceTo(p1) / Math.max(1e-6, d0)) * 180) / Math.PI);
+      // Subject on screen, in units of the frame's long side (the width on landscape, the height on
+      // portrait). While the barrel still fills the frame (to J 2.1) its
+      // anchored aim point (the lens shift); then the middle of the barrel (where the microphone is);
+      // once the pull out has landed (J 2.75), also the stand's foot: before that it is rising into
+      // the frame from below, which is the reveal itself. Points off screen in either frame do not count.
+      let screen = 0;
+      if (J >= 1.625 && J < 2.1) screen = Math.hypot((f0.shift[0] - f1.shift[0]) * Math.min(1, aspect), (f0.shift[1] - f1.shift[1]) / Math.max(1, aspect));
+      else if (J >= 2.1) {
+        for (const P of J >= 2.75 ? [barrel, foot] : [barrel]) {
+          const a = scr(f0, P);
+          const b = scr(f1, P);
+          if (inFrame(a) && inFrame(b)) screen = Math.max(screen, Math.hypot(a.lx - b.lx, a.ly - b.ly));
+        }
+      }
+      const beat = beats.find((b) => J >= b.from - 1e-9 && J < b.to - 1e-9)?.id ?? '?';
+      steps.push({ J: +J.toFixed(3), view: +view.toFixed(3), screen: +screen.toFixed(4), move: +move.toFixed(3), beat });
+    }
+    const median = (a: number[]) => {
+      const b = [...a].sort((x, y) => x - y);
+      return b.length ? b[Math.floor(b.length / 2)] : 0;
+    };
+    const fails: string[] = [];
+    // Local peaks over the whole sweep (a step above both its neighbours, across beat boundaries too).
+    const isPeak = (i: number, key: 'view' | 'screen') =>
+      steps[i][key] > (steps[i - 1]?.[key] ?? -1) && steps[i][key] > (steps[i + 1]?.[key] ?? -1);
+    const perBeat = beats.map((b) => {
+      const idx = steps.map((s, i) => (s.beat === b.id ? i : -1)).filter((i) => i >= 0);
+      const st = idx.map((i) => steps[i]);
+      const v = st.map((s) => s.view);
+      const sc = st.map((s) => s.screen);
+      const mv = median(v);
+      const ms = median(sc);
+      const maxV = Math.max(...v);
+      const maxS = Math.max(...sc);
+      const vAt = st[v.indexOf(maxV)]?.J;
+      const sAt = st[sc.indexOf(maxS)]?.J;
+      // A spike is a single step that stands out: a local peak (above both neighbours) against the
+      // median of its beat; a move that eases out from a faster beat is not one. It only counts when
+      // it is big enough to see (the hero and the macro creep at fractions of a degree).
+      const peak = (key: 'view' | 'screen', min: number) => {
+        let p = 0;
+        for (const i of idx) if (steps[i][key] >= min && isPeak(i, key)) p = Math.max(p, steps[i][key]);
+        return p;
+      };
+      const spikeV = mv > 0 ? Math.max(1, peak('view', 0.6) / mv) : 1;
+      const spikeS = ms > 0 ? Math.max(1, peak('screen', 0.006) / ms) : 1;
+      // Velocity continuity of the orbit and rise: the largest change of the turn between neighbouring
+      // steps, relative to the larger of them (a stop-start at a section boundary shows up here).
+      let accel = 0;
+      let accelAt = 0;
+      for (let i = 1; i < st.length; i++) {
+        const big = Math.max(st[i].view, st[i - 1].view);
+        if (big < 0.6) continue;
+        const r = Math.abs(st[i].view - st[i - 1].view) / big;
+        if (r > accel) [accel, accelAt] = [r, st[i].J];
+      }
+      if (maxV > MOTION_LIMITS.viewDeg) fails.push(`${b.id}: view ${maxV.toFixed(2)} deg/step at J${vAt} > ${MOTION_LIMITS.viewDeg}`);
+      if (maxS > MOTION_LIMITS.screen) fails.push(`${b.id}: subject ${(maxS * 100).toFixed(2)}%/step at J${sAt} > ${MOTION_LIMITS.screen * 100}%`);
+      if (b.id !== 'b1 hero+macro' && spikeV > MOTION_LIMITS.spike) fails.push(`${b.id}: view spike ${spikeV.toFixed(2)}x median at J${vAt}`);
+      if (b.id !== 'b1 hero+macro' && spikeS > MOTION_LIMITS.spike) fails.push(`${b.id}: subject spike ${spikeS.toFixed(2)}x median at J${sAt}`);
+      return {
+        beat: b.id,
+        viewMedianDeg: +mv.toFixed(2),
+        viewMaxDeg: +maxV.toFixed(2),
+        viewMaxAtJ: vAt,
+        viewSpike: +spikeV.toFixed(2),
+        screenMedianPct: +(ms * 100).toFixed(2),
+        screenMaxPct: +(maxS * 100).toFixed(2),
+        screenMaxAtJ: sAt,
+        screenSpike: +spikeS.toFixed(2),
+        maxStepChange: +accel.toFixed(2),
+        maxStepChangeAtJ: accelAt,
+      };
+    });
+    // Liveness: runs of steps with essentially no camera change while a 3D section is on screen.
+    let run = 0;
+    let longest = 0;
+    let longestAt = 0;
+    for (const s of steps) {
+      if (s.move < 0.05) {
+        run++;
+        if (run > longest) [longest, longestAt] = [run, s.J];
+      } else run = 0;
+    }
+    if (longest > MOTION_LIMITS.stillRun) fails.push(`liveness: ${longest} still steps ending J${longestAt}`);
+    // Monotonic channels (fine sweep): the distance to the head from the macro's end, the orbit from
+    // the point where the camera has left the barrel (J 1.9; closer in, the aim sliding along the
+    // tilted barrel moves the azimuth by a few tenths of a degree), the height from the landing on
+    // the stage (J 2.625) to the end of Tickets. A reversal is a change of direction by more than
+    // the tolerance from the last extreme.
+    const reversals = (from: number, to: number, val: (f: Frame) => number, tol: number) => {
+      let dir = 0;
+      let n = 0;
+      let firstAt = -1;
+      let extreme = NaN;
+      for (const f of F) {
+        if (f.J < from || f.J > to) continue;
+        const v = val(f);
+        if (Number.isNaN(extreme)) {
+          extreme = v;
+          continue;
+        }
+        const d = v - extreme;
+        if (dir === 0) {
+          if (Math.abs(d) > tol) [dir, extreme] = [Math.sign(d), v];
+        } else if (Math.sign(d) === dir) extreme = v;
+        else if (Math.abs(d) > tol) {
+          n++;
+          if (firstAt < 0) firstAt = f.J;
+          dir = Math.sign(d);
+          extreme = v;
+        }
+      }
+      return { reversals: n, firstAtJ: firstAt };
+    };
+    const orbitAt = (J: number) => {
+      let d = az(at(J)) - az(at(1.66));
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      return +((d * 180) / Math.PI).toFixed(1);
+    };
+    const mono = {
+      orbit: reversals(1.9, 6.0, az, 1e-3),
+      distance: reversals(1.7, 6.0, (f) => new Vector3(...f.pos).distanceTo(head), 1e-3),
+      height: reversals(2.625, 6.0, (f) => f.pos[1], 1e-3),
+    };
+    for (const [k, v] of Object.entries(mono)) if (v.reversals) fails.push(`monotonic ${k}: ${v.reversals} reversals (first at J${v.firstAtJ})`);
+    // Frame and copy column: the head and the tail of the mic from J 2.1 (the whole microphone has
+    // arrived), the stand's foot from 2.45 (the pull out has landed on the stage).
+    const frame = { xMin: 1, xMax: 0, yMin: 1, yMax: 0, xMinAtJ: 0 };
+    let frameFails = 0;
+    for (const f of F) {
+      if (f.J < 2.1 || f.J > 5.98) continue;
+      for (const P of f.J >= 2.45 ? [head, tail, foot] : [head, tail]) {
+        const q = scr(f, P);
+        if (q.x < frame.xMin) [frame.xMin, frame.xMinAtJ] = [q.x, f.J];
+        frame.xMax = Math.max(frame.xMax, q.x);
+        frame.yMin = Math.min(frame.yMin, q.y);
+        frame.yMax = Math.max(frame.yMax, q.y);
+        const out = q.z <= 0 || q.x < 0.02 || q.x > 0.98 || q.y < 0.02 || q.y > 0.98;
+        const copy = !portrait && q.x < MOTION_LIMITS.copyX;
+        if (out || copy) frameFails++;
+      }
+    }
+    if (frameFails) fails.push(`frame/copy: ${frameFails} samples out of frame or over the copy column (xMin ${frame.xMin.toFixed(3)} at J${frame.xMinAtJ})`);
+    return {
+      viewport: `${window.innerWidth}x${window.innerHeight}`,
+      limits: MOTION_LIMITS,
+      perBeat,
+      liveness: { longestStillRun: longest, endsAtJ: longestAt },
+      monotonic: mono,
+      orbitDeg: { at2_5: orbitAt(2.5), at3: orbitAt(3), at4: orbitAt(4), at5: orbitAt(5), at6: orbitAt(6) },
+      heightM: { at2_5: +at(2.5).pos[1].toFixed(2), at4: +at(4).pos[1].toFixed(2), at5: +at(5).pos[1].toFixed(2), at6: +at(6).pos[1].toFixed(2) },
+      frame: { ...frame, xMin: +frame.xMin.toFixed(3), xMax: +frame.xMax.toFixed(3), yMin: +frame.yMin.toFixed(3), yMax: +frame.yMax.toFixed(3) },
+      steps,
+      /** Where the subject sits on screen (fractions from the left / top) at a few positions. */
+      subjectAt: [2.1, 2.25, 2.375, 2.5, 2.75, 3, 3.5, 4, 4.5, 5, 5.25, 5.5, 5.75, 5.95].map((J) => {
+        const f = at(J);
+        const r = (P: Vector3) => {
+          const q = scr(f, P);
+          return [+q.x.toFixed(3), +q.y.toFixed(3)];
+        };
+        return { J, head: r(head), tail: r(tail), foot: r(foot) };
+      }),
+      fails,
+      pass: fails.length === 0,
+    };
+  };
+  const full = { ...api, metrics, motion };
   (window as unknown as { __sceneSim?: typeof full }).__sceneSim = full;
 }
