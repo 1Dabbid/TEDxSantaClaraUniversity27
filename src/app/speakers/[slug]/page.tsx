@@ -8,6 +8,7 @@ import { jsonLdString, speakerJsonLd } from '@/lib/jsonld';
 import { clip, SITE_NAME } from '@/lib/site';
 import { ticketCta } from '@/lib/tickets';
 import { Button } from '@/components/ui/Button';
+import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, JsonLd, Redaction } from '@/components/print/Print';
 
 type Props = { params: Promise<{ slug: string }> };
@@ -189,7 +190,7 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
           </div>
           <figcaption data-cursor="loupe" className="fine-print mt-3 flex justify-between gap-4 text-mute">
             <span>Fig. {String(index + 1).padStart(2, '0')}</span>
-            <span className="text-right">{speaker.name}</span>
+            <span className="text-right">{keepTedxCase(speaker.name)}</span>
           </figcaption>
         </figure>
 

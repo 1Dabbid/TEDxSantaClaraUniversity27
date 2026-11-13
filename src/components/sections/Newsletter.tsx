@@ -3,6 +3,7 @@ import type { Settings } from '@/lib/content';
 import { Arrow } from '@/components/print/Print';
 import styles from './Newsletter.module.css';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { EventName } from '@/components/ui/KeepCase';
 import { NewsletterMotion } from '@/motion/sections/NewsletterMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
 
@@ -112,7 +113,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
 
         <div className="mt-20 grid gap-8 border-t border-white/15 pt-6 sm:grid-cols-2 sm:mt-28">
           <p id="newsletter-note" data-cursor="loupe" className="fine-print max-w-md text-mute">
-            <span className="text-accent">1.</span> The list is only used for TEDxSantaClaraUniversity event news. You can
+            <span className="text-accent">1.</span> The list is only used for <EventName /> event news. You can
             unsubscribe at any time.
           </p>
           <ul className="fine-print -my-1.5 flex flex-wrap gap-x-6 sm:justify-end text-mute">

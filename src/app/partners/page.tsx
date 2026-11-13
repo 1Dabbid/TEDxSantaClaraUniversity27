@@ -7,6 +7,7 @@ import { partnerCta } from '@/lib/links';
 import { SITE_NAME, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { PartnersMotion } from '@/motion/sections/PartnersMotion';
 
@@ -55,7 +56,8 @@ function LoopMark() {
   );
 }
 
-const reasons = (capacity: number): { figure: ReactNode; title: string; body: string }[] => [
+/** The year-round card only shows when Show / hide sections > showYearRound is ticked (default off). */
+const reasons = (capacity: number, showYearRound: boolean): { figure: ReactNode; title: string; body: string }[] => [
   {
     figure: '1st',
     title: 'The first mainstage.',
@@ -69,13 +71,17 @@ const reasons = (capacity: number): { figure: ReactNode; title: string; body: st
   {
     figure: <PlayMark />,
     title: 'Talks that travel.',
-    body: 'Talks are recorded and published on the TEDx YouTube channel, so the ideas outlast the evening.',
+    body: 'Talks are recorded and submitted for publication on the TEDx Talks YouTube channel.',
   },
-  {
-    figure: <LoopMark />,
-    title: 'All year, not one night.',
-    body: 'Beyond the mainstage, TEDxSantaClaraUniversity runs general-meeting events throughout the year.',
-  },
+  ...(showYearRound
+    ? [
+        {
+          figure: <LoopMark />,
+          title: 'All year, not one night.',
+          body: 'Beyond the mainstage, TEDxSantaClaraUniversity runs general-meeting events throughout the year.',
+        },
+      ]
+    : []),
 ];
 
 const RULES = [
@@ -252,7 +258,7 @@ function BenefitsComparison({
           return (
             <li key={b.benefit} className="border-b border-white/15 py-5">
               <p className="text-white">{b.benefit}</p>
-              <p className="fine-print mt-2 text-mute">{names.length ? names.join(' · ') : 'Not yet assigned to a tier'}</p>
+              <p className="fine-print mt-2 text-mute">{names.length ? keepTedxCase(names.join(' · ')) : 'Not yet assigned to a tier'}</p>
             </li>
           );
         })}
@@ -263,19 +269,21 @@ function BenefitsComparison({
 
 function SponsorMark({ sponsor }: { sponsor: Sponsor }) {
   const mark = sponsor.logo ? (
-    // Capped at 32px tall: always smaller than the event logo in the header.
+    // Capped at 24px tall and 72px wide: always smaller than the event logo (48px tall in the header).
     <Image
       src={sponsor.logo}
       alt={sponsor.name}
-      width={160}
-      height={32}
-      className="h-8 max-h-8 w-auto max-w-[10rem] object-contain"
+      width={72}
+      height={24}
+      className="h-6 max-h-6 w-auto max-w-[4.5rem] object-contain"
     />
   ) : (
-    <span className="text-lg font-medium text-white">{sponsor.name}</span>
+    // Text fallback stays below the size of the event logo's wordmark.
+    <span className="text-sm font-medium text-white">{sponsor.name}</span>
   );
   return (
-    <li data-cursor="loupe" className="flex min-h-28 items-center justify-center border border-white/10 bg-black p-6">
+    // No loupe here: it would magnify partner logos beyond the event logo.
+    <li className="flex min-h-28 items-center justify-center border border-white/10 bg-black p-6">
       {sponsor.url ? (
         <a href={sponsor.url} target="_blank" rel="noopener noreferrer" className="inline-flex p-1">
           {mark}
@@ -323,7 +331,7 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
               </span>
               <span className={`block h-px ${i === 0 ? 'bg-white/60' : 'bg-white/25'}`} />
               <span className="fine-print mt-2 flex justify-between gap-4 text-mute">
-                <span className={i === 0 ? 'text-white' : undefined}>{name}</span>
+                <span className={i === 0 ? 'text-white' : undefined}>{keepTedxCase(name)}</span>
                 <span>Unsigned</span>
               </span>
             </li>
@@ -337,7 +345,7 @@ function CurrentPartners({ tiers, sponsors, cta }: { tiers: Tier[]; sponsors: Sp
     <div className="mt-12 space-y-14">
       {groups.map((g) => (
         <div key={g.tier.slug}>
-          <h3 className="fine-print text-white">{g.tier.name}s</h3>
+          <h3 className="fine-print text-white">{keepTedxCase(`${g.tier.name}s`)}</h3>
           <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {g.items.map((s) => (
               <SponsorMark key={s.slug} sponsor={s} />
@@ -373,7 +381,9 @@ export default async function PartnersPage() {
       : cta.href;
   const lastLetter = String.fromCharCode(64 + Math.max(tiers.length, 1));
   const anyTerms = tiers.some((t) => t.amount || t.slots);
-  const REASONS = reasons(settings.capacity);
+  const REASONS = reasons(settings.capacity, settings.sections.showYearRound);
+  // Four facts: 2 x 2 then a row of four. Three (year-round card off): one row of three from md up.
+  const four = REASONS.length === 4;
 
   return (
     <div id="prospectus" className="relative isolate">
@@ -383,7 +393,7 @@ export default async function PartnersPage() {
       {/* Hero */}
       <section aria-labelledby="partners-title" className="shell pb-24 pt-20 sm:pb-32 sm:pt-32">
         <p data-reveal="fade" className="fine-print text-mute">
-          Partners · Prospectus · {settings.themeName}
+          Partners · Prospectus · {keepTedxCase(settings.themeName)}
         </p>
         <h1
           id="partners-title"
@@ -438,13 +448,22 @@ export default async function PartnersPage() {
           Recitals.
           <span className="text-mute"> The facts on which this agreement rests.</span>
         </h2>
-        <ol data-reveal="stagger" className="mt-14 grid border-t border-white/15 sm:grid-cols-2 lg:grid-cols-4">
+        <ol
+          data-reveal="stagger"
+          className={`mt-14 grid border-t border-white/15 ${four ? 'sm:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}
+        >
           {REASONS.map((r, i) => (
             <li
               key={r.title}
-              className={`grid grid-cols-[5.25rem_minmax(0,1fr)] content-start gap-x-4 border-b border-white/15 py-8 sm:flex sm:flex-col sm:py-10 lg:border-b-0 ${
-                i % 2 === 1 ? 'sm:border-l sm:pl-8' : 'sm:pr-8'
-              } ${i > 0 ? 'lg:border-l lg:pl-8' : ''} ${i < REASONS.length - 1 ? 'lg:pr-8' : 'lg:pr-0'}`}
+              className={`grid grid-cols-[5.25rem_minmax(0,1fr)] content-start gap-x-4 border-b border-white/15 py-8 ${
+                four
+                  ? `sm:flex sm:flex-col sm:py-10 lg:border-b-0 ${i % 2 === 1 ? 'sm:border-l sm:pl-8' : 'sm:pr-8'} ${
+                      i > 0 ? 'lg:border-l lg:pl-8' : ''
+                    } ${i < REASONS.length - 1 ? 'lg:pr-8' : 'lg:pr-0'}`
+                  : `md:flex md:flex-col md:border-b-0 md:py-10 ${i > 0 ? 'md:border-l md:pl-8' : ''} ${
+                      i < REASONS.length - 1 ? 'md:pr-8' : 'md:pr-0'
+                    }`
+              }`}
             >
               <span className="fine-print col-span-2 text-mute">Whereas ({String.fromCharCode(97 + i)})</span>
               <span
@@ -524,7 +543,7 @@ export default async function PartnersPage() {
               <SectionLabel index={5}>Terms</SectionLabel>
             </div>
             <h2 id="rules-title" data-reveal="lines" className="mt-6 text-title font-semibold tracking-tight text-balance">
-              How TEDx partnerships work.
+              How partnerships work under TEDx rules.
             </h2>
             <p data-reveal="fade" className="mt-6 max-w-sm text-mute">
               Every TEDx event follows rules set by TED. They protect the talks, and they are the reason partners can

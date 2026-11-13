@@ -45,7 +45,7 @@ export default config({
       'The event': ['settings', 'venue', 'tickets', 'schedule', 'faq'],
       People: ['speakers', 'team'],
       Partners: ['tiers', 'benefits', 'sponsors'],
-      'Contact & site': ['contact', 'sections'],
+      'Contact & site': ['contact', 'sections', 'tedLanguage'],
     },
   },
   singletons: {
@@ -180,8 +180,8 @@ export default config({
         ),
         ticketPriceNote: fields.text({
           label: 'Price note',
-          description: 'One short sentence about price. TEDx rules cap tickets at $100.',
-          defaultValue: 'Tickets will be priced at no more than $100, in line with TEDx guidelines.',
+          description: 'One short sentence about price. Our cap is $100; confirm the limit for our licence tier with the licence holder.',
+          defaultValue: 'Tickets will cost no more than $100.',
         }),
         ticketPrice: fields.number({
           label: 'Ticket price in US dollars (optional)',
@@ -228,13 +228,16 @@ export default config({
         ),
         livestreamUrl: urlField(
           'Livestream link (optional)',
-          'Only if the event is streamed, e.g. the YouTube live page. When filled in, a “Watch live” link appears in the hero and the Tickets section (it opens in a new tab). Leave blank to show nothing.',
+          'Only if the event is streamed, e.g. the YouTube live page. When filled in, a “Watch live” link appears in the hero and the Tickets section (it opens in a new tab). Leave blank to show nothing. The stream must be free. Do not stream if any TED Talk videos are shown in the programme; confirm with the licence holder first.',
         ),
         socials: fields.object(
           {
             instagram: urlField('Instagram', 'Full link, e.g. https://www.instagram.com/…'),
             linkedin: urlField('LinkedIn', 'Full link to the page.'),
-            youtube: urlField('YouTube', 'Full link to the channel.'),
+            youtube: urlField(
+              'YouTube',
+              'Full link to the channel. Club channel only. Full TEDx talks may only be published through TED’s uploader, never on this channel.',
+            ),
             tiktok: urlField('TikTok', 'Full link to the profile.'),
           },
           { label: 'Social links', description: 'Only filled-in links are shown.' },
@@ -257,6 +260,33 @@ export default config({
         showSpeakerApplications: fields.checkbox({
           label: 'Show the speaker applications band (under Tickets)',
           defaultValue: true,
+        }),
+        showYearRound: fields.checkbox({
+          label: 'Show the “All year, not one night” card on the Partners page',
+          description:
+            'Only turn on if TED has confirmed the club’s year-round events may use the TEDx name. The licence covers the mainstage event; general-meeting events are not automatically TEDx events.',
+          defaultValue: false,
+        }),
+      },
+    }),
+
+    tedLanguage: singleton({
+      label: 'Required TED language',
+      path: 'content/ted-language',
+      schema: {
+        aboutTedx: fields.text({
+          label: 'About TEDx',
+          description:
+            'Shown in the footer of every page under “About TEDx”. Paste the current official text from TED’s TEDx organizer guide exactly. Do not edit the wording.',
+          multiline: true,
+          validation: { isRequired: true },
+        }),
+        aboutTed: fields.text({
+          label: 'About TED',
+          description:
+            'Shown in the footer of every page under “About TED”. Paste the current official text from TED’s TEDx organizer guide exactly. Do not edit the wording.',
+          multiline: true,
+          validation: { isRequired: true },
         }),
       },
     }),
@@ -455,7 +485,8 @@ export default config({
         tier: fields.relationship({ label: 'Tier', collection: 'tiers' }),
         logo: fields.image({
           label: 'Logo',
-          description: 'A white or light version on a transparent background (PNG or SVG). Shown small, on /partners only.',
+          description:
+            'A white or light version on a transparent background (PNG or SVG). Shown on /partners only, at most 24 px tall and 72 px wide, always smaller than the event logo. No tobacco, weapons/ammunition or adult-product companies, and none of TED’s prohibited sponsors. Sponsors can never be speakers.',
           directory: 'public/images/sponsors',
           publicPath: '/images/sponsors/',
         }),

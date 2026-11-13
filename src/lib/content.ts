@@ -44,6 +44,8 @@ export type SectionVisibility = {
   showTeam: boolean;
   showFaq: boolean;
   showSpeakerApplications: boolean;
+  /** Partners page "All year, not one night" card. Off unless TED confirmed year-round use of the name. */
+  showYearRound: boolean;
 };
 
 export type Settings = {
@@ -149,6 +151,9 @@ export type Sponsor = {
   url: string;
 };
 
+/** TED's required "About TEDx" / "About TED" texts, pasted verbatim by Compliance. */
+export type TedLanguage = { aboutTedx: string; aboutTed: string };
+
 /** A row of the partner benefits comparison: which tier slugs include it. */
 export type PartnerBenefit = { benefit: string; tiers: string[] };
 
@@ -248,6 +253,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
       showTeam: sections?.showTeam ?? true,
       showFaq: sections?.showFaq ?? true,
       showSpeakerApplications: sections?.showSpeakerApplications ?? true,
+      showYearRound: sections?.showYearRound ?? false,
     },
   };
 });
@@ -342,6 +348,11 @@ export const getPartnerBenefits = cache(async (): Promise<PartnerBenefit[]> => {
   return (b?.items ?? [])
     .map((i) => ({ benefit: str(i.benefit), tiers: [...i.tiers] }))
     .filter((i) => i.benefit);
+});
+
+export const getTedLanguage = cache(async (): Promise<TedLanguage> => {
+  const t = await reader.singletons.tedLanguage.read();
+  return { aboutTedx: str(t?.aboutTedx), aboutTed: str(t?.aboutTed) };
 });
 
 /** Splits multi-paragraph plain text (blank-line separated) into paragraphs. */

@@ -15,6 +15,9 @@ import { lenisRef } from '../lenisRef';
  * target mutations wake a short rAF loop that stops itself once the ring has
  * caught up with the pointer.
  *
+ * `[data-cursor="none"]` (the logo links) opts out: the custom cursor is hidden
+ * there and the native pointer shows, so nothing is ever drawn over the logo.
+ *
  * Only for fine, hovering pointers. The native cursor is hidden (html.has-cursor)
  * only after the custom one has received a real mouse move.
  */
@@ -24,7 +27,7 @@ const TEXTISH = 'input, textarea, select, [contenteditable="true"], iframe';
 const DEFAULT_ZOOM = 2.4;
 const MAX_LAYERS = 8;
 
-type State = 'default' | 'link' | 'loupe' | 'text';
+type State = 'default' | 'link' | 'loupe' | 'text' | 'none';
 
 const transparent = (c: string) => c === 'transparent' || /rgba?\([^)]*,\s*0\)$/.test(c) || /\/\s*0\)$/.test(c);
 
@@ -187,6 +190,7 @@ export function initCursor(root: HTMLElement): () => void {
       return 'loupe';
     }
     if (loupeTarget) clearLoupe();
+    if (tagged?.dataset.cursor === 'none') return 'none';
     if (el.closest(TEXTISH)) return 'text';
     if (tagged?.dataset.cursor === 'link' || el.closest(LINKISH)) return 'link';
     return 'default';

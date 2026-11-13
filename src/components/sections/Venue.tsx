@@ -3,6 +3,7 @@ import { formatCoordinate } from '@/lib/links';
 import { seatsLabel } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
+import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, CropMarks, Tba } from '@/components/print/Print';
 import { VenueMotion } from '@/motion/sections/VenueMotion';
 import { SectionShell, SectionTitle } from './SectionShell';
@@ -99,7 +100,7 @@ export function Venue({ settings }: { settings: Settings }) {
                   </p>
                   {coords.note ? (
                     <p data-cursor="loupe" className="fine-print mt-3 text-mute">
-                      {coords.note}
+                      {keepTedxCase(coords.note)}
                     </p>
                   ) : null}
                 </>
@@ -127,7 +128,7 @@ export function Venue({ settings }: { settings: Settings }) {
               </address>
               {settings.venueAddressLabel ? (
                 <span data-cursor="loupe" className="fine-print mt-3 block text-subtle">
-                  {settings.venueAddressLabel}
+                  {keepTedxCase(settings.venueAddressLabel)}
                 </span>
               ) : null}
             </dd>
