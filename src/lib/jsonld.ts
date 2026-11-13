@@ -82,13 +82,13 @@ function offersJsonLd(s: Settings) {
   };
 }
 
-/** schema.org Event (plus the WebSite it lives on) for the home page. */
 /** schema.org doorTime with the venue's offset, or nothing when the time cannot be read. */
 function doorTime(dateISO: string, time: string): { doorTime?: string } {
   const { startDate } = eventDateTimes(dateISO, time, '');
   return startDate !== dateISO ? { doorTime: startDate } : {};
 }
 
+/** schema.org Event (plus the WebSite it lives on) for the home page. */
 export function eventJsonLd(s: Settings, speakers: Speaker[]) {
   const announced = speakers.filter((sp) => sp.announced);
   const description = paragraphs(s.themeStory)[0] || s.themeTagline;
