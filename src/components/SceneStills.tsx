@@ -52,7 +52,7 @@ export function SceneStills() {
           </picture>
         );
       })}
-      {/* Fades the room to black after the venue, as the live scene does. */}
+      {/* Fades the room to black as the partner band arrives, after Tickets. */}
       <div className={`${styles.layer} ${styles.end}`} />
     </div>
   );

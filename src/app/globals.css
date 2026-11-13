@@ -1340,7 +1340,7 @@ html.has-cursor [contenteditable] {
  * the fixed stack follows publish named view timelines, visible to the stack
  * through timeline-scope on <main>. --fp-plate is each section's still.     */
 #main:has(> [data-scene-stills]) {
-  timeline-scope: --fp-still-theme, --fp-still-speakers, --fp-still-schedule, --fp-still-venue, --fp-still-team;
+  timeline-scope: --fp-still-theme, --fp-still-speakers, --fp-still-schedule, --fp-still-venue, --fp-still-end;
 }
 #main:has(> [data-scene-stills]) > [data-section='hero'] {
   --fp-plate: image-set(url('/stills/hero-landscape.avif') type('image/avif'), url('/stills/hero-landscape.webp') type('image/webp'));
@@ -1361,8 +1361,9 @@ html.has-cursor [contenteditable] {
   view-timeline-name: --fp-still-venue;
   --fp-plate: image-set(url('/stills/venue-landscape.avif') type('image/avif'), url('/stills/venue-landscape.webp') type('image/webp'));
 }
-#main:has(> [data-scene-stills]) > [data-section='team'] {
-  view-timeline-name: --fp-still-team;
+/* The partner band (always rendered, right after Tickets) fades the room to black. */
+#main:has(> [data-scene-stills]) > [data-still-end] {
+  view-timeline-name: --fp-still-end;
 }
 @media (max-aspect-ratio: 9/10) {
   #main:has(> [data-scene-stills]) > [data-section='hero'] {

@@ -68,7 +68,7 @@
       animation-timeline: --fp-still-venue;
     }
     .end {
-      animation-timeline: --fp-still-team;
+      animation-timeline: --fp-still-end;
     }
   }
 }
