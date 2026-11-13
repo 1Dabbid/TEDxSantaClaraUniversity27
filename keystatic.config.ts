@@ -82,6 +82,7 @@ export default config({
           validation: { pattern: { regex: /^\d{4}-\d{2}-\d{2}$/, message: 'Write the date as YYYY-MM-DD, e.g. 2027-04-23.' } },
         }),
         doorsTime: timeField('Doors open at'),
+        talksTime: timeField('Talks start at'),
         endTime: timeField('Event ends at'),
         capacity: fields.integer({
           label: 'Seat capacity',
@@ -181,6 +182,16 @@ export default config({
           label: 'Price note',
           description: 'One short sentence about price. TEDx rules cap tickets at $100.',
           defaultValue: 'Tickets will be priced at no more than $100, in line with TEDx guidelines.',
+        }),
+        ticketPrice: fields.number({
+          label: 'Ticket price in US dollars (optional)',
+          description:
+            'Just the number, e.g. 25 (or 0 for free). TEDx rules cap tickets at $100, so it cannot be more than 100. Used by search engines once tickets are on sale; the visible wording is the Price note above. Leave blank until the price is set.',
+          validation: { min: 0, max: 100 },
+        }),
+        ticketSaleStart: fields.date({
+          label: 'Tickets on sale from (optional)',
+          description: 'The first day of ticket sales. Used by search engines once tickets are on sale. Leave blank if unsure.',
         }),
         speakerApplicationsState: fields.select({
           label: 'Speaker applications',

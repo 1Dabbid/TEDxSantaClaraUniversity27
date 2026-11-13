@@ -2,6 +2,7 @@ import 'server-only';
 import { cache } from 'react';
 import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
+import { formatCalendarDate } from './dates';
 import { TEDX_MAX_CAPACITY } from './site';
 
 /**
@@ -53,9 +54,13 @@ export type Settings = {
   dateISO: string;
   /** "Friday, April 23, 2027" */
   dateLong: string;
+  /** "Fri, Apr 23, 2027" */
+  dateMedium: string;
   /** "Apr 23, 2027" */
   dateShort: string;
   doorsTime: string;
+  /** When the talks begin ("6:00 PM"), '' while unknown. Structured data falls back to doorsTime. */
+  talksTime: string;
   endTime: string;
   /** Seat capacity, 1..100 (TEDx licence cap). The single source for every seat count on the site. */
   capacity: number;
@@ -76,6 +81,10 @@ export type Settings = {
   ticketUrl: string;
   ticketEmbedUrl: string;
   ticketPriceNote: string;
+  /** Ticket price in USD (0..100, TEDx cap), or null while not set. */
+  ticketPrice: number | null;
+  /** First day of ticket sales, "YYYY-MM-DD", or '' while not set. */
+  ticketSaleStart: string;
   speakerApplicationsState: ApplicationsState;
   speakerApplicationsUrl: string;
   speakerApplicationsDeadline: string;
@@ -150,15 +159,8 @@ function capacityOf(v: number | null | undefined): number {
   return typeof v === 'number' && Number.isInteger(v) && v >= 1 ? Math.min(v, TEDX_MAX_CAPACITY) : TEDX_MAX_CAPACITY;
 }
 
-function formatDate(iso: string, style: 'long' | 'short'): string {
-  const d = new Date(`${iso}T12:00:00Z`);
-  if (Number.isNaN(d.getTime())) return iso;
-  return new Intl.DateTimeFormat('en-US', {
-    timeZone: 'UTC',
-    ...(style === 'long'
-      ? { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' }
-      : { month: 'short', day: 'numeric', year: 'numeric' }),
-  }).format(d);
+function priceOf(v: number | null | undefined): number | null {
+  return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(v, 100) : null;
 }
 
 const byOrder = <T extends { order: number }>(a: T, b: T) => a.order - b.order;
@@ -203,9 +205,11 @@ export const getSettings = cache(async (): Promise<Settings> => {
     themeTagline: s.themeTagline,
     themeStory: s.themeStory,
     dateISO,
-    dateLong: formatDate(dateISO, 'long'),
-    dateShort: formatDate(dateISO, 'short'),
+    dateLong: formatCalendarDate(dateISO, 'long'),
+    dateMedium: formatCalendarDate(dateISO, 'medium'),
+    dateShort: formatCalendarDate(dateISO, 'short'),
     doorsTime: str(s.doorsTime),
+    talksTime: str(s.talksTime),
     endTime: str(s.endTime),
     capacity: capacityOf(s.capacity),
     accentColor: /^#[0-9a-f]{6}$/i.test(s.accentColor) ? s.accentColor : ACCENT_FALLBACK,
@@ -223,6 +227,8 @@ export const getSettings = cache(async (): Promise<Settings> => {
     ticketUrl: str(tickets?.ticketUrl),
     ticketEmbedUrl: str(tickets?.ticketEmbedUrl),
     ticketPriceNote: str(tickets?.ticketPriceNote),
+    ticketPrice: priceOf(tickets?.ticketPrice),
+    ticketSaleStart: str(tickets?.ticketSaleStart),
     speakerApplicationsState: tickets?.speakerApplicationsState ?? 'coming-soon',
     speakerApplicationsUrl: str(tickets?.speakerApplicationsUrl),
     speakerApplicationsDeadline: str(tickets?.speakerApplicationsDeadline),

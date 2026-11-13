@@ -1,6 +1,6 @@
 import { Faq, Hero, Newsletter, Schedule, Speakers, Team, Theme, Tickets, Venue } from '@/components/sections';
 import { getFaq, getSchedule, getSettings, getSpeakers, getTeam } from '@/lib/content';
-import { eventJsonLd } from '@/lib/jsonld';
+import { eventJsonLd, jsonLdString } from '@/lib/jsonld';
 
 export default async function HomePage() {
   const [settings, speakers, schedule, team, faq] = await Promise.all([
@@ -15,7 +15,7 @@ export default async function HomePage() {
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(eventJsonLd(settings, speakers)).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{ __html: jsonLdString(eventJsonLd(settings, speakers)) }}
       />
       {/* Order must match SECTION_IDS in src/scene/scrollState.ts */}
       <Hero settings={settings} />
