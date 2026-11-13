@@ -730,7 +730,17 @@ html:not(.motion) .reading-progress {
   }
 }
 
-/* Stage moment. Static / no JS: normal flow on black (none of this applies).
+/* Static (reduced motion, the Reduce motion switch, no JS): no stage, but the
+   section's still is a plate behind its top (Scene stills, below). A veil from
+   the top keeps the intro line AA where the spotlight cone falls behind it on
+   phones (#b8b8b8 measured 4.1:1 there without it). */
+html:not(.motion) .speakers-scrim {
+  background:
+    radial-gradient(ellipse 66% 58% at 16% 20%, rgb(0 0 0 / 0.55), rgb(0 0 0 / 0) 100%),
+    linear-gradient(to bottom, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.3) 45%, rgb(0 0 0 / 0) 85%);
+}
+
+/* Stage moment. Static / no JS: normal flow (none of this applies).
    Keep the two media blocks in sync with STAGE in SpeakersMotion. */
 @media (min-width: 1024px) and (min-height: 44rem) {
   /* Desktop: a runway with a sticky full-viewport stage. The camera keys off
