@@ -96,7 +96,26 @@ export const STAND_TOP_Y = PIVOT_WORLD.y - 0.034;
 /** Where the stand's foot sits: the centre of the rug, on top of the pile. */
 export const STAND_BASE = new Vector3(PIVOT_WORLD.x, RUG_TOP, PIVOT_WORLD.z);
 
-/** Audience: rows of seats curving around a point behind the stage. */
+/**
+ * The house (seats, treads, aisle lights, audience floor, stage front and the
+ * stage deck that ends at it) is turned about the stage centre so that it
+ * faces the camera's heading at the end of the journey: the one continuous
+ * move (choreography.ts) orbits about 70 degrees round from the hero's
+ * heading and pulls back over the seats into the wide house view. The house
+ * axis points along azimuth HOUSE_AZ (from +Z towards +X). SEATING,
+ * STAGE_EDGE_Z and the house geometry are written in house space (+Z towards
+ * the audience); `toHouse` takes a world point there. The curtain, the rug,
+ * the spot and the microphone stay in world space.
+ */
+export const HOUSE_AZ = -1.0;
+const HOUSE_COS = Math.cos(HOUSE_AZ);
+const HOUSE_SIN = Math.sin(HOUSE_AZ);
+/** World point -> house space (x across the house, z towards the audience). */
+export function toHouse(p: Vector3, out = new Vector3()): Vector3 {
+  return out.set(p.x * HOUSE_COS - p.z * HOUSE_SIN, p.y, p.x * HOUSE_SIN + p.z * HOUSE_COS);
+}
+
+/** Audience (house space): rows of seats curving around a point behind the stage. */
 export const SEATING = {
   centre: new Vector3(0, 0, -2.2),
   firstRadius: 8.3,

@@ -11,7 +11,7 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
-import { ENGRAVING_START_PHI, MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE } from './layout';
+import { ENGRAVING_START_PHI, HOUSE_AZ, MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE } from './layout';
 import { EMPTY_MASK } from './textures';
 
 /** Tangent of the overhead spot's nominal half-angle (the beam just covers the rug). */
@@ -774,22 +774,26 @@ export function createVenueMaterial() {
       uSeat: { value: [SEATING.centre.x, SEATING.centre.z, SEATING.firstRadius, SEATING.rowGap] },
       uAisle: { value: SEATING.aisle },
       uEdgeZ: { value: STAGE_EDGE_Z },
+      uHouse: { value: [Math.cos(HOUSE_AZ), Math.sin(HOUSE_AZ)] },
     },
-    fragmentHead: 'uniform vec4 uSeat; uniform float uAisle; uniform float uEdgeZ;',
+    fragmentHead: 'uniform vec4 uSeat; uniform float uAisle; uniform float uEdgeZ; uniform vec2 uHouse;',
     fragmentBody: `
-      vec3 nW = toWorld(normal);
+      // House space: the house is turned by HOUSE_AZ about the stage centre (layout.ts).
+      vec3 nW0 = toWorld(normal);
+      vec3 nW = vec3(nW0.x * uHouse.x - nW0.z * uHouse.y, nW0.y, nW0.x * uHouse.y + nW0.z * uHouse.x);
+      vec3 hW = vec3(vWorld.x * uHouse.x - vWorld.z * uHouse.y, vWorld.y, vWorld.x * uHouse.y + vWorld.z * uHouse.x);
       // Stage front: a thin worn nosing along the top edge catches the spill.
-      float front = step(0.7, nW.z) * (1.0 - smoothstep(0.0, 0.03, abs(vWorld.z - uEdgeZ)));
-      float nosing = smoothstep(-0.035, -0.004, vWorld.y) * front;
-      float spill = exp(-vWorld.x * vWorld.x / 18.0);
+      float front = step(0.7, nW.z) * (1.0 - smoothstep(0.0, 0.03, abs(hW.z - uEdgeZ)));
+      float nosing = smoothstep(-0.035, -0.004, hW.y) * front;
+      float spill = exp(-hW.x * hW.x / 18.0);
       totalEmissiveRadiance += vec3(1.0, 0.93, 0.86) * nosing * spill * uSpot * 0.05;
       diffuseColor.rgb *= 1.0 - 0.4 * front * (1.0 - nosing);
       // Aisle step-light pools on the treads.
-      vec2 d = vWorld.xz - uSeat.xy;
+      vec2 d = hW.xz - uSeat.xy;
       float R = length(d);
       float s = atan(d.x, d.y) * R;
       float fr = fract((R - uSeat.z + uSeat.w * 0.5) / uSeat.w);
-      float pool = exp(-pow(abs(s) - uAisle * 0.5 + 0.08, 2.0) / 0.03) * exp(-fr * 7.0) * step(0.5, nW.y) * step(uEdgeZ + 0.3, vWorld.z);
+      float pool = exp(-pow(abs(s) - uAisle * 0.5 + 0.08, 2.0) / 0.03) * exp(-fr * 7.0) * step(0.5, nW.y) * step(uEdgeZ + 0.3, hW.z);
       totalEmissiveRadiance += vec3(1.0, 0.6, 0.3) * pool * 0.012;`,
   });
   return m;

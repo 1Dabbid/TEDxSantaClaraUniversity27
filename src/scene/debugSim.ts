@@ -360,8 +360,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     // Beats: 1 hero + macro, 2 spiral pull out, 3 Speakers..Venue, 4 Tickets.
     const beats = [
       { id: 'b1 hero+macro', from: 0.5, to: 1.625 },
-      { id: 'b2 pull out', from: 1.625, to: 2.625 },
-      { id: 'b3 speakers-venue', from: 2.625, to: 5.0 },
+      { id: 'b2 pull out', from: 1.625, to: 2.75 },
+      { id: 'b3 speakers-venue', from: 2.75, to: 5.0 },
       { id: 'b4 tickets', from: 5.0, to: 6.0 },
     ];
     type Step = { J: number; view: number; screen: number; move: number; beat: string };
@@ -464,7 +464,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     // Monotonic channels (fine sweep): the distance to the head from the macro's end, the orbit from
     // the point where the camera has left the barrel (J 1.9; closer in, the aim sliding along the
     // tilted barrel moves the azimuth by a few tenths of a degree), the height from the landing on
-    // the stage (J 2.625) to the end of Tickets. A reversal is a change of direction by more than
+    // the stage (J 2.75) to the end of Tickets. A reversal is a change of direction by more than
     // the tolerance from the last extreme.
     const reversals = (from: number, to: number, val: (f: Frame) => number, tol: number) => {
       let dir = 0;
@@ -500,7 +500,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     const mono = {
       orbit: reversals(1.9, 6.0, az, 1e-3),
       distance: reversals(1.7, 6.0, (f) => new Vector3(...f.pos).distanceTo(head), 1e-3),
-      height: reversals(2.625, 6.0, (f) => f.pos[1], 1e-3),
+      height: reversals(2.75, 6.0, (f) => f.pos[1], 1e-3),
     };
     for (const [k, v] of Object.entries(mono)) if (v.reversals) fails.push(`monotonic ${k}: ${v.reversals} reversals (first at J${v.firstAtJ})`);
     // Frame and copy column: the head and the tail of the mic from J 2.1 (the whole microphone has
@@ -521,6 +521,11 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       }
     }
     if (frameFails) fails.push(`frame/copy: ${frameFails} samples out of frame or over the copy column (xMin ${frame.xMin.toFixed(3)} at J${frame.xMinAtJ})`);
+    // Near plane against the scene's surfaces (< 1 would clip).
+    let minClr = Infinity;
+    let clrAt = '';
+    for (const f of F) if (f.clr < minClr) [minClr, clrAt] = [f.clr, `${f.obj}@J${f.J}`];
+    if (minClr < 1) fails.push(`clearance ${minClr} at ${clrAt}`);
     return {
       viewport: `${window.innerWidth}x${window.innerHeight}`,
       limits: MOTION_LIMITS,
@@ -530,6 +535,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       orbitDeg: { at2_5: orbitAt(2.5), at3: orbitAt(3), at4: orbitAt(4), at5: orbitAt(5), at6: orbitAt(6) },
       heightM: { at2_5: +at(2.5).pos[1].toFixed(2), at4: +at(4).pos[1].toFixed(2), at5: +at(5).pos[1].toFixed(2), at6: +at(6).pos[1].toFixed(2) },
       frame: { ...frame, xMin: +frame.xMin.toFixed(3), xMax: +frame.xMax.toFixed(3), yMin: +frame.yMin.toFixed(3), yMax: +frame.yMax.toFixed(3) },
+      clearance: { min: minClr, at: clrAt },
       steps,
       /** Where the subject sits on screen (fractions from the left / top) at a few positions. */
       subjectAt: [2.1, 2.25, 2.375, 2.5, 2.75, 3, 3.5, 4, 4.5, 5, 5.25, 5.5, 5.75, 5.95].map((J) => {

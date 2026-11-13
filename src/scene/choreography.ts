@@ -401,7 +401,8 @@ export function track(keys: Keys, J: number): number {
  * - `orbit`, `elev` (degrees) swing round and rise;
  * - the aim slides up the barrel (`mic`, mic-space height) until `micUntil`,
  *   then down the stand line: first so that the middle of the barrel glides
- *   evenly to its stage place on screen (`barrelY`, fraction from the top;
+ *   evenly from the anchor to its stage place on screen (`barrelY`, fraction
+ *   from the top, its first key at `micUntil`;
  *   the aim height follows from the distance), from the last `barrelY` key
  *   on by height (`stand`, metres);
  * - `ax`, `ay`: the screen anchor; `roll`: the macro's roll unwinding.
@@ -471,16 +472,15 @@ const DESKTOP_MOVE: Move = {
   // The barrel glides from the anchor up to about a third of the height while the stand and the
   // rug come in below it (about 1.5% of the width per step, with the anchor's own slide).
   barrelY: [
-    [1.85, 0.475],
-    [2.1, 0.435],
-    [2.35, 0.395],
-    [2.6, 0.352],
-    [2.85, 0.315],
+    [2.05, 0.46],
+    [2.225, 0.424],
+    [2.4, 0.388],
+    [2.575, 0.352],
+    [2.75, 0.317],
   ],
   // Speakers: on the red circle, the stand's foot clear of the glass panel low left. Tickets: the
   // stage rises into the upper right, above the fact list (x 0.59-0.95, y 0.24-0.56) and the numerals.
   stand: [
-    [3.0, 1.03],
     [4.0, 0.82],
     [5.0, 0.62],
     [5.85, 0.52],
@@ -548,14 +548,13 @@ const PORTRAIT_MOVE: Move = {
     [2.05, 0.1],
   ],
   barrelY: [
-    [1.85, 0.56],
-    [2.1, 0.52],
-    [2.35, 0.475],
-    [2.6, 0.43],
-    [2.85, 0.39],
+    [2.05, 0.562],
+    [2.225, 0.535],
+    [2.4, 0.508],
+    [2.575, 0.481],
+    [2.75, 0.455],
   ],
   stand: [
-    [3.0, 0.58],
     [4.0, 0.53],
     [5.0, 0.5],
     [5.85, 0.45],
@@ -611,8 +610,8 @@ function lightAt(keys: readonly LightKey[], J: number): Look {
  * the copy sit beside it); after Tickets the lights go down.
  */
 const STAGE_KEYS_DESKTOP: LightKey[] = [
-  { at: 2.5, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.3, cone: 0.1, key: 0.6, warm: 0.1 },
-  { at: 2.62, ...STAGE_LOOK, spot: 0.75, cone: 0.65, key: 0.55, warm: 0.15 },
+  { at: 2.5, ...STAGE_LOOK, ...STAGE_WARM, spot: 0.72, cone: 0.55, key: 0.55, haze: 0, warm: 0.1 },
+  { at: 2.62, ...STAGE_LOOK, spot: 0.88, cone: 0.95, key: 0.52, warm: 0.15 },
   { at: 2.75, ...STAGE_LOOK, warm: 0.2 },
   { at: 3.1, ...STAGE_LOOK, warm: 0.45 },
   { at: 3.9, ...STAGE_LOOK, cone: 1.45, spot: 0.95, exposure: 0.97, warm: -0.45 },
@@ -625,8 +624,8 @@ const STAGE_KEYS_DESKTOP: LightKey[] = [
 /** On phones the speakers and schedule copy sits over the beam: a thinner shaft, darker at the top edge, keeps it at 4.5:1. */
 const STAGE_PORTRAIT = { ...STAGE_LOOK, fov: 36, exposure: 1.0, parallax: 0, cone: 0.4, spot: 1.1, scrimEdge: 0.55 };
 const STAGE_KEYS_PORTRAIT: LightKey[] = [
-  { at: 2.5, ...STAGE_PORTRAIT, ...STAGE_WARM, cone: 0.06, warm: 0.1 },
-  { at: 2.62, ...STAGE_PORTRAIT, spot: 0.8, cone: 0.3, key: 0.55, warm: 0.15 },
+  { at: 2.5, ...STAGE_PORTRAIT, ...STAGE_WARM, spot: 0.72, cone: 0.22, key: 0.55, haze: 0, warm: 0.1 },
+  { at: 2.62, ...STAGE_PORTRAIT, spot: 0.9, cone: 0.32, key: 0.55, warm: 0.15 },
   { at: 2.75, ...STAGE_PORTRAIT, warm: 0.2 },
   { at: 3.1, ...STAGE_PORTRAIT, warm: 0.45 },
   { at: 3.9, ...STAGE_PORTRAIT, cone: 0.7, spot: 1.05, exposure: 0.97, warm: -0.45 },
@@ -646,9 +645,12 @@ function pullLook(f: number, portrait: boolean): Look & { keyDir?: V3; focus?: r
   if (f < 0.4) return { ...PULL_MIC, ...(portrait ? { fov: 34.5, scrim: 0.35 } : {}), ...p };
   if (f < 0.52) return { ...PULL_DARK, ...(portrait ? { fov: 36 } : {}), ...p };
   if (f < 0.64) return { ...PULL_STAND, fov: portrait ? 36 : 31, ...p };
+  // The stage arrives already in a little light (no dark gap): the spot warms up as the rug comes
+  // into frame, and the shaft starts to show before the pull out lands.
   const stage = portrait ? STAGE_PORTRAIT : STAGE_LOOK;
-  if (f < 0.76) return { ...stage, ...STAGE_WARM, spot: 0.18, cone: 0.05, key: 0.7, rim: 1.05 };
-  return { ...stage, ...STAGE_WARM, spot: 0.25, cone: 0.07, key: 0.65, rim: 1.0 };
+  if (f < 0.72) return { ...stage, ...STAGE_WARM, spot: 0.3, cone: 0.06, key: 0.7, rim: 1.05 };
+  if (f < 0.86) return { ...stage, ...STAGE_WARM, spot: 0.45, cone: 0.14, key: 0.65, rim: 1.0, haze: 0.02 };
+  return { ...stage, ...STAGE_WARM, spot: 0.6, cone: portrait ? 0.15 : 0.3, key: 0.6, rim: 0.95, haze: 0.01 };
 }
 
 /** Sleeve turn along the hero, the macro and the start of the pull out (radians). */
@@ -790,8 +792,8 @@ const PORTRAIT_OPENING: Shot[] = [
 const DESKTOP_ANNOUNCED: Partial<Pick<Move, 'ay' | 'barrelY'>> = {
   ay: [
     [1.66, ANCHOR_MACRO[1]],
-    [2.0, 0.44],
-    [2.5, 0.355],
+    [2.0, 0.455],
+    [2.5, 0.37],
     [3.1, 0.35],
     [3.9, 0.415],
     [4.1, 0.42],
@@ -800,11 +802,11 @@ const DESKTOP_ANNOUNCED: Partial<Pick<Move, 'ay' | 'barrelY'>> = {
     [6.0, 0.2],
   ],
   barrelY: [
-    [1.85, 0.47],
-    [2.1, 0.42],
-    [2.35, 0.36],
-    [2.6, 0.3],
-    [2.85, 0.245],
+    [2.05, 0.455],
+    [2.225, 0.416],
+    [2.4, 0.378],
+    [2.575, 0.339],
+    [2.75, 0.3],
   ],
 };
 

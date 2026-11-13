@@ -43,7 +43,7 @@ import Seats from './Seats';
 import Stage, { reflected } from './Stage';
 import Venue from './Venue';
 import { SECTION_IDS, scrollState, type SectionId } from './scrollState';
-import { MIC_AXIS } from './layout';
+import { HOUSE_AZ, MIC_AXIS } from './layout';
 
 const Y_AXIS = new Vector3(0, 1, 0);
 
@@ -563,8 +563,11 @@ export default function Experience({
       <directionalLight position={[0, 7, -8]} intensity={0.3} color="#dfe5f2" onUpdate={reflected} />
       <Microphone quality={tier} engraving={engraving} />
       <Stage quality={tier} />
-      <Seats quality={tier} />
-      <Venue />
+      {/* The house faces the end of the camera's orbit (layout.ts, HOUSE_AZ). */}
+      <group rotation={[0, HOUSE_AZ, 0]}>
+        <Seats quality={tier} />
+        <Venue />
+      </group>
       <mesh ref={hazeRef} geometry={fx.hazeGeo} material={fx.haze} renderOrder={4} frustumCulled={false} />
       <group ref={motesRef}>
         <points geometry={fx.motesGeo} material={fx.motes} renderOrder={10} frustumCulled={false} />

@@ -15,7 +15,7 @@ import {
   type SpotLight,
 } from 'three';
 import { machinedLathe } from './geometry';
-import { RUG_RADIUS, SPOT_ANGLE, SPOT_HEIGHT, STAGE_EDGE_Z } from './layout';
+import { HOUSE_AZ, RUG_RADIUS, SPOT_ANGLE, SPOT_HEIGHT, STAGE_EDGE_Z } from './layout';
 import {
   BEAM,
   createConeMaterial,
@@ -142,7 +142,8 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
 
   return (
     <group>
-      <mesh geometry={geo.floor} material={mats.floor} />
+      {/* The deck ends at the stage front, which turns with the house (HOUSE_AZ). */}
+      <mesh geometry={geo.floor} material={mats.floor} rotation={[0, HOUSE_AZ, 0]} />
       <mesh geometry={geo.rug} material={mats.rug} onUpdate={reflected} />
       <mesh geometry={geo.curtain} material={mats.curtain} position={[0, 0, CURTAIN.z]} onUpdate={reflected} />
       <spotLight
