@@ -20,9 +20,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 /**
- * One board role. A person's name (and photo) only when they agreed to be named
- * (People > Team > Show name publicly); otherwise the role alone, plainly, with
- * no "to be announced" line.
+ * One board role. Every card has the same shape, so the board reads as one list
+ * and rows line up: the number, then the role (always the same slot and style),
+ * then the person's name (and photo) only when they agreed to be named (People >
+ * Team > Show name publicly). No "to be announced" line for an unnamed role.
  */
 function BoardRole({ member, index }: { member: TeamMember; index: number }) {
   return (
@@ -30,27 +31,15 @@ function BoardRole({ member, index }: { member: TeamMember; index: number }) {
       <p aria-hidden="true" className="fine-print text-mute tabular-nums">
         §&nbsp;{String(index + 1).padStart(2, '0')}
       </p>
+      <p className="mt-4 text-xl leading-snug font-medium tracking-tight text-balance text-white wrap-anywhere">{member.role}</p>
       {member.name ? (
-        <>
-          <div className="mt-4 flex min-h-12 items-center gap-4">
-            {member.photo ? (
-              <Image
-                src={member.photo}
-                alt=""
-                width={96}
-                height={96}
-                className="size-12 shrink-0 rounded-full object-cover grayscale"
-              />
-            ) : null}
-            <p className="min-w-0 text-2xl leading-tight font-light tracking-tight text-balance text-white wrap-anywhere">
-              {member.name}
-            </p>
-          </div>
-          <p className="mt-2 text-base leading-snug text-balance text-mute wrap-anywhere">{member.role}</p>
-        </>
-      ) : (
-        <p className="mt-4 text-xl leading-snug font-medium tracking-tight text-balance text-white wrap-anywhere">{member.role}</p>
-      )}
+        <div className="mt-3 flex items-center gap-3">
+          {member.photo ? (
+            <Image src={member.photo} alt="" width={80} height={80} className="size-10 shrink-0 rounded-full object-cover grayscale" />
+          ) : null}
+          <p className="min-w-0 text-lg leading-snug font-light text-balance text-mute wrap-anywhere">{member.name}</p>
+        </div>
+      ) : null}
     </li>
   );
 }
