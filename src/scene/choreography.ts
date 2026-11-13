@@ -281,10 +281,10 @@ export function aimPoint(aim: Aim, out = new Vector3()): Vector3 {
   return out.set(SPINE.x, aim.stand, SPINE.z);
 }
 /**
- * Where a shot's track starts: the aim point itself on the barrel (a slide
- * along the barrel carries the camera with it, so it never turns), the top of
- * the stand line otherwise (the camera stays on the one track while the aim
- * moves down the stand).
+ * The centre of the camera's sphere: the aim point itself on the barrel (a
+ * slide along the barrel carries the camera with it, so it never turns), the
+ * top of the stand line otherwise (the camera orbits and rises round the stand
+ * line while the aim moves down it).
  */
 function trackOrigin(aim: Aim, out = new Vector3()): Vector3 {
   return 'mic' in aim ? aimPoint(aim, out) : out.copy(SPINE);
@@ -299,11 +299,13 @@ function trackOrigin(aim: Aim, out = new Vector3()): Vector3 {
  * the anchor (about 68% across) keeps clear of:
  * - hero 0..0.55 (scroll 0 lands near J 0.45): the text column covers the left 60%
  * - theme J 0.8..2.02: headline phrases left / centre, the right 42% open for the engraving
- * - speakers J 2..3: heading top left (left 45%), one glass panel low left
- *   (x 3-36%, y 62-76%); when speakers are announced, a strip of cards along
- *   the lower edge from about 44% of the pin
+ * - speakers J 2..3: heading top left (left 45%), a glass panel along the
+ *   bottom (x 2-72%, y 72-96%; it has its own backing, the rug may pass behind
+ *   it); when speakers are announced, a strip of cards along the lower edge
+ *   from early in the pin
  * - schedule J 3..4: a column on the left 40%
- * - venue J 4..5: heading top left, details across the lower half over a scrim
+ * - venue J 4..5: heading top left, details across the lower half over a scrim,
+ *   a location card with a small map at the top right (over the upper beam)
  * - tickets J 5..6: text left, big numerals at the bottom
  */
 
@@ -325,7 +327,7 @@ const MACRO = {
   haze: 0,
   motes: 1,
   vignette: 0.85,
-  // The studio strips walk round the barrel (choreography never circles it): the streak runs down
+  // The studio strips walk round the barrel (the macro itself holds orbit 0): the streak runs down
   // the engraved column, a little right of the row starts, so the etched copy reads bright.
   envRot: -0.72,
   env: 0.4,
@@ -337,15 +339,15 @@ const MACRO = {
 };
 
 const HERO_LOOK = { fov: 30, exposure: 1.05, drift: 0.012, parallax: 0.022, cone: 0.05, spot: 0.45, key: 1.15, rim: 1.5, rimAng: 0.45, haze: 1, vignette: 0.6, bloom: 1 };
-/** The stage under its light: the speakers hold and everything after it. */
-/** The stage before the light comes on: the spot barely warm, no shaft yet, the key on the mic. */
+/** The stage before the light is fully up: the spot warm, little shaft yet, the key on the mic. */
 const STAGE_WARM = { spot: 0.3, cone: 0.09, key: 0.6, haze: 0.03, dof: 0.12 };
+/** The stage under its light: Speakers and everything after it. */
 const STAGE_LOOK = { fov: 32, exposure: 1, dof: 0.1, drift: 0.006, parallax: 0.025, cone: 1.3, spot: 1, key: 0.5, keyCam: 0, rim: 0.9, rimAng: -0.6, haze: 0, motes: 0, vignette: 0.62, bloom: 1.1, env: 1 };
 
 /*
- * Looks along the pull back, between the macro and the lit stage. The key light leaves the
+ * Looks along the spiral pull out, between the macro and the lit stage. The key light leaves the
  * camera (keyCam 1 -> 0) and the rim swings from screen right to the upstage side, while the
- * overhead spot stays off until the stand and the rug are in frame.
+ * overhead spot stays low until the stand and the rug come into frame (see pullLook).
  */
 /** The barrel standing back from upright, the engraving still lit by the raking key. */
 const PULL_BARREL = { fov: 29, exposure: 1.06, dof: 0.5, drift: 0.003, parallax: 0.006, cone: 0, spot: 0, key: 0.8, keyCam: 0.75, keyDir: [1.8, 1.7, 0.35] as V3, rim: 0.7, rimAng: 0.6, haze: 0.15, motes: 0.5, vignette: 0.8, envRot: -0.5, env: 0.45, scrim: 0.45, scrimEdge: 0.75, bloom: 1.2 };
