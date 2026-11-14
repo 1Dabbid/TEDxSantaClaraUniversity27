@@ -136,7 +136,7 @@ export function Venue({ settings }: { settings: Settings }) {
 
         {/* Particulars. Clause numbers sit inside each <dt> (hidden from assistive tech) so the list stays valid. */}
         <div data-reveal="rule" className="mt-16 h-px bg-white/15 sm:mt-20" aria-hidden="true" />
-        <dl data-reveal="stagger" className={`grid gap-10 pt-8 sm:gap-8 ${anyNote ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
+        <dl data-reveal="stagger" data-venue-facts className={`grid gap-10 pt-8 sm:gap-8 ${anyNote ? 'sm:grid-cols-3' : 'sm:grid-cols-2 lg:grid-cols-4'}`}>
           <div className="grid grid-cols-[3.5rem_1fr] content-start gap-x-2">
             <dt className="col-span-2 grid grid-cols-subgrid">
               <ClauseNo>4.1</ClauseNo>

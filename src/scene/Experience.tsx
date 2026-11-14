@@ -35,6 +35,7 @@ import {
 import { createStudioEnvironment } from './environment';
 import type { EngravingFacts } from './engraving';
 import { look } from './look';
+import { measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
 import Microphone from './Microphone';
@@ -62,7 +63,7 @@ function measureSections() {
     if (el) metrics.heights[id] = el.getBoundingClientRect().height;
   }
   const opts = contentOptions();
-  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}`;
+  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}:${opts.speakersX ?? ''}:${opts.venueX ?? ''}:${opts.ticketsX ?? ''}`;
   if (key !== contentKey) {
     contentKey = key;
     contentListeners.forEach((f) => f());
@@ -72,7 +73,7 @@ function contentOptions(): ShotOptions {
   const sched = metrics.heights.schedule;
   // The orbit was authored for a schedule about 1.45 viewports tall.
   const scheduleScale = sched ? Math.min(1, Math.max(0.4, sched / (1.45 * metrics.vh))) : 1;
-  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale };
+  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale, speakersX: measureSpeakersX(), venueX: measureVenueX(), ticketsX: measureTicketsX() };
 }
 const currentJourney = () => journey(scrollState.sections, metrics.heights, metrics.vh);
 

@@ -1,7 +1,8 @@
 import { Vector3 } from 'three';
 import { MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
-import { STAND_BASE } from './layout';
+import { STAND_BASE, STAND_TOP_Y } from './layout';
 import { clearance } from './clearance';
+import { measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, nearCorner, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
 
@@ -71,6 +72,8 @@ type Frame = {
   spot: number;
   cone: number;
   motes: number;
+  /** Upper-middle band veil (0..1). */
+  band: number;
 };
 
 const WORLD_UP = new Vector3(0, 1, 0);
@@ -100,8 +103,74 @@ function contentShots(L: Layout, over: Partial<ShotOptions>): ResolvedShot[] {
   const base: ShotOptions = {
     speakersTba: !!document.querySelector('.speakers-runway--tba'),
     scheduleScale: sched ? Math.min(1, Math.max(0.4, sched / (1.45 * L.vh))) : 1,
+    speakersX: measureSpeakersX(),
+    venueX: measureVenueX(),
+    ticketsX: measureTicketsX(),
   };
   return resolveShots(shotsFor(portrait, { ...base, ...over }));
+}
+
+/**
+ * A box of copy on screen: fractions of the viewport [left, top, right, bottom], its kind (body text
+ * line, heading line of 20px type or more, or panel / button) and, for a panel, the opacity of its backing.
+ */
+export type CopyBox = [number, number, number, number, 't' | 'h' | 'p', number?];
+
+/**
+ * The copy on screen right now: every visible line of text (tight line boxes from the text nodes)
+ * and every panel with its own backing (a background at least 30% opaque, or a backdrop blur, that
+ * covers less than half the viewport, so section backgrounds do not count). The scene canvas and
+ * the stills are skipped.
+ */
+function copyBoxesNow(): CopyBox[] {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const out: CopyBox[] = [];
+  const push = (r: DOMRect, k: CopyBox[4], alpha?: number) => {
+    if (r.width < 2 || r.height < 2 || r.bottom <= 0 || r.top >= vh || r.right <= 0 || r.left >= vw) return;
+    const c = (v: number) => +Math.min(1, Math.max(0, v)).toFixed(4);
+    out.push(alpha === undefined ? [c(r.left / vw), c(r.top / vh), c(r.right / vw), c(r.bottom / vh), k] : [c(r.left / vw), c(r.top / vh), c(r.right / vw), c(r.bottom / vh), k, +alpha.toFixed(2)]);
+  };
+  const visible = (el: Element) =>
+    !el.closest('.scene-canvas, [data-scene-stills]') &&
+    (el as HTMLElement & { checkVisibility?: (o: object) => boolean }).checkVisibility?.({ opacityProperty: true, visibilityProperty: true }) !== false;
+  const range = document.createRange();
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    const el = n.parentElement;
+    if (!el || !n.textContent?.trim() || el.closest('script, style, noscript, .sr-only') || !visible(el)) continue;
+    const cs = getComputedStyle(el);
+    if (+cs.opacity < 0.05) continue;
+    range.selectNodeContents(n);
+    for (const r of range.getClientRects()) push(r, parseFloat(cs.fontSize) >= 20 ? 'h' : 't');
+  }
+  for (const el of document.body.querySelectorAll('*')) {
+    const cs = getComputedStyle(el);
+    const alpha = alphaOf(cs.backgroundColor);
+    const blur = cs.backdropFilter && cs.backdropFilter !== 'none';
+    if (alpha < 0.3 && !blur) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width * r.height > 0.5 * vw * vh || !visible(el)) continue;
+    push(r, 'p', alpha);
+  }
+  return out;
+}
+
+/** Opacity of a CSS colour in any syntax (the 2D canvas normalises it). */
+let alphaCtx: CanvasRenderingContext2D | null = null;
+const alphaCache = new Map<string, number>();
+function alphaOf(color: string): number {
+  let a = alphaCache.get(color);
+  if (a !== undefined) return a;
+  alphaCtx ??= Object.assign(document.createElement('canvas'), { width: 1, height: 1 }).getContext('2d', { willReadFrequently: true });
+  if (!alphaCtx) return 0;
+  alphaCtx.clearRect(0, 0, 1, 1);
+  alphaCtx.fillStyle = '#000';
+  alphaCtx.fillStyle = color;
+  alphaCtx.fillRect(0, 0, 1, 1);
+  a = alphaCtx.getImageData(0, 0, 1, 1).data[3] / 255;
+  alphaCache.set(color, a);
+  return a;
 }
 
 const r3 = (v: Vector3): [number, number, number] => [+v.x.toFixed(8), +v.y.toFixed(8), +v.z.toFixed(8)];
@@ -109,6 +178,7 @@ const r3 = (v: Vector3): [number, number, number] => [+v.x.toFixed(8), +v.y.toFi
 export function installSim(getShots: () => { shots: ResolvedShot[]; away: ResolvedShot }) {
   const api = {
     layout: measure,
+    copyBoxes: copyBoxesNow,
     journeyAt: (y: number) => journeyAt(measure(), y),
     /**
      * Steps the rig at a fixed dt over `ys` (scroll px per step) or `js`
@@ -153,6 +223,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
           spot: +look.spot.toFixed(4),
           cone: +look.cone.toFixed(4),
           motes: +look.motes.toFixed(4),
+          band: +look.band.toFixed(4),
         });
       });
       return frames;
@@ -335,7 +406,12 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       scroll,
     };
   };
-  const motion = (opts: { content?: Partial<ShotOptions>; step?: number } = {}) => {
+    /**
+   * `copy`: the copy on screen at each filmstrip step (key J.toFixed(3), from `copyBoxes()` with the
+   * page scrolled there; the audit script collects them), so the keep-out test uses the real layout
+   * at this viewport instead of fixed fractions. `copyMarginPx` is the air kept round every box.
+   */
+  const motion = (opts: { content?: Partial<ShotOptions>; step?: number; copy?: Record<string, CopyBox[]>; copyMarginPx?: number } = {}) => {
     const step = opts.step ?? 0.125;
     const js: number[] = [];
     for (let J = 0; J <= 6.0 + 1e-9; J += 0.001) js.push(+J.toFixed(3));
@@ -360,11 +436,11 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     // Beats: 1 hero + macro, 2 spiral pull out, 3 Speakers..Venue, 4 Tickets.
     const beats = [
       { id: 'b1 hero+macro', from: 0.5, to: 1.625 },
-      { id: 'b2 pull out', from: 1.625, to: 2.75 },
-      { id: 'b3 speakers-venue', from: 2.75, to: 5.0 },
+      { id: 'b2 pull out', from: 1.625, to: 3.125 },
+      { id: 'b3 speakers-venue', from: 3.125, to: 5.0 },
       { id: 'b4 tickets', from: 5.0, to: 6.0 },
     ];
-    type Step = { J: number; view: number; screen: number; move: number; beat: string };
+    type Step = { J: number; view: number; screen: number; move: number; zoom: number; beat: string };
     const steps: Step[] = [];
     for (let J = 0.5; J <= 6.0 - step + 1e-9; J += step) {
       const f0 = at(J);
@@ -376,22 +452,25 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       const d0 = p0.distanceTo(new Vector3(...f0.tgt));
       // Camera change as an angle: travel relative to the distance to the aim, or the turn.
       const move = Math.max(view, (Math.atan(p0.distanceTo(p1) / Math.max(1e-6, d0)) * 180) / Math.PI);
+      // Change of scale: the log of the camera-to-aim distance (a zoom in or out is a move too).
+      const d1 = p1.distanceTo(new Vector3(...f1.tgt));
+      const zoom = Math.abs(Math.log(Math.max(1e-6, d1) / Math.max(1e-6, d0)));
       // Subject on screen, in units of the frame's long side (the width on landscape, the height on
-      // portrait). While the barrel still fills the frame (to J 2.1) its
+      // portrait). While the barrel still fills the frame (the hero, the push in, the macro, to J 2.1) its
       // anchored aim point (the lens shift); then the middle of the barrel (where the microphone is);
       // once the pull out has landed (J 2.75), also the stand's foot: before that it is rising into
       // the frame from below, which is the reveal itself. Points off screen in either frame do not count.
       let screen = 0;
-      if (J >= 1.625 && J < 2.1) screen = Math.hypot((f0.shift[0] - f1.shift[0]) * Math.min(1, aspect), (f0.shift[1] - f1.shift[1]) / Math.max(1, aspect));
-      else if (J >= 2.1) {
-        for (const P of J >= 2.75 ? [barrel, foot] : [barrel]) {
+      if (J < MOTION_LIMITS.frameMicFrom) screen = Math.hypot((f0.shift[0] - f1.shift[0]) * Math.min(1, aspect), (f0.shift[1] - f1.shift[1]) / Math.max(1, aspect));
+      else {
+        for (const P of J >= MOTION_LIMITS.frameFootFrom ? [barrel, foot] : [barrel]) {
           const a = scr(f0, P);
           const b = scr(f1, P);
           if (inFrame(a) && inFrame(b)) screen = Math.max(screen, Math.hypot(a.lx - b.lx, a.ly - b.ly));
         }
       }
       const beat = beats.find((b) => J >= b.from - 1e-9 && J < b.to - 1e-9)?.id ?? '?';
-      steps.push({ J: +J.toFixed(3), view: +view.toFixed(3), screen: +screen.toFixed(4), move: +move.toFixed(3), beat });
+      steps.push({ J: +J.toFixed(3), view: +view.toFixed(3), screen: +screen.toFixed(4), move: +move.toFixed(3), zoom: +zoom.toFixed(4), beat });
     }
     const median = (a: number[]) => {
       const b = [...a].sort((x, y) => x - y);
@@ -399,7 +478,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     };
     const fails: string[] = [];
     // Local peaks over the whole sweep (a step above both its neighbours, across beat boundaries too).
-    const isPeak = (i: number, key: 'view' | 'screen') =>
+    const isPeak = (i: number, key: 'view' | 'screen' | 'zoom') =>
       steps[i][key] > (steps[i - 1]?.[key] ?? -1) && steps[i][key] > (steps[i + 1]?.[key] ?? -1);
     const perBeat = beats.map((b) => {
       const idx = steps.map((s, i) => (s.beat === b.id ? i : -1)).filter((i) => i >= 0);
@@ -415,13 +494,27 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       // A spike is a single step that stands out: a local peak (above both neighbours) against the
       // median of its beat; a move that eases out from a faster beat is not one. It only counts when
       // it is big enough to see (the hero and the macro creep at fractions of a degree).
-      const peak = (key: 'view' | 'screen', min: number) => {
+      const peak = (key: 'view' | 'screen' | 'zoom', min: number) => {
         let p = 0;
         for (const i of idx) if (steps[i][key] >= min && isPeak(i, key)) p = Math.max(p, steps[i][key]);
         return p;
       };
       const spikeV = mv > 0 ? Math.max(1, peak('view', 0.6) / mv) : 1;
       const spikeS = ms > 0 ? Math.max(1, peak('screen', 0.006) / ms) : 1;
+      const z = st.map((s) => s.zoom);
+      const mz = median(z);
+      const maxZ = Math.max(...z);
+      const zAt = st[z.indexOf(maxZ)]?.J;
+      const spikeZ = mz > 0 ? Math.max(1, peak('zoom', 0.08) / mz) : 1;
+      // The same continuity for the change of scale (a hard start or stop of a zoom).
+      let zAccel = 0;
+      let zAccelAt = 0;
+      for (let i = 1; i < st.length; i++) {
+        const big = Math.max(st[i].zoom, st[i - 1].zoom);
+        if (big < MOTION_LIMITS.zoomAccelFrom) continue;
+        const r = Math.abs(st[i].zoom - st[i - 1].zoom) / big;
+        if (r > zAccel) [zAccel, zAccelAt] = [r, st[i].J];
+      }
       // Velocity continuity of the orbit and rise: the largest change of the turn between neighbouring
       // steps, relative to the larger of them (a stop-start at a section boundary shows up here).
       let accel = 0;
@@ -434,6 +527,10 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       }
       if (maxV > MOTION_LIMITS.viewDeg) fails.push(`${b.id}: view ${maxV.toFixed(2)} deg/step at J${vAt} > ${MOTION_LIMITS.viewDeg}`);
       if (maxS > MOTION_LIMITS.screen) fails.push(`${b.id}: subject ${(maxS * 100).toFixed(2)}%/step at J${sAt} > ${MOTION_LIMITS.screen * 100}%`);
+      if (maxZ > MOTION_LIMITS.zoom) fails.push(`${b.id}: scale ${maxZ.toFixed(3)} ln/step at J${zAt} > ${MOTION_LIMITS.zoom}`);
+      if (b.id !== 'b1 hero+macro' && spikeZ > MOTION_LIMITS.spike) fails.push(`${b.id}: scale spike ${spikeZ.toFixed(2)}x median at J${zAt}`);
+      if (zAccel > MOTION_LIMITS.zoomAccel) fails.push(`${b.id}: scale velocity change ${zAccel.toFixed(2)} at J${zAccelAt} > ${MOTION_LIMITS.zoomAccel}`);
+      if (accel > MOTION_LIMITS.accel) fails.push(`${b.id}: view velocity change ${accel.toFixed(2)} at J${accelAt} > ${MOTION_LIMITS.accel}`);
       if (b.id !== 'b1 hero+macro' && spikeV > MOTION_LIMITS.spike) fails.push(`${b.id}: view spike ${spikeV.toFixed(2)}x median at J${vAt}`);
       if (b.id !== 'b1 hero+macro' && spikeS > MOTION_LIMITS.spike) fails.push(`${b.id}: subject spike ${spikeS.toFixed(2)}x median at J${sAt}`);
       return {
@@ -448,6 +545,12 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
         screenSpike: +spikeS.toFixed(2),
         maxStepChange: +accel.toFixed(2),
         maxStepChangeAtJ: accelAt,
+        zoomMedian: +mz.toFixed(3),
+        zoomMax: +maxZ.toFixed(3),
+        zoomMaxAtJ: zAt,
+        zoomSpike: +spikeZ.toFixed(2),
+        zoomStepChange: +zAccel.toFixed(2),
+        zoomStepChangeAtJ: zAccelAt,
       };
     });
     // Liveness: runs of steps with essentially no camera change while a 3D section is on screen.
@@ -508,20 +611,90 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     const frame = { xMin: 1, xMax: 0, yMin: 1, yMax: 0, xMinAtJ: 0 };
     let frameFails = 0;
     for (const f of F) {
-      if (f.J < 2.1 || f.J > 5.98) continue;
-      for (const P of f.J >= 2.45 ? [head, tail, foot] : [head, tail]) {
+      if (f.J < MOTION_LIMITS.frameMicFrom || f.J > 5.98) continue;
+      for (const P of f.J >= MOTION_LIMITS.frameFootFrom ? [head, tail, foot] : [head, tail]) {
         const q = scr(f, P);
         if (q.x < frame.xMin) [frame.xMin, frame.xMinAtJ] = [q.x, f.J];
         frame.xMax = Math.max(frame.xMax, q.x);
         frame.yMin = Math.min(frame.yMin, q.y);
         frame.yMax = Math.max(frame.yMax, q.y);
         const out = q.z <= 0 || q.x < 0.02 || q.x > 0.98 || q.y < 0.02 || q.y > 0.98;
-        const onCard = f.J >= MOTION_LIMITS.cardJ[0] && f.J <= MOTION_LIMITS.cardJ[1] && q.x > MOTION_LIMITS.cardX;
-        const copy = !portrait && (q.x < MOTION_LIMITS.copyX || onCard);
+        // Without measured copy boxes, the copy column's fixed fraction stands in for the layout.
+        const copy = !opts.copy && !portrait && q.x < MOTION_LIMITS.copyX;
         if (out || copy) frameFails++;
       }
     }
     if (frameFails) fails.push(`frame/copy: ${frameFails} samples out of frame or over the copy column (xMin ${frame.xMin.toFixed(3)} at J${frame.xMinAtJ})`);
+    // Copy keep-out (real layout): the head, the barrel, the tail, points down the stand and its foot
+    // must stay out of every line of text and every panel on screen, with `copyMarginPx` of air,
+    // from the landing of the pull out on the stage (J 2.25: the whole subject is in frame) to the end
+    // of Tickets.
+    const standPts = [0.9, 0.75, 0.6, 0.45, 0.3, 0.15].map((k) => new Vector3(SPINE.x, STAND_TOP_Y * k, SPINE.z));
+    const subjectPts: [string, Vector3][] = [['head', head], ['barrel', barrel], ['tail', tail], ...standPts.map((P, i) => [`stand${i}`, P] as [string, Vector3]), ['foot', foot]];
+    const copyHits: { J: number; part: string; kind: string; box: number[] }[] = [];
+    let copyMin = Infinity;
+    let copyMinAt = 0;
+    let copySteps = 0;
+    const copyPts: Record<string, number[][]> = {};
+    let copyRun = 0;
+    let copyRunAt = 0;
+    if (opts.copy) {
+      const airPx = opts.copyMarginPx ?? (portrait ? 8 : MOTION_LIMITS.copyAirPx);
+      const mx = airPx / window.innerWidth;
+      const my = airPx / window.innerHeight;
+      // Landscape: every kind of copy; portrait: headings, buttons and panels (body text is checked
+      // for legibility on the rendered frames).
+      const counts = (k: CopyBox[4]) => !portrait || k !== 't';
+      let run = 0;
+      for (const key of Object.keys(opts.copy).sort((a, b) => +a - +b)) {
+        const boxes = opts.copy[key];
+        const J = +key;
+        if (J < MOTION_LIMITS.copyJ[0] - 1e-9 || J > MOTION_LIMITS.copyJ[1] + 1e-9) continue;
+        const f = at(J);
+        if (!f) continue;
+        copySteps++;
+        copyPts[key] = subjectPts.map(([, P]) => {
+          const q = scr(f, P);
+          return [+q.x.toFixed(4), +q.y.toFixed(4)];
+        });
+        // The stand drawn as a line: the sampled points plus points between them.
+        const pts: [string, { x: number; y: number; z: number }][] = [];
+        subjectPts.forEach(([part, P], i) => {
+          const q = scr(f, P);
+          pts.push([part, q]);
+          if (i >= 3) {
+            const q0 = scr(f, subjectPts[i - 1][1]);
+            for (const t of [0.25, 0.5, 0.75]) pts.push([part, { x: q0.x + (q.x - q0.x) * t, y: q0.y + (q.y - q0.y) * t, z: q.z }]);
+          }
+        });
+        let hitHere = false;
+        // Portrait: a step where the band veil has taken the subject down does not count.
+        const veiled = portrait && f.band >= MOTION_LIMITS.portraitVeil;
+        for (const [part, q] of pts) {
+          if (q.z <= 0 || q.x < 0 || q.x > 1 || q.y < 0 || q.y > 1) continue;
+          for (const b of boxes) {
+            if (!counts(b[4])) continue;
+            // Air (px) between the point and the box, negative inside.
+            const ax = Math.max(b[0] - q.x, q.x - b[2]) * window.innerWidth;
+            const ay = Math.max(b[1] - q.y, q.y - b[3]) * window.innerHeight;
+            const air = ax < 0 && ay < 0 ? Math.max(ax, ay) : Math.hypot(Math.max(0, ax), Math.max(0, ay));
+            if (air < copyMin) [copyMin, copyMinAt] = [air, J];
+            // A panel's edge is not copy: a little air (`copyPanelAirPx`) is enough there.
+            const k = b[4] === 'p' ? Math.min(1, MOTION_LIMITS.copyPanelAirPx / airPx) : 1;
+            if (!hitHere && !veiled && q.x > b[0] - mx * k && q.x < b[2] + mx * k && q.y > b[1] - my * k && q.y < b[3] + my * k) {
+              copyHits.push({ J, part, kind: b[4], box: b.slice(0, 4) as number[] });
+              hitHere = true;
+            }
+          }
+        }
+        run = hitHere ? run + 1 : 0;
+        if (run > copyRun) [copyRun, copyRunAt] = [run, J];
+      }
+      if (!portrait && copyHits.length)
+        fails.push(`copy: subject within ${airPx}px of copy at ${copyHits.length} of ${copySteps} steps (first J${copyHits[0].J} ${copyHits[0].part} ${copyHits[0].kind})`);
+      if (portrait && (copyRun > MOTION_LIMITS.portraitRun || copyHits.length > MOTION_LIMITS.portraitShare * copySteps))
+        fails.push(`copy: subject behind headings / buttons / panels at ${copyHits.length} of ${copySteps} steps, longest run ${copyRun} ending J${copyRunAt}`);
+    }
     // Near plane against the scene's surfaces (< 1 would clip).
     let minClr = Infinity;
     let clrAt = '';
@@ -537,15 +710,16 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       heightM: { at2_5: +at(2.5).pos[1].toFixed(2), at4: +at(4).pos[1].toFixed(2), at5: +at(5).pos[1].toFixed(2), at6: +at(6).pos[1].toFixed(2) },
       frame: { ...frame, xMin: +frame.xMin.toFixed(3), xMax: +frame.xMax.toFixed(3), yMin: +frame.yMin.toFixed(3), yMax: +frame.yMax.toFixed(3) },
       clearance: { min: minClr, at: clrAt },
+      copy: opts.copy ? { steps: copySteps, hits: copyHits, longestRun: copyRun, longestRunAtJ: copyRunAt, minAirPx: +copyMin.toFixed(1), minAirAtJ: copyMinAt, points: copyPts } : null,
       steps,
       /** Where the subject sits on screen (fractions from the left / top) at a few positions. */
-      subjectAt: [2.1, 2.25, 2.375, 2.5, 2.75, 3, 3.5, 4, 4.5, 5, 5.25, 5.5, 5.75, 5.95].map((J) => {
+      subjectAt: Array.from({ length: 31 }, (_, i) => 2.25 + i * 0.125).map((J) => {
         const f = at(J);
         const r = (P: Vector3) => {
           const q = scr(f, P);
           return [+q.x.toFixed(3), +q.y.toFixed(3)];
         };
-        return { J, head: r(head), tail: r(tail), foot: r(foot) };
+        return { J, head: r(head), barrel: r(barrel), tail: r(tail), foot: r(foot), dist: +new Vector3(...f.pos).distanceTo(new Vector3(...f.tgt)).toFixed(3) };
       }),
       fails,
       pass: fails.length === 0,
