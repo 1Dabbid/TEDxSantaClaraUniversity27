@@ -448,11 +448,11 @@ const STAGE_LOOK = { fov: 32, exposure: 1, dof: 0.1, drift: 0.006, parallax: 0.0
 /** The barrel standing back from upright, the engraving still lit by the raking key. */
 const PULL_BARREL = { fov: 29, exposure: 1.06, dof: 0.5, drift: 0.003, parallax: 0.006, cone: 0, spot: 0, key: 0.8, keyCam: 0.75, kx: 1.8, ky: 1.7, kz: 0.35, rim: 0.7, rimAng: 0.6, haze: 0.15, motes: 0.5, vignette: 0.8, envRot: -0.5, env: 0.45, scrim: 0.45, scrimEdge: 0.75, bloom: 1.2 };
 /** Barrel and grille; the spot starts to warm the haze behind. */
-const PULL_MIC = { fov: 29.5, exposure: 1.03, dof: 0.4, drift: 0.004, parallax: 0.008, cone: 0.03, spot: 0.1, key: 0.85, keyCam: 0.5, kx: 1.5, ky: 1.6, kz: 0.3, rim: 1.0, rimAng: 0.1, haze: 0.3, motes: 0.2, vignette: 0.75, envRot: -0.2, env: 0.55, scrim: 0.4, scrimEdge: 0.6, bloom: 1.1 };
+const PULL_MIC = { fov: 29.5, exposure: 1.03, dof: 0.4, drift: 0.004, parallax: 0.008, cone: 0.1, spot: 0.32, key: 0.85, keyCam: 0.5, kx: 1.5, ky: 1.6, kz: 0.3, rim: 1.0, rimAng: 0.1, haze: 0.3, motes: 0.2, vignette: 0.75, envRot: -0.2, env: 0.55, scrim: 0.4, scrimEdge: 0.6, bloom: 1.1 };
 /** The whole microphone in the warm haze of the spot. */
-const PULL_WHOLE = { fov: 30, exposure: 1, dof: 0.3, drift: 0.004, parallax: 0.012, cone: 0.08, spot: 0.25, key: 0.85, keyCam: 0.3, kx: 1.4, ky: 1.6, kz: 0.3, rim: 1.2, rimAng: -0.3, haze: 0.25, motes: 0, vignette: 0.72, envRot: 0, env: 0.6, scrim: 0.35, scrimEdge: 0.5, bloom: 1.1 };
+const PULL_WHOLE = { fov: 30, exposure: 1, dof: 0.3, drift: 0.004, parallax: 0.012, cone: 0.2, spot: 0.46, key: 0.85, keyCam: 0.3, kx: 1.4, ky: 1.6, kz: 0.3, rim: 1.2, rimAng: -0.3, haze: 0.25, motes: 0, vignette: 0.72, envRot: 0, env: 0.6, scrim: 0.35, scrimEdge: 0.5, bloom: 1.1 };
 /** Microphone and upper stand, the spot warming. */
-const PULL_STAND = { fov: 31, exposure: 1, dof: 0.22, drift: 0.005, parallax: 0.016, cone: 0.14, spot: 0.4, key: 0.8, keyCam: 0.1, rim: 1.15, rimAng: -0.45, haze: 0.08, motes: 0, vignette: 0.68, env: 0.75, scrim: 0.2, scrimEdge: 0.3, bloom: 1.1 };
+const PULL_STAND = { fov: 31, exposure: 1, dof: 0.22, drift: 0.005, parallax: 0.016, cone: 0.26, spot: 0.55, key: 0.8, keyCam: 0.1, rim: 1.15, rimAng: -0.45, haze: 0.08, motes: 0, vignette: 0.68, env: 0.75, scrim: 0.2, scrimEdge: 0.3, bloom: 1.1 };
 
 /**
  * Journey position at or beyond which the scene is fully dark: the end of
@@ -605,10 +605,10 @@ const DESKTOP_MOVE: Move = {
   // (capped so the microphone still reads at the wide end).
   dist: [
     [4.0, 6.3],
-    [5.0, 8.6],
-    [5.5, 10.5],
-    [5.85, 12.0],
-    [6.0, 12.2],
+    [5.0, 9.0],
+    [5.5, 11.8],
+    [5.85, 14.2],
+    [6.0, 14.4],
   ],
   micUntil: 2.4,
   // The macro tracks a little way down the barrel; the pull out slides the aim back to the barrel's
@@ -656,8 +656,8 @@ const DESKTOP_MOVE: Move = {
     [2.4, -1.2],
     [3.0, 1.5],
     [5.0, 16.5],
-    [5.85, 18],
-    [6.0, 18.05],
+    [5.85, 23],
+    [6.0, 23.1],
   ],
   // The barrel's slide right for the macro (even, about 2% of the width per step); an even slide
   // over the pull out to its place right of the Speakers panel; then an even drift left over Schedule
@@ -722,11 +722,13 @@ const DESKTOP_MOVE: Move = {
       lk(4.0, STAGE_LOOK, { cone: 1.4, spot: 0.95, warm: -0.45 }),
       lk(4.3, STAGE_LOOK, { fov: 31.5, cone: 1.2, spot: 0.95, key: 0.45, rim: 1.1, vignette: 0.61, scrimEdge: 0.3, warm: -0.4 }),
       lk(4.6, STAGE_LOOK, { fov: 31, cone: 1.0, spot: 0.95, key: 0.45, rim: 1.1, vignette: 0.6, scrimEdge: 0.5, warm: -0.35 }),
-      lk(5.0, STAGE_LOOK, { fov: 30.5, cone: 0.95, spot: 0.95, key: 0.45, rim: 1.1, vignette: 0.61, scrimEdge: 0.6, warm: -0.3 }),
-      lk(5.3, STAGE_LOOK, { fov: 30, cone: 0.9, spot: 0.95, key: 0.45, rim: 1.1, vignette: 0.62, scrimEdge: 0.7, warm: -0.2 }),
-      lk(5.6, STAGE_LOOK, { fov: 30, exposure: 0.9, cone: 0.85, spot: 0.95, key: 0.42, rim: 1.05, vignette: 0.63, scrimEdge: 0.7, warm: -0.17 }),
-      lk(5.8, STAGE_LOOK, { fov: 30, exposure: 0.75, cone: 0.8, spot: 0.95, key: 0.4, vignette: 0.66, scrimEdge: 0.7, warm: -0.15 }),
-      lk(6.0, STAGE_LOOK, { fov: 30 }, DARK, { scrimEdge: 0.7, warm: -0.15 }),
+      // Tickets: the house view; the spot a little up and a soft glow in the air behind the subject,
+      // so the stage still reads from the back of the room.
+      lk(5.0, STAGE_LOOK, { fov: 31, cone: 1.15, spot: 1.0, key: 0.5, rim: 1.15, haze: 0.15, vignette: 0.6, scrimEdge: 0.6, warm: -0.3 }),
+      lk(5.3, STAGE_LOOK, { fov: 32, exposure: 1.03, cone: 1.3, spot: 1.08, key: 0.52, rim: 1.2, haze: 0.3, vignette: 0.58, scrimEdge: 0.7, warm: -0.2 }),
+      lk(5.6, STAGE_LOOK, { fov: 32.5, exposure: 1.0, cone: 1.25, spot: 1.08, key: 0.5, rim: 1.15, haze: 0.3, vignette: 0.6, scrimEdge: 0.7, warm: -0.17 }),
+      lk(5.8, STAGE_LOOK, { fov: 32.5, exposure: 0.8, cone: 1.1, spot: 1.0, key: 0.45, rim: 1.0, haze: 0.2, vignette: 0.64, scrimEdge: 0.7, warm: -0.15 }),
+      lk(6.0, STAGE_LOOK, { fov: 32.5 }, DARK, { scrimEdge: 0.7, warm: -0.15 }),
     ],
   },
 };
