@@ -10,18 +10,32 @@ import { faqIds, RESERVED_IDS } from '../../src/lib/faq-ids';
 const NEW_PAGES = ['/schedule', '/venue', '/team', '/faq'].filter((r) => topicRoutes().includes(r));
 
 test.describe('navigation rule', () => {
-  test('home: header links scroll to the home sections; footer links open the topic pages', async ({ page }) => {
+  test('home: header links open the topic pages, like the footer; nothing is marked current', async ({ page }) => {
     await page.goto('/');
     const header = page.getByRole('navigation', { name: 'Primary' });
     const hrefs = await header.getByRole('link').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
-    expect(hrefs.length).toBeGreaterThan(0);
-    for (const h of hrefs) expect(h === '/partners' || h!.startsWith('/#'), `header link ${h}`).toBe(true);
+    expect(hrefs, 'header lists every topic page that exists, in order').toEqual(topicRoutes());
     await expect(header.locator('[aria-current]')).toHaveCount(0);
 
     const footer = page.getByRole('navigation', { name: 'Site' });
     const footerHrefs = await footer.getByRole('link').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
     for (const r of topicRoutes()) expect(footerHrefs, `footer links ${r}`).toContain(r);
     for (const h of footerHrefs) expect(h === '/#tickets' || !h!.includes('#'), `footer link ${h}`).toBe(true);
+    expect(hrefs, 'header and footer list the same pages on /').toEqual(footerHrefs.filter((h) => !h!.includes('#')));
+  });
+
+  test('home: a header link opens its page; the Tickets button still goes to the home Tickets section', async ({ page }) => {
+    await page.goto('/');
+    await settle(page, 300);
+    const tickets = page.locator('header').getByRole('link', { name: /tickets/i }).first();
+    const ticketsHref = await tickets.getAttribute('href');
+    // Before sales open there is no tickets page: the button points at the home section, which exists.
+    if (ticketsHref!.startsWith('/#')) await expect(page.locator(ticketsHref!.slice(1))).toHaveCount(1);
+    await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Venue' }).click();
+    await page.waitForURL((u) => u.pathname === '/venue');
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(page.locator('#main')).toBeFocused({ timeout: 5_000 });
+    await expect(page.getByRole('navigation', { name: 'Primary' }).locator('a[aria-current="page"]')).toHaveAttribute('href', '/venue');
   });
 
   for (const route of NEW_PAGES) {
@@ -30,7 +44,7 @@ test.describe('navigation rule', () => {
       const header = page.getByRole('navigation', { name: 'Primary' });
       const hrefs = await header.getByRole('link').evaluateAll((as) => as.map((a) => a.getAttribute('href')));
       for (const h of hrefs) expect(h!.includes('#'), `header link ${h} on ${route}`).toBe(false);
-      // Off the home page the header lists every page that exists, so the current one is always there and marked.
+      // The header lists every page that exists, so the current one is always there and marked.
       const current = header.locator('a[aria-current="page"]');
       await expect(current).toHaveCount(1);
       await expect(current).toHaveAttribute('href', route);
@@ -62,7 +76,12 @@ test.describe('navigation rule', () => {
     await page.goto('/');
     await settle(page, 200);
     await page.getByRole('button', { name: 'Open menu' }).click();
-    await expect(menu.getByRole('link', { name: /Venue/ })).toHaveAttribute('href', '/#venue');
+    await expect(menu.getByRole('link', { name: /Venue/ })).toHaveAttribute('href', '/venue');
+    await expect(menu.locator('[aria-current]')).toHaveCount(0);
+    await menu.getByRole('link', { name: /Schedule/ }).click();
+    await page.waitForURL((u) => u.pathname === '/schedule');
+    await page.getByRole('button', { name: 'Open menu' }).click();
+    await expect(menu.getByRole('link', { name: /Schedule/ })).toHaveAttribute('aria-current', 'page');
   });
 
   test('home sections end with a quiet link to their page', async ({ page }) => {

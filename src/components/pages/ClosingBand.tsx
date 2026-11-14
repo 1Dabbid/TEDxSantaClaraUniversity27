@@ -2,7 +2,7 @@ import Link from 'next/link';
 import type { ReactNode } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Arrow } from '@/components/print/Print';
-import { footerNavItems, navVisibility } from '@/components/nav';
+import { navItems, navVisibility } from '@/components/nav';
 import type { Settings } from '@/lib/content';
 import { seatsLabel } from '@/lib/site';
 import { ticketCta, ticketSaleLine } from '@/lib/tickets';
@@ -32,7 +32,7 @@ export async function ClosingBand({
   action?: Action;
   secondary?: Action;
 }) {
-  const pages = footerNavItems(await navVisibility());
+  const pages = navItems(await navVisibility());
   const at = pages.findIndex((p) => p.href === current);
   const next = at >= 0 ? pages[at + 1] : undefined;
 

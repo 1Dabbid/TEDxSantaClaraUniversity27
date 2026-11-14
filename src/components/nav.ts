@@ -1,5 +1,5 @@
 import 'server-only';
-import { getFaq, getSchedule, getSettings, getSpeakers, getTeam } from '@/lib/content';
+import { getFaq, getSettings, getSpeakers, getTeam } from '@/lib/content';
 import type { NavItem } from './nav-links';
 
 /**
@@ -7,40 +7,31 @@ import type { NavItem } from './nav-links';
  * own page with a direct, shareable address (/speakers, /schedule, /venue,
  * /partners, /team, /faq). One rule decides where a link goes:
  *
- * 1. Header, on the home page: the links scroll to the home sections (`/#venue`).
- *    The story is the product; the header never pulls a visitor out of it.
- * 2. Header, on every other page (topic pages, speaker pages, the 404): the same
- *    links, in the same order, go to the topic pages (`/venue`), and the link of
- *    the page you are on carries aria-current. The switch is made per page by
- *    `navHref` / `navCurrent` (nav-links.ts) in the header and the mobile menu.
- * 3. Footer, everywhere: always the topic pages.
- * 4. Each home section ends with one quiet "more" link to its page (MoreLink,
+ * 1. Header and mobile menu, on every page (the home page included): the links
+ *    open the topic pages (`/venue`), and the link of the page you are on carries
+ *    aria-current (`navCurrent`, nav-links.ts).
+ * 2. Footer, everywhere: the same topic pages.
+ * 3. Each home section ends with one quiet "more" link to its page (MoreLink,
  *    components/pages/MoreLink.tsx), only where the page offers more than the
  *    section: "All speakers" (once one is announced), "Full schedule" (once
  *    published), "Venue details", "The team", "All 10 questions" (when /faq has more than the five at home).
+ *    In-page buttons inside the home sections (the hero's "Speakers" or
+ *    "Get updates") still move within the home page.
  *
- * Header items on the home page follow the home sections' own content state, so
- * the header there never points at a placeholder:
- * - Schedule: only once the running order is published (the section shows a
- *   short "to follow" note until then).
- * - Team: only when the home section renders (switched on and one name public).
- * - FAQ: only when switched on and non-empty.
- * Off the home page the header follows whether the PAGE exists, like the footer,
- * which is wider: /schedule always (it states the date), /team whenever the Team
- * switch is on and has entries (it lists the board roles even before a name is
- * public). So a visitor on /schedule or /team always sees where they are, and
- * the header and footer list the same pages. Items that exist only off the home
- * page carry `homeHidden` (filtered by `headerItems`, nav-links.ts).
- * A page whose content is switched off is a 404 and is linked from nowhere.
- * Tickets is not in the header list: it is the red button next to it.
+ * A link shows when its PAGE exists, in the header and the footer alike:
+ * /speakers, /schedule (it always states the date), /venue and /partners always;
+ * /team whenever the Team switch is on and has entries (it lists the board roles
+ * even before a name is public); /faq when switched on and non-empty. So the
+ * header and footer list the same pages, and a visitor on any of them always
+ * sees where they are. A page whose content is switched off is a 404 and is
+ * linked from nowhere.
+ * Tickets is not in the header list: it is the red button next to it. There is
+ * no tickets page, so until sales open it goes to the home Tickets section
+ * (`/#tickets`), and to the ticket shop once they do (ticketCta, lib/tickets.ts).
  */
 export type { NavItem };
 
 export type NavVisibility = {
-  /** schedule.published && schedule.items.length > 0 */
-  schedule: boolean;
-  /** settings.sections.showTeam && at least one public name (teamVisible in Team.tsx) */
-  team: boolean;
   /** settings.sections.showFaq && faq.length > 0 (the home section and /faq) */
   faq: boolean;
   /** settings.sections.showTeam && at least one entry: /team exists (it lists every board role, named or not). */
@@ -49,23 +40,10 @@ export type NavVisibility = {
   speakerPages: readonly string[];
 };
 
-/** Header and mobile menu: each item knows its page and its home section. */
+/** Header, mobile menu and footer: the topic pages that exist, in this order. */
 export function navItems(visible: NavVisibility): NavItem[] {
   const items: (NavItem | false)[] = [
-    { label: 'Speakers', href: '/speakers', home: '/#speakers', pages: visible.speakerPages },
-    { label: 'Schedule', href: '/schedule', home: '/#schedule', homeHidden: !visible.schedule },
-    { label: 'Venue', href: '/venue', home: '/#venue' },
-    { label: 'Partners', href: '/partners' },
-    visible.teamPage && { label: 'Team', href: '/team', home: '/#team', homeHidden: !visible.team },
-    visible.faq && { label: 'FAQ', href: '/faq', home: '/#faq' },
-  ];
-  return items.filter((i): i is NavItem => Boolean(i));
-}
-
-/** Footer: the topic pages that exist, always as pages. */
-export function footerNavItems(visible: NavVisibility): NavItem[] {
-  const items: (NavItem | false)[] = [
-    { label: 'Speakers', href: '/speakers' },
+    { label: 'Speakers', href: '/speakers', pages: visible.speakerPages },
     { label: 'Schedule', href: '/schedule' },
     { label: 'Venue', href: '/venue' },
     { label: 'Partners', href: '/partners' },
@@ -75,12 +53,10 @@ export function footerNavItems(visible: NavVisibility): NavItem[] {
   return items.filter((i): i is NavItem => Boolean(i));
 }
 
-/** Visibility from content, shared by the header, the footer and the topic pages. */
+/** Visibility from content, shared by the header, the footer and the closing band of the topic pages. */
 export async function navVisibility(): Promise<NavVisibility> {
-  const [settings, schedule, team, faq, speakers] = await Promise.all([getSettings(), getSchedule(), getTeam(), getFaq(), getSpeakers()]);
+  const [settings, team, faq, speakers] = await Promise.all([getSettings(), getTeam(), getFaq(), getSpeakers()]);
   return {
-    schedule: schedule.published && schedule.items.length > 0,
-    team: settings.sections.showTeam && team.some((m) => m.name),
     faq: settings.sections.showFaq && faq.length > 0,
     teamPage: settings.sections.showTeam && team.length > 0,
     speakerPages: speakers.map((s) => `/speakers/${s.slug}`),
