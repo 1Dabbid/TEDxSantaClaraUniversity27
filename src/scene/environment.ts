@@ -11,7 +11,7 @@ import {
   type Texture,
   type WebGLRenderer,
 } from 'three';
-import { MIC_AXIS } from './layout';
+import { MIC_AXIS, VIEW_AZ } from './layout';
 
 /**
  * Procedural studio environment: black void with a few thin softbox strips,
@@ -20,15 +20,17 @@ import { MIC_AXIS } from './layout';
  */
 type Strip = { pos: [number, number, number]; size: [number, number]; intensity: number; color?: string; alongMic?: boolean };
 
-/** Direction (from the mic) of a strip that lays a long streak down the barrel for the hero camera. */
+/** Direction (from the mic) of a strip that lays a long streak down the barrel for the camera on its axis. */
 const STREAK_DIR = (() => {
-  const toHeroCam = new Vector3(Math.sin(0.44), 0.05, Math.cos(0.44)).normalize();
-  return toHeroCam.applyQuaternion(new Quaternion().setFromAxisAngle(MIC_AXIS, 0.55)).multiplyScalar(8);
+  const toCam = new Vector3(Math.sin(VIEW_AZ), 0.05, Math.cos(VIEW_AZ)).normalize();
+  return toCam.applyQuaternion(new Quaternion().setFromAxisAngle(MIC_AXIS, 0.55)).multiplyScalar(8);
 })();
 const STREAK_DIR2 = (() => {
-  const toHeroCam = new Vector3(Math.sin(0.44), 0.05, Math.cos(0.44)).normalize();
-  return toHeroCam.applyQuaternion(new Quaternion().setFromAxisAngle(MIC_AXIS, -1.25)).multiplyScalar(8);
+  const toCam = new Vector3(Math.sin(VIEW_AZ), 0.05, Math.cos(VIEW_AZ)).normalize();
+  return toCam.applyQuaternion(new Quaternion().setFromAxisAngle(MIC_AXIS, -1.25)).multiplyScalar(8);
 })();
+/** The room strips were placed for a camera heading of 0.44 rad: turn them with the camera axis. */
+const ROOM_TURN = VIEW_AZ - 0.44;
 
 const STRIPS: Strip[] = [
   // Long overhead softbox
@@ -61,6 +63,7 @@ export function createStudioEnvironment(gl: WebGLRenderer): Texture {
     });
     const m = new Mesh(geo, mat);
     m.position.set(...s.pos);
+    if (!s.alongMic) m.position.applyAxisAngle(new Vector3(0, 1, 0), ROOM_TURN);
     m.scale.set(s.size[0], s.size[1], 1);
     if (s.alongMic) {
       m.up.copy(MIC_AXIS);

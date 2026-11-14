@@ -37,11 +37,35 @@ export function barrelRadius(y: number): number {
   return MIC.taperR[0] + (MIC.taperR[1] - MIC.taperR[0]) * f;
 }
 
-/** World position of the clip pivot (top of the stand). */
-export const PIVOT_WORLD = new Vector3(1.72, 1.43, 0.86);
-/** Mic aim: azimuth (from +Z towards +X) and elevation, radians. */
-const AIM_AZ = Math.atan2(-0.93, 0.37);
-const AIM_EL = (44 * Math.PI) / 180;
+/**
+ * The hero's camera heading (see choreography.ts): from the subject towards
+ * the camera, as an azimuth from +Z towards +X. The hero, the push in and the
+ * engraving macro look back along it (orbit 0), and everything lit or aimed
+ * "for the camera" there (the mic aim, the studio strips, the engraving) is
+ * placed relative to it. From the pull out on, the camera orbits away from it
+ * (towards the grille side), in one direction only.
+ */
+export const VIEW_AZ = 0.12;
+
+/**
+ * Where every engraved row begins around the barrel (mic-space angle, atan(x, z)). The camera
+ * axis meets the barrel at about +0.09; starting the rows a quarter radian to its left puts the
+ * column of row starts just right of the theme headline in the macro, with the copy running
+ * across the lit face of the barrel instead of the seam between row ends and row starts.
+ */
+export const ENGRAVING_START_PHI = -0.14;
+
+/** Rug pile height: the stand's foot stands on it. */
+export const RUG_TOP = 0.0185;
+/** World position of the clip pivot (top of the stand): the stand stands at the centre of the rug. */
+export const PIVOT_WORLD = new Vector3(0, 1.43 + RUG_TOP, 0);
+/**
+ * Mic aim: azimuth (from +Z towards +X) and elevation, radians. The mic points
+ * to screen left, seen side-on from the camera axis (a few degrees away from
+ * the lens), its grille towards the page copy.
+ */
+const AIM_AZ = Math.atan2(-Math.cos(VIEW_AZ), Math.sin(VIEW_AZ)) - 0.06;
+const AIM_EL = (54 * Math.PI) / 180;
 
 function buildMicMatrix(): Matrix4 {
   const y = new Vector3(Math.cos(AIM_EL) * Math.sin(AIM_AZ), Math.sin(AIM_EL), Math.cos(AIM_EL) * Math.cos(AIM_AZ)).normalize();
@@ -70,9 +94,29 @@ export function micToWorld(v: Vector3, out = new Vector3()): Vector3 {
 
 /** Top of the stand tube (the clip stud rises from here to the pivot). */
 export const STAND_TOP_Y = PIVOT_WORLD.y - 0.034;
-export const STAND_BASE = new Vector3(PIVOT_WORLD.x, 0, PIVOT_WORLD.z);
+/** Where the stand's foot sits: the centre of the rug, on top of the pile. */
+export const STAND_BASE = new Vector3(PIVOT_WORLD.x, RUG_TOP, PIVOT_WORLD.z);
 
-/** Audience: rows of seats curving around a point behind the stage. */
+/**
+ * The house (seats, treads, aisle lights, audience floor, stage front and the
+ * stage deck that ends at it) is turned about the stage centre so that it
+ * faces the camera's heading at the end of the journey: the one continuous
+ * move (choreography.ts) orbits about 70 degrees round from the hero's
+ * heading and pulls back over the seats into the wide house view. The house
+ * axis points along azimuth HOUSE_AZ (from +Z towards +X). SEATING,
+ * STAGE_EDGE_Z and the house geometry are written in house space (+Z towards
+ * the audience); `toHouse` takes a world point there. The curtain, the rug,
+ * the spot and the microphone stay in world space.
+ */
+export const HOUSE_AZ = -1.0;
+const HOUSE_COS = Math.cos(HOUSE_AZ);
+const HOUSE_SIN = Math.sin(HOUSE_AZ);
+/** World point -> house space (x across the house, z towards the audience). */
+export function toHouse(p: Vector3, out = new Vector3()): Vector3 {
+  return out.set(p.x * HOUSE_COS - p.z * HOUSE_SIN, p.y, p.x * HOUSE_SIN + p.z * HOUSE_COS);
+}
+
+/** Audience (house space): rows of seats curving around a point behind the stage. */
 export const SEATING = {
   centre: new Vector3(0, 0, -2.2),
   firstRadius: 8.3,

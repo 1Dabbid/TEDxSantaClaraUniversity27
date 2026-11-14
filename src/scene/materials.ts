@@ -11,7 +11,7 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
-import { MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE, STAND_TOP_Y } from './layout';
+import { ENGRAVING_START_PHI, HOUSE_AZ, MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE } from './layout';
 import { EMPTY_MASK } from './textures';
 
 /** Tangent of the overhead spot's nominal half-angle (the beam just covers the rug). */
@@ -157,6 +157,8 @@ type Patch = {
    * scene environment is used, so a per-material 0 would be ignored.
    */
   noEnv?: boolean;
+  /** Height (m) over which this surface's floor reflection fades out (1/e); defaults to REFL_FADE. */
+  reflFade?: number;
 };
 
 function patch(material: MeshStandardMaterial, key: string, p: Patch) {
@@ -176,6 +178,14 @@ function patch(material: MeshStandardMaterial, key: string, p: Patch) {
       .replace('#include <alphatest_fragment>', `{\n${p.alphaBody ?? ''}\n}\n#include <alphatest_fragment>`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>\nfloat ccMul = 1.0;\nfloat sheenMul = 1.0;\n{\n${p.fragmentBody}\n}`)
       .replace('material.clearcoat = clearcoat;', 'material.clearcoat = clearcoat * ccMul;')
+      // In the floor reflection (mirrored camera below the deck) every surface fades with its height
+      // above the floor, like a reflection in a satin finish: contact is sharp and full, a metre up is gone.
+      // Once faded out it is dropped from the mirrored pass, so it cannot black out what it stands
+      // in front of (the stand's dark silhouette cut a thin line through the reflected beam).
+      .replace(
+        '#include <dithering_fragment>',
+        `#include <dithering_fragment>\nif (cameraPosition.y < 0.0) { float reflF = exp(-max(vWorld.y, 0.0) / ${(p.reflFade ?? REFL_FADE).toFixed(3)}); if (reflF < 0.02) discard; gl_FragColor.rgb *= reflF; }`,
+      )
       .replace('material.sheenColor = sheenColor;', 'material.sheenColor = sheenColor * sheenMul;');
     if (p.noEnv) shader.fragmentShader = shader.fragmentShader.replace('#include <lights_fragment_maps>', '');
   };
@@ -183,7 +193,16 @@ function patch(material: MeshStandardMaterial, key: string, p: Patch) {
   material.userData.patchUniforms = p.uniforms;
 }
 
-const lin = (hex: string) => new Color(hex); // Color() converts sRGB hex to linear working space
+const lin = (hex: string) => new Color(hex);
+/** Height (m) over which a surface's floor reflection fades out (1/e). */
+const REFL_FADE = 0.3; // Color() converts sRGB hex to linear working space
+/**
+ * The microphone and its stand fade out of the floor reflection much sooner. The stand stands in
+ * the middle of the rug, and cut pile does not mirror: what the deck beyond the rug would show is
+ * the upper tube and the mic, 1.5 m from the foot, a pale stripe below the rug that reads as a drip
+ * from the stand. With a short fade only what is near the floor reflects (the cable on the deck).
+ */
+const STAND_REFL_FADE = 0.08;
 
 /* ------------------------------------------------------------------------- */
 /* Microphone                                                                */
@@ -208,6 +227,8 @@ export function createBodyMaterial(cheap: boolean) {
     uEtch: { value: lin('#b9bbbf') },
     /** 0..1: fades the engraving in once its mask has been built. */
     uMaskOn: { value: 0 },
+    /** Turn of the sleeve (engraving, knurl, tool marks) about the mic axis, radians (look.turn). */
+    uTurn: { value: 0 },
   };
   const params = { color: lin('#2b2c31'), metalness: 1, roughness: 0.3, envMapIntensity: 1.25 };
   const m = cheap
@@ -220,6 +241,7 @@ export function createBodyMaterial(cheap: boolean) {
         clearcoatRoughness: 0.2,
       });
   patch(m, `mic-body-${cheap ? 1 : 0}`, {
+    reflFade: STAND_REFL_FADE,
     uniforms,
     vertexHead: 'varying vec3 vTanV; varying vec3 vBitV;',
     vertexBody: `
@@ -229,10 +251,10 @@ export function createBodyMaterial(cheap: boolean) {
     fragmentHead: `
       varying vec3 vTanV; varying vec3 vBitV;
       uniform sampler2D uMask; uniform vec2 uMaskTexel; uniform vec2 uBand; uniform vec3 uKnurl;
-      uniform float uKnurlN; uniform float uDepth; uniform vec3 uEtch; uniform float uMaskOn;`,
+      uniform float uKnurlN; uniform float uDepth; uniform vec3 uEtch; uniform float uMaskOn; uniform float uTurn;`,
     fragmentBody: `
       float r = length(vObj.xz);
-      float phi = atan(vObj.x, vObj.z);
+      float phi = atan(vObj.x, vObj.z) - uTurn;
       vec3 T = normalize(vTanV);
       vec3 B = normalize(vBitV);
       vec2 sp = vec2(phi * r, vObj.y);
@@ -266,7 +288,8 @@ export function createBodyMaterial(cheap: boolean) {
 
       float bv = (vObj.y - uBand.x) / (uBand.y - uBand.x);
       if (bv > 0.0 && bv < 1.0 && r > 0.005) {
-        vec2 uv = vec2(phi * 0.15915494, bv);
+        // u = 0 (where every row begins) at ENGRAVING_START_PHI, left of the camera axis.
+        vec2 uv = vec2((phi - (${ENGRAVING_START_PHI.toFixed(4)})) * 0.15915494, bv);
         vec2 dx = dFdx(uv); vec2 dy = dFdy(uv);
         dx.x -= floor(dx.x + 0.5); dy.x -= floor(dy.x + 0.5);
         float mr = textureGrad(uMask, uv, dx, dy).r;
@@ -356,6 +379,7 @@ export function createGrilleMaterial(cheap: boolean) {
   };
   const m = new MeshStandardMaterial({ color: lin('#6d7178'), metalness: 1, roughness: 0.12, envMapIntensity: 0.24 });
   patch(m, `mic-grille-${cheap ? 1 : 0}`, {
+    reflFade: STAND_REFL_FADE,
     uniforms,
     fragmentHead: `uniform float uGC; uniform float uGR; uniform float uSquash; uniform float uPitch; uniform float uWire; uniform float uAmp; uniform float uInner; uniform vec3 uFoam;`,
     fragmentBody: `
@@ -444,6 +468,7 @@ export function createNickelMaterial(cheap: boolean) {
   const params = { color: lin('#cfc6b6'), metalness: 1, roughness: 0.14, envMapIntensity: 1.35 };
   const m = new MeshStandardMaterial(params);
   patch(m, `nickel-${cheap ? 1 : 0}`, {
+    reflFade: STAND_REFL_FADE,
     uniforms: {},
     fragmentBody: `
       float fy = fwidth(vObj.y);
@@ -462,6 +487,7 @@ export function createNickelMaterial(cheap: boolean) {
 export function createPolishedMaterial() {
   const m = new MeshStandardMaterial({ color: lin('#d4d6da'), metalness: 1, roughness: 0.1, envMapIntensity: 1.3 });
   patch(m, 'chrome', {
+    reflFade: STAND_REFL_FADE,
     uniforms: {},
     fragmentBody: `
       totalEmissiveRadiance += uRimColor * rimTerm(normal, 0.3) * 0.6;
@@ -489,6 +515,7 @@ const GLSL_BOUNCE = /* glsl */ `
 export function createHardwareMaterial() {
   const m = new MeshStandardMaterial({ color: lin('#17171a'), metalness: 0.85, roughness: 0.36, envMapIntensity: 1.0 });
   patch(m, 'hardware', {
+    reflFade: STAND_REFL_FADE,
     uniforms: { uClip: { value: PIVOT_WORLD.clone() } },
     fragmentHead: GLSL_BOUNCE + 'uniform vec3 uClip;',
     fragmentBody: `
@@ -540,25 +567,29 @@ export function createFloorMaterial(cheap: boolean) {
     noEnv: true,
     uniforms: {
       uRugR: { value: RUG_RADIUS },
-      uStand: { value: [STAND_BASE.x, STAND_BASE.z] },
-      uH: { value: SPOT_HEIGHT },
-      uTanA: { value: SPOT_TAN },
-      uStandTop: { value: STAND_TOP_Y + 0.12 },
     },
-    fragmentHead: `uniform float uRugR; uniform vec2 uStand; uniform float uH; uniform float uTanA; uniform float uStandTop; uniform sampler2D uRefl; uniform mat4 uReflMat; uniform float uReflOn;
+    fragmentHead: `uniform float uRugR; uniform sampler2D uRefl; uniform mat4 uReflMat; uniform float uReflOn;
       float sdBox(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }`,
     fragmentBody: `
       vec2 p = vWorld.xz;
       float rr = length(p);
-      // Contact shadows: tight under the rug lip, broad around it, stand base.
+      // Contact shadows: tight under the rug lip, broad around it (the stand stands on the rug).
       float ao = 1.0 - 0.8 * (1.0 - smoothstep(uRugR, uRugR + 0.05, rr)) - 0.15 * (1.0 - smoothstep(uRugR, uRugR + 0.4, rr));
-      ao *= 1.0 - 0.75 * (1.0 - smoothstep(0.13, 0.32, length(p - uStand)));
       ao = max(ao, 0.0);
       diffuseColor.rgb *= ao;
       float broad = vnoise(p * 0.35) * 0.6 + vnoise(p * 1.3 + 4.0) * 0.4;
       float scuff = vnoise(p * vec2(9.0, 2.0) + 2.0) * vnoise(p * 24.0);
       roughnessFactor = clamp(0.5 + 0.14 * broad + 0.08 * scuff, 0.05, 1.0) + (1.0 - ao) * 0.3;
       diffuseColor.rgb *= 0.85 + 0.3 * broad;
+      // Boards running up and down stage: a fine, slightly rougher seam every 14 cm (box-filtered,
+      // gone once it is under a pixel wide), and a faint tone change from board to board.
+      float bx = p.x / 0.142;
+      float fwb = fwidth(bx) + 1e-5;
+      float dSeam = abs(fract(bx + 0.5) - 0.5);
+      float seam = (1.0 - smoothstep(0.012, 0.012 + fwb, dSeam)) * (1.0 - smoothstep(0.08, 0.3, fwb));
+      float board = hash11(floor(bx) + 3.0);
+      diffuseColor.rgb *= (0.94 + 0.12 * board) * (1.0 - 0.35 * seam);
+      roughnessFactor = clamp(roughnessFactor + 0.04 * (board - 0.5) + 0.15 * seam, 0.05, 1.0);
       // Spike tape: a T downstage centre, two corner marks.
       vec2 q = p - vec2(0.0, uRugR + 0.32);
       float d = min(sdBox(q, vec2(0.12, 0.024)), sdBox(q - vec2(0.0, 0.085), vec2(0.024, 0.07)));
@@ -571,19 +602,6 @@ export function createFloorMaterial(cheap: boolean) {
       float wear = 0.8 + 0.3 * vnoise(p * 300.0);
       diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.09, 0.09, 0.085) * wear, tape);
       roughnessFactor = mix(roughnessFactor, 0.75, tape);
-      // Shadow of the stand cast by the overhead spot: a soft radial streak from the base outwards
-      // (penumbra widening with height, from the lens size), ending in the mic's blob.
-      vec2 sd = normalize(uStand);
-      float sr = length(uStand);
-      float along = dot(p, sd);
-      float across = abs(dot(p, vec2(-sd.y, sd.x)));
-      float hgt = clamp(uH * (1.0 - sr / max(along, 1e-3)), 0.0, uH);
-      float sEnd = sr * uH / (uH - uStandTop);
-      float pen = 0.012 + 0.11 * hgt / max(uH - hgt, 0.1);
-      float streak = (1.0 - smoothstep(pen * 0.35, pen + 0.012, across)) * smoothstep(sr - 0.02, sr + 0.04, along) * (1.0 - smoothstep(sEnd - 0.02, sEnd + 0.03, along));
-      float blob = 1.0 - smoothstep(0.03, 0.1, length(p - sd * (sEnd + 0.06)));
-      float sh = clamp(max(streak * 0.85, blob * 0.6), 0.0, 1.0);
-      diffuseColor.rgb *= 1.0 - sh;
       // Warm spill from the spot's soft outer field: a bright ring hugging the rug that dies into
       // the dark within a couple of metres (the room around the pool reads as black).
       float outside = smoothstep(uRugR - 0.02, uRugR + 0.02, rr);
@@ -591,11 +609,12 @@ export function createFloorMaterial(cheap: boolean) {
       float spill = exp(-dr / 0.75) * 0.8 + exp(-dr / 0.22) * 0.9;
       totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.93, 0.85) * spill * outside * uSpot * 3.2;
       // Red bounce spilling off the rug onto the polished deck.
-      totalEmissiveRadiance += vec3(0.8, 0.0, 0.021) * (exp(-dr / 0.3) * 0.075 + exp(-dr / 0.9) * 0.02) * outside * (1.0 - sh * 0.7) * uSpot;
-      // Scuffs: faint arcs and drag marks that break the reflection up.
+      totalEmissiveRadiance += vec3(0.8, 0.0, 0.021) * (exp(-dr / 0.3) * 0.075 + exp(-dr / 0.9) * 0.02) * outside * uSpot;
+      // Scuffs: faint, continuous drag marks that break the reflection up (no thresholds, so no
+      // islands or speckles for the bloom to find).
       float sc1 = vnoise(vec2(dot(p, vec2(0.8, 0.6)) * 3.0, dot(p, vec2(-0.6, 0.8)) * 40.0));
       float sc2 = vnoise(vec2(length(p - vec2(0.6, 1.9)) * 55.0, atan(p.y - 1.9, p.x - 0.6) * 2.0));
-      float scuff2 = smoothstep(0.8, 0.98, sc1) * 0.35 + smoothstep(0.85, 0.99, sc2) * 0.25 * exp(-rr * 0.4);
+      float scuff2 = sc1 * sc1 * 0.14 + sc2 * 0.06 * exp(-rr * 0.4);
       roughnessFactor = clamp(roughnessFactor + scuff2 * 0.25, 0.05, 1.0);
       vec3 Vd = normalize(vWorld - cameraPosition);
       float fres = 0.04 + 0.96 * pow(1.0 - clamp(-Vd.y, 0.0, 1.0), 5.0);
@@ -614,12 +633,16 @@ export function createFloorMaterial(cheap: boolean) {
       vec4 rc = uReflMat * vec4(vWorld, 1.0);
       vec2 ruv = rc.xy / max(rc.w, 1e-4);
       vec2 wob = (vec2(vnoise(p * 7.0), vnoise(p * 7.0 + 5.2)) - 0.5) * 0.006 * (0.6 + 2.0 * scuff2);
-      float lod = mix(0.6, 2.6, smoothstep(0.4, 0.9, roughnessFactor));
+      // Everything the deck mirrors stands on the rug, so the reflection blurs and fades the further
+      // the deck point is from the rug's edge (the reflected beam spreads into a broad glow, never a line).
+      float lod = mix(0.6, 2.6, smoothstep(0.4, 0.9, roughnessFactor)) + min(2.4, dr * 1.6);
       vec2 sv = vec2(0.0, 0.012 * (1.0 + lod));
-      vec3 refl = textureLod(uRefl, ruv + wob, lod).rgb * 0.4
-                + textureLod(uRefl, ruv + wob + sv, lod + 0.6).rgb * 0.25 + textureLod(uRefl, ruv + wob - sv, lod + 0.6).rgb * 0.25
+      vec2 sh = vec2(0.006 * (1.0 + lod), 0.0);
+      vec3 refl = textureLod(uRefl, ruv + wob, lod).rgb * 0.3
+                + textureLod(uRefl, ruv + wob + sv, lod + 0.6).rgb * 0.2 + textureLod(uRefl, ruv + wob - sv, lod + 0.6).rgb * 0.2
+                + textureLod(uRefl, ruv + wob + sh, lod + 0.6).rgb * 0.1 + textureLod(uRefl, ruv + wob - sh, lod + 0.6).rgb * 0.1
                 + textureLod(uRefl, ruv + wob + 2.5 * sv, lod + 1.2).rgb * 0.05 + textureLod(uRefl, ruv + wob - 2.5 * sv, lod + 1.2).rgb * 0.05;
-      totalEmissiveRadiance += refl * fres * mix(0.35, 1.0, gloss) * uReflOn * 4.0;`
+      totalEmissiveRadiance += refl * fres * mix(0.35, 1.0, gloss) * uReflOn * 4.0 * mix(0.35, 1.0, exp(-dr / 1.6));`
       }`,
   });
   return m;
@@ -645,8 +668,8 @@ export function createRugMaterial(cheap: boolean) {
   m.alphaToCoverage = true;
   patch(m, `rug-${cheap ? 1 : 0}`, {
     noEnv: true,
-    uniforms: { uR: { value: RUG_RADIUS }, uRed: { value: TEDX_RED } },
-    fragmentHead: 'uniform float uR; uniform vec3 uRed;',
+    uniforms: { uR: { value: RUG_RADIUS }, uRed: { value: TEDX_RED }, uFoot: { value: [STAND_BASE.x, STAND_BASE.z] } },
+    fragmentHead: 'uniform float uR; uniform vec3 uRed; uniform vec2 uFoot;',
     alphaBody: `
       vec2 pa = vWorld.xz;
       float ang = atan(pa.y, pa.x);
@@ -683,6 +706,10 @@ export function createRugMaterial(cheap: boolean) {
       // on top), so the circle reads as lit from above rather than as a flat red disc.
       float hot = 0.14 + 1.2 * exp(-rr * rr / 0.85);
       diffuseColor.rgb *= (0.64 + 0.58 * fib) * (0.94 + 0.12 * nap) * (1.0 - 0.35 * edge) * hot * mix(1.0, 0.6, wallF);
+      // The stand's foot stands in the middle of the pool: a tight contact shadow where the cast base
+      // presses into the pile, and the soft penumbra of the base and the mic under the overhead spot.
+      float dFoot = length(p - uFoot);
+      diffuseColor.rgb *= (1.0 - 0.7 * (1.0 - smoothstep(0.148, 0.2, dFoot))) * (1.0 - 0.3 * (1.0 - smoothstep(0.15, 0.42, dFoot)));
       roughnessFactor = 1.0;
       // The rug is only lit by the overhead spot: keep it dark when the spot is down.
       float lit = clamp(uSpot * 4.0, 0.0, 1.0);
@@ -747,22 +774,26 @@ export function createVenueMaterial() {
       uSeat: { value: [SEATING.centre.x, SEATING.centre.z, SEATING.firstRadius, SEATING.rowGap] },
       uAisle: { value: SEATING.aisle },
       uEdgeZ: { value: STAGE_EDGE_Z },
+      uHouse: { value: [Math.cos(HOUSE_AZ), Math.sin(HOUSE_AZ)] },
     },
-    fragmentHead: 'uniform vec4 uSeat; uniform float uAisle; uniform float uEdgeZ;',
+    fragmentHead: 'uniform vec4 uSeat; uniform float uAisle; uniform float uEdgeZ; uniform vec2 uHouse;',
     fragmentBody: `
-      vec3 nW = toWorld(normal);
+      // House space: the house is turned by HOUSE_AZ about the stage centre (layout.ts).
+      vec3 nW0 = toWorld(normal);
+      vec3 nW = vec3(nW0.x * uHouse.x - nW0.z * uHouse.y, nW0.y, nW0.x * uHouse.y + nW0.z * uHouse.x);
+      vec3 hW = vec3(vWorld.x * uHouse.x - vWorld.z * uHouse.y, vWorld.y, vWorld.x * uHouse.y + vWorld.z * uHouse.x);
       // Stage front: a thin worn nosing along the top edge catches the spill.
-      float front = step(0.7, nW.z) * (1.0 - smoothstep(0.0, 0.03, abs(vWorld.z - uEdgeZ)));
-      float nosing = smoothstep(-0.035, -0.004, vWorld.y) * front;
-      float spill = exp(-vWorld.x * vWorld.x / 18.0);
+      float front = step(0.7, nW.z) * (1.0 - smoothstep(0.0, 0.03, abs(hW.z - uEdgeZ)));
+      float nosing = smoothstep(-0.035, -0.004, hW.y) * front;
+      float spill = exp(-hW.x * hW.x / 18.0);
       totalEmissiveRadiance += vec3(1.0, 0.93, 0.86) * nosing * spill * uSpot * 0.05;
       diffuseColor.rgb *= 1.0 - 0.4 * front * (1.0 - nosing);
       // Aisle step-light pools on the treads.
-      vec2 d = vWorld.xz - uSeat.xy;
+      vec2 d = hW.xz - uSeat.xy;
       float R = length(d);
       float s = atan(d.x, d.y) * R;
       float fr = fract((R - uSeat.z + uSeat.w * 0.5) / uSeat.w);
-      float pool = exp(-pow(abs(s) - uAisle * 0.5 + 0.08, 2.0) / 0.03) * exp(-fr * 7.0) * step(0.5, nW.y) * step(uEdgeZ + 0.3, vWorld.z);
+      float pool = exp(-pow(abs(s) - uAisle * 0.5 + 0.08, 2.0) / 0.03) * exp(-fr * 7.0) * step(0.5, nW.y) * step(uEdgeZ + 0.3, hW.z);
       totalEmissiveRadiance += vec3(1.0, 0.6, 0.3) * pool * 0.012;`,
   });
   return m;
@@ -942,24 +973,30 @@ export function createDustMaterial() {
         vec3 wp = (modelMatrix * vec4(p, 1.0)).xyz;
         float cph = dot(normalize(wp - vec3(0.0, uHeight, 0.0)), normalize(cameraPosition - wp));
         inside *= 0.5 + 1.5 * pow(max(cph, 0.0), 3.0);
-        // Motes turn their flat sides to the light now and then: sharp sparkles.
+        // Motes turn a little brighter now and then: a gentle shimmer, never a star-like spike
+        // (bloom turned the old 6x sparkle into hard white points).
         float ph = sin(uTime * (0.5 + seed.z * 1.4) + seed.x * 40.0) * 0.5 + 0.5;
-        float twinkle = 0.25 + 0.5 * ph + 6.0 * pow(ph, 16.0);
+        float twinkle = 0.35 + 0.45 * ph + 0.9 * pow(ph, 12.0);
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
-        float size = (0.5 + seed.z * 1.1) * 0.0095;
-        gl_PointSize = max(1.0, size * uScale / -mv.z);
+        // Soft specks of a few pixels, not single bright pixels: the same light over a bigger disc.
+        float size = (0.8 + seed.z * 1.2) * 0.013;
+        float px = size * uScale / -mv.z;
+        gl_PointSize = clamp(px, 2.5, 24.0);
         float fadeNear = smoothstep(0.3, 1.5, -mv.z);
-        vA = inside * twinkle * fadeNear * smoothstep(0.0, 0.6, p.y) * min(1.0, gl_PointSize / 2.0);
+        // Only in the upper air of the beam: dust low in the shaft sits in front of the rug on screen
+        // and read as specks on it.
+        float high = smoothstep(1.0, 2.2, p.y);
+        vA = inside * twinkle * fadeNear * high * min(1.0, px / 2.5) / max(1.0, gl_PointSize * gl_PointSize / 9.0);
       }`,
     fragmentShader: /* glsl */ `
       uniform float uIntensity;
       varying float vA;
       void main() {
         vec2 c = gl_PointCoord - 0.5;
-        float d = 1.0 - smoothstep(0.05, 0.5, length(c));
-        // Capped: a sparkle reads as a bright point, never as a blown-out disc (or a hot pixel behind type).
-        gl_FragColor = vec4(min(vec3(1.0, 0.96, 0.9) * d * d * vA * 2.0 * uIntensity, vec3(0.9)), 1.0);
+        // A soft gaussian speck with a low, capped peak (nothing for bloom to turn into a point).
+        float d = exp(-dot(c, c) * 18.0);
+        gl_FragColor = vec4(min(vec3(1.0, 0.96, 0.9) * d * vA * 1.6 * uIntensity, vec3(0.45)), 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
@@ -1031,7 +1068,8 @@ export function createMotesMaterial() {
         // Circle of confusion grows away from the focus plane (z = -1).
         float coc = abs(1.0 / -z - 1.0);
         float px = (0.004 + coc * 0.03) * uScale / -z;
-        gl_PointSize = clamp(px, 1.0, 90.0);
+        // Never a single hard pixel: the smallest motes are still soft discs.
+        gl_PointSize = clamp(px, 2.5, 90.0);
         vBokeh = clamp(coc * 1.5, 0.0, 1.0);
         float beam = smoothstep(-0.3, 0.9, xy.x) * (0.6 + 0.4 * sin(xy.y * 2.0 + 1.0));
         float tw = 0.6 + 0.4 * sin(uTime * (0.4 + seed.w) + seed.x * 30.0);

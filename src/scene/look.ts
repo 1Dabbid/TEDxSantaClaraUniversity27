@@ -34,6 +34,10 @@ export const look = {
   bloom: 1,
   /** Vignette strength 0..1. */
   vignette: 0.6,
+  /** Colour temperature of the overhead spot and its beam: +1 warm, 0 neutral, -1 cool. */
+  warm: 0,
+  /** Turn of the mic's barrel sleeve (engraving, knurl) about its axis, radians. */
+  turn: 0,
   /** True while the scene is fully faded out (rendering can stop). */
   dark: false,
 };

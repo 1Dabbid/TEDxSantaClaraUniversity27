@@ -43,15 +43,17 @@ const ONLY = (process.env.STILLS_ONLY ?? '').split(',').map((s) => s.trim()).fil
 /**
  * The shots. `J` is the journey coordinate of src/scene/choreography.ts:
  * section k spans J = k..k+1 (k in SECTION_IDS order), the fraction is how far
- * the viewport centre has travelled through it. Pick a J where the shot holds
- * (see the comments above DESKTOP_SHOTS / PORTRAIT_SHOTS). `darken` multiplies
+ * the viewport centre has travelled through it. The camera never holds (one
+ * continuous move): pick a J that stands for the section, with its light up
+ * (see the move tables in choreography.ts). `darken` multiplies
  * the encoded pixels (1 = as rendered) where text sits over a bright frame.
  */
 const SHOTS = [
   // Hero: J 0 scrolls to the very top, the first frame a visitor sees.
   { name: 'hero', landscape: { J: 0 }, portrait: { J: 0 } },
   { name: 'theme', landscape: { J: 1.1 }, portrait: { J: 1.0 } },
-  { name: 'speakers', landscape: { J: 2.2 }, portrait: { J: 2.15 } },
+  // Speakers: the pull out has landed on the stage and the light is up.
+  { name: 'speakers', landscape: { J: 2.75 }, portrait: { J: 2.75 } },
   { name: 'schedule', landscape: { J: 3.5 }, portrait: { J: 3.5 } },
   { name: 'venue', landscape: { J: 4.5 }, portrait: { J: 4.5 } },
 ];

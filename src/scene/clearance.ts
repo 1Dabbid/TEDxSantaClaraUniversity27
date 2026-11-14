@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { AUDIENCE_FLOOR_Y, MIC, PIVOT_WORLD, SEATING, STAGE_EDGE_Z, STAND_BASE, STAND_TOP_Y, barrelRadius, micToWorld, rowHeight } from './layout';
+import { AUDIENCE_FLOOR_Y, MIC, PIVOT_WORLD, SEATING, STAGE_EDGE_Z, STAND_BASE, STAND_TOP_Y, barrelRadius, micToWorld, rowHeight, toHouse } from './layout';
 
 /**
  * Cheap distance proxies for the scene's solid geometry (metres). The rig
@@ -13,6 +13,7 @@ const MIC_LEN = MIC_A.distanceTo(MIC_B);
 const CLIP_C = micToWorld(new Vector3(-0.022, MIC.clipY, 0));
 const tmp = new Vector3();
 const tmp2 = new Vector3();
+const hp = new Vector3();
 
 function micRadius(y: number) {
   if (y < 0) return 0.0092;
@@ -61,17 +62,19 @@ export function clearance(p: Vector3): [number, string] {
   const stand = Math.hypot(p.x - STAND_BASE.x, p.z - STAND_BASE.z);
   const yIn = Math.min(STAND_TOP_Y, Math.max(0.05, p.y));
   take(Math.hypot(stand - 0.0095 > 0 ? stand - 0.0095 : 0, p.y - yIn), 'stand');
-  take(Math.hypot(Math.max(0, stand - 0.15), Math.max(0, p.y - 0.055)), 'base');
-  // Floors: stage (with the rug) and the audience floor beyond the lip.
-  const onStage = p.z < STAGE_EDGE_Z;
+  take(Math.hypot(Math.max(0, stand - 0.15), Math.max(0, p.y - STAND_BASE.y - 0.055)), 'base');
+  // Floors: stage (with the rug) and the audience floor beyond the lip (the house is turned: test
+  // it in house space).
+  const h = toHouse(p, hp);
+  const onStage = h.z < STAGE_EDGE_Z;
   if (onStage) take(p.y - (Math.hypot(p.x, p.z) < 1.52 ? 0.0185 : 0), 'floor');
   else take(Math.hypot(p.y - AUDIENCE_FLOOR_Y, 0), 'audience floor');
-  take(Math.hypot(Math.max(0, p.z - STAGE_EDGE_Z), Math.max(0, p.y)), 'stage lip');
+  take(Math.hypot(Math.max(0, h.z - STAGE_EDGE_Z), Math.max(0, p.y)), 'stage lip');
   take(p.z + 4.6 - 0.1, 'curtain');
   for (const s of SEATS) {
-    const dx = Math.max(0, Math.abs(p.x - s.x) - 0.3);
-    const dy = Math.max(0, Math.abs(p.y - s.y) - 0.45);
-    const dz = Math.max(0, Math.abs(p.z - s.z) - 0.3);
+    const dx = Math.max(0, Math.abs(h.x - s.x) - 0.3);
+    const dy = Math.max(0, Math.abs(h.y - s.y) - 0.45);
+    const dz = Math.max(0, Math.abs(h.z - s.z) - 0.3);
     take(Math.hypot(dx, dy, dz), 'seat');
   }
   return [best, name];

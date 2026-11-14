@@ -13,6 +13,20 @@ import type { look as lookState } from './look';
 
 export type LookOut = Omit<typeof lookState, 'dark'>;
 
+/**
+ * Distance from the camera to the far corner of the near plane, for a near
+ * distance, a vertical fov (degrees), a lens shift (where the optical axis
+ * lands on screen, fractions from the left / top) and an aspect. The shift
+ * moves the frustum off centre, so its far corner is further out on the
+ * shifted side. Shared by the rig (near plane) and the debug simulator.
+ */
+export function nearCorner(near: number, fov: number, shiftX: number, shiftY: number, aspect: number): number {
+  const ty = Math.tan((fov * Math.PI) / 360);
+  const kx = 1 + 2 * Math.abs(shiftX - 0.5);
+  const ky = 1 + 2 * Math.abs(shiftY - 0.5);
+  return near * Math.sqrt(1 + ty * ty * (ky * ky + (kx * aspect) ** 2));
+}
+
 export function createRig() {
   return {
     sample: emptyShot(),
@@ -44,9 +58,14 @@ export function createRig() {
     band: new Damped(0),
     bloom: new Damped(1),
     env: new Damped(1),
+    warm: new Damped(0),
+    turn: new Damped(0),
     roll: new Damped(0),
     keyDir: new DampedVec3(),
     keyCam: new Damped(0),
+    /** Screen anchor of the target (lens shift), fractions from the left / top. */
+    shiftX: new Damped(0.5),
+    shiftY: new Damped(0.5),
     px: new Damped(0),
     py: new Damped(0),
     J: new Damped(0),
@@ -83,6 +102,9 @@ export function createRigOut() {
     envRot: 0,
     /** Smoothed journey coordinate actually sampled. */
     Js: 0,
+    /** Where the target sits on screen (lens shift), fractions from the left / top. */
+    shiftX: 0.5,
+    shiftY: 0.5,
   };
 }
 export type RigOut = ReturnType<typeof createRigOut>;
@@ -154,10 +176,14 @@ export function stepRig(
     rig.band.snap(s.band);
     rig.bloom.snap(s.bloom);
     rig.env.snap(s.env);
+    rig.warm.snap(s.warm);
+    rig.turn.snap(s.turn);
     rig.envRot.snap(s.envRot);
     rig.keyDir.snap(s.keyDir);
     rig.keyCam.snap(s.keyCam);
     rig.shade.snap(s.shade);
+    rig.shiftX.snap(s.shiftX);
+    rig.shiftY.snap(s.shiftY);
     if (snap) rig.exposure.snap(s.exposure);
     else if (first) rig.exposure.snap(0);
   }
@@ -189,11 +215,15 @@ export function stepRig(
   look.scrimEdge = Math.max(0, rig.scrimEdge.step(s.scrimEdge, 0.6, dt));
   look.band = Math.max(0, rig.band.step(s.band, 0.6, dt));
   look.bloom = rig.bloom.step(s.bloom, 0.6, dt);
+  look.warm = rig.warm.step(s.warm, 0.8, dt);
+  look.turn = rig.turn.step(s.turn, 0.5, dt);
   out.rimAng = rig.rimAng.step(s.rimAng, 0.6, dt);
   rig.keyDir.step(s.keyDir, 0.8, dt, out.keyDir);
   out.keyCam = rig.keyCam.step(s.keyCam, 0.6, dt);
   out.env = Math.max(0, rig.env.step(s.env, 0.6, dt));
   out.envRot = rig.envRot.step(s.envRot, 0.8, dt);
+  out.shiftX = rig.shiftX.step(s.shiftX, RIG.anchorFollow, dt);
+  out.shiftY = rig.shiftY.step(s.shiftY, RIG.anchorFollow, dt);
 
   // Camera basis, idle drift (slow breathing), pointer parallax with weight, bank into lateral moves.
   out.fwd.copy(view);
@@ -207,12 +237,14 @@ export function stepRig(
   const py = rig.py.step(input.pointerY, 1.1, dt);
   const dx = Math.sin(t * 0.21) * 0.6 + Math.sin(t * 0.13 + 1.7) * 0.4;
   const dy = Math.sin(t * 0.17 + 0.6) * 0.6 + Math.sin(t * 0.07) * 0.4;
-  const breathe = 1 + Math.sin(t * 0.31) * 0.004 * (s.drift > 0 ? 1 : 0);
+  // Breathing along the view axis: 0.4% of the distance close in, capped at 5 mm on the wide stage
+  // shots, so the idle float stays a few millimetres however far the camera has pulled back.
+  const breathe = s.drift > 0 ? Math.sin(t * 0.31) * Math.min(0.004 * dist, 0.005) : 0;
   const ox = dx * s.drift + px * s.parallax;
   const oy = dy * s.drift * 0.6 + py * s.parallax * 0.6;
   out.position
     .copy(target)
-    .addScaledVector(out.fwd, -dist * breathe)
+    .addScaledVector(out.fwd, -(dist + breathe))
     .addScaledVector(out.right, ox)
     .addScaledVector(out.camUp, oy);
   out.target.copy(target);
@@ -222,9 +254,9 @@ export function stepRig(
   out.up.copy(out.camUp).multiplyScalar(cr).addScaledVector(out.right, sr);
   out.dist = dist;
   out.roll = roll;
-  // Never let the near plane cut into a surface the camera grazes on a fast move.
-  const ty = Math.tan((look.fov * Math.PI) / 360);
-  const corner = Math.sqrt(1 + ty * ty * (1 + (input.aspect ?? 1.6) ** 2));
+  // Never let the near plane cut into a surface the camera grazes on a fast move. The lens shift
+  // moves the frustum off centre: its far corner is further out on the shifted side.
+  const corner = nearCorner(1, look.fov, out.shiftX, out.shiftY, input.aspect ?? 1.6);
   out.gap = clearance(out.position)[0];
   out.near = Math.max(0.0015, Math.min(nearFor(dist), (out.gap * 0.7) / corner));
   copyInto(out.s, s);
@@ -246,4 +278,6 @@ function copyInto(dst: ResolvedShot, src: ResolvedShot) {
   dst.keyCam = src.keyCam;
   dst.cone = src.cone;
   dst.spot = src.spot;
+  dst.shiftX = src.shiftX;
+  dst.shiftY = src.shiftY;
 }

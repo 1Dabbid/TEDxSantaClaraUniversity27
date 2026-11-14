@@ -20,8 +20,10 @@ import {
   MIC_POSITION,
   MIC_QUATERNION,
   PIVOT_WORLD,
+  RUG_RADIUS,
   STAND_BASE,
   STAND_TOP_Y,
+  VIEW_AZ,
   barrelRadius,
   micToWorld,
 } from './layout';
@@ -34,6 +36,7 @@ import {
   createPolishedMaterial,
 } from './materials';
 import { REFLECT_LAYER } from './reflection';
+import { look } from './look';
 import { engravingRows, type EngravingFacts } from './engraving';
 import { EMPTY_MASK, createEngravingMask } from './textures';
 
@@ -310,33 +313,47 @@ function connectorGeometry(high: boolean) {
   );
 }
 
-/** Cable from the connector down the back of the stand, over the base and off upstage right. */
+/**
+ * Cable from the connector down the back of the stand, over the base, in a
+ * loose S across the pile to the rug's edge, down its lip and off upstage
+ * right on the deck.
+ */
 function cableGeometry(high: boolean) {
   const sx = STAND_BASE.x;
   const sz = STAND_BASE.z;
+  const fy = STAND_BASE.y;
   const tail = micToWorld(new Vector3(0, -0.044, 0));
   const tail2 = micToWorld(new Vector3(0, -0.085, 0));
   const off = 0.014;
+  // Upstage right, away from the camera axis: the cable never crosses the lens' view of the stand.
+  const ax = Math.sin(VIEW_AZ + Math.PI * 0.78);
+  const az = Math.cos(VIEW_AZ + Math.PI * 0.78);
+  const along = (r: number, y: number, wob = 0) => new Vector3(sx + ax * r - az * wob, y, sz + az * r + ax * wob);
+  const rugEdge = RUG_RADIUS + 0.012;
   const pts = [
     tail,
     tail2,
     new Vector3(sx + 0.02, tail2.y - 0.12, sz - off * 1.5),
-    new Vector3(sx + 0.004, 1.12, sz - off),
-    new Vector3(sx, 0.98, sz - 0.02),
-    new Vector3(sx - 0.003, 0.84, sz - off),
-    new Vector3(sx, 0.45, sz - off),
-    new Vector3(sx, 0.12, sz - off),
-    new Vector3(sx + 0.002, 0.066, sz - 0.026),
-    new Vector3(sx + 0.01, 0.034, sz - 0.08),
-    new Vector3(sx + 0.03, 0.019, sz - 0.142),
-    new Vector3(sx + 0.06, 0.0045, sz - 0.2),
-    new Vector3(sx + 0.16, 0.0035, sz - 0.42),
-    new Vector3(sx + 0.42, 0.0035, sz - 0.78),
-    new Vector3(sx + 0.38, 0.0035, sz - 1.3),
-    new Vector3(sx + 0.75, 0.0035, sz - 1.9),
-    new Vector3(sx + 1.4, 0.0035, sz - 2.4),
-    new Vector3(sx + 2.5, 0.0035, sz - 3.6),
-    new Vector3(sx + 4.5, 0.0035, sz - 6.5),
+    new Vector3(sx + 0.004, fy + 1.1, sz - off),
+    new Vector3(sx, fy + 0.96, sz - 0.02),
+    new Vector3(sx - 0.003, fy + 0.82, sz - off),
+    new Vector3(sx, fy + 0.45, sz - off),
+    new Vector3(sx, fy + 0.12, sz - off),
+    new Vector3(sx + 0.002, fy + 0.066, sz - 0.026),
+    along(0.08, fy + 0.034, 0.01),
+    along(0.142, fy + 0.019),
+    along(0.2, fy + 0.0045),
+    // A loose S across the pile: an asymmetric line on the round rug, so the orbit reads as a turn.
+    along(0.36, fy + 0.0035, 0.12),
+    along(0.62, fy + 0.0035, 0.2),
+    along(0.9, fy + 0.0035, -0.06),
+    along(1.15, fy + 0.0035, -0.12),
+    along(rugEdge - 0.02, fy + 0.0035, 0.03),
+    along(rugEdge + 0.01, 0.009, 0.03),
+    along(rugEdge + 0.06, 0.0035, 0.035),
+    along(2.2, 0.0035, -0.05),
+    along(3.2, 0.0035, 0.1),
+    along(5.5, 0.0035, 0.3),
   ];
   const curve = new CatmullRomCurve3(pts, false, 'centripetal');
   return new TubeGeometry(curve, high ? 520 : 220, 0.0034, high ? 8 : 5, false);
@@ -351,6 +368,8 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
   const engravingKey = JSON.stringify(engraving ?? {});
   const rows = useMemo(() => engravingRows(JSON.parse(engravingKey) as Partial<EngravingFacts>), [engravingKey]);
   const maskOn = useRef<{ value: number } | null>(null);
+  /** The sleeve's turn uniform (look.turn), written every frame. */
+  const turn = useRef<{ value: number } | null>(null);
 
   const geo = useMemo(() => {
     const seg = high ? 160 : 72;
@@ -366,7 +385,7 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
       base: machinedLathe(standBaseProfile(), high ? 128 : 64),
       lower: new CylinderGeometry(0.0095, 0.0095, 0.92 - 0.05, high ? 40 : 20, 1, true),
       clutch: machinedLathe(clutchProfile(), high ? 160 : 64, { ridges: { count: 32, depth: 0.0006, from: 2, to: 3 } }),
-      upper: new CylinderGeometry(0.0074, 0.0074, STAND_TOP_Y - 0.97, high ? 32 : 16, 1, true),
+      upper: new CylinderGeometry(0.0074, 0.0074, STAND_TOP_Y - STAND_BASE.y - 0.97, high ? 32 : 16, 1, true),
       cap: machinedLathe(
         [
           [0.0074, 0, true],
@@ -444,8 +463,13 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
     [geo, mats],
   );
 
-  // Fade the engraving in (about 1.2 s) once the mask is ready.
+  useEffect(() => {
+    turn.current = mats.body.uniforms.uTurn;
+  }, [mats]);
+
+  // Fade the engraving in (about 1.2 s) once the mask is ready; turn the sleeve with the choreography.
   useFrame((_, dt) => {
+    if (turn.current) turn.current.value = look.turn;
     if (fade.current <= 0 || fade.current >= 1 || !maskOn.current) return;
     fade.current = Math.min(1, fade.current + dt / 1.2);
     const f = fade.current;
@@ -459,6 +483,7 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
 
   const sx = STAND_BASE.x;
   const sz = STAND_BASE.z;
+  const fy = STAND_BASE.y;
 
   return (
     <group ref={root}>
@@ -478,10 +503,10 @@ export default function Microphone({ quality, engraving }: { quality: 'high' | '
       </group>
 
       {/* Stand */}
-      <mesh geometry={geo.base} material={mats.hardware} position={[sx, 0, sz]} />
-      <mesh geometry={geo.lower} material={mats.hardware} position={[sx, (0.92 + 0.05) / 2, sz]} />
-      <mesh geometry={geo.clutch} material={mats.hardware} position={[sx, 0.915, sz]} />
-      <mesh geometry={geo.upper} material={mats.polished} position={[sx, (STAND_TOP_Y + 0.97) / 2, sz]} />
+      <mesh geometry={geo.base} material={mats.hardware} position={[sx, fy, sz]} />
+      <mesh geometry={geo.lower} material={mats.hardware} position={[sx, fy + (0.92 + 0.05) / 2, sz]} />
+      <mesh geometry={geo.clutch} material={mats.hardware} position={[sx, fy + 0.915, sz]} />
+      <mesh geometry={geo.upper} material={mats.polished} position={[sx, (STAND_TOP_Y + fy + 0.97) / 2, sz]} />
       <mesh geometry={geo.cap} material={mats.hardware} position={[sx, STAND_TOP_Y - 0.0115, sz]} />
       <mesh geometry={geo.cable} material={mats.cable} />
     </group>

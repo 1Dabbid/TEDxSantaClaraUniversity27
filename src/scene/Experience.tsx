@@ -10,6 +10,7 @@ import {
   HalfFloatType,
   Object3D,
   PlaneGeometry,
+  Quaternion,
   Vector3,
   WebGLRenderTarget,
   UnsignedByteType,
@@ -34,6 +35,7 @@ import {
 import { createStudioEnvironment } from './environment';
 import type { EngravingFacts } from './engraving';
 import { look } from './look';
+import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
 import Microphone from './Microphone';
@@ -42,6 +44,9 @@ import Seats from './Seats';
 import Stage, { reflected } from './Stage';
 import Venue from './Venue';
 import { SECTION_IDS, scrollState, type SectionId } from './scrollState';
+import { HOUSE_AZ, MIC_AXIS } from './layout';
+
+const Y_AXIS = new Vector3(0, 1, 0);
 
 type Tier = 'high' | 'low';
 
@@ -58,7 +63,7 @@ function measureSections() {
     if (el) metrics.heights[id] = el.getBoundingClientRect().height;
   }
   const opts = contentOptions();
-  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}`;
+  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}:${opts.speakersX ?? ''}:${opts.venueX ?? ''}:${opts.ticketsX ?? ''}:${opts.heroX ?? ''}`;
   if (key !== contentKey) {
     contentKey = key;
     contentListeners.forEach((f) => f());
@@ -68,7 +73,7 @@ function contentOptions(): ShotOptions {
   const sched = metrics.heights.schedule;
   // The orbit was authored for a schedule about 1.45 viewports tall.
   const scheduleScale = sched ? Math.min(1, Math.max(0.4, sched / (1.45 * metrics.vh))) : 1;
-  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale };
+  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale, speakersX: measureSpeakersX(), venueX: measureVenueX(), ticketsX: measureTicketsX(), heroX: measureHeroX() };
 }
 const currentJourney = () => journey(scrollState.sections, metrics.heights, metrics.vh);
 
@@ -85,6 +90,8 @@ function createState() {
     out: createRigOut(),
     keyA: new Vector3(),
     keyB: new Vector3(),
+    qa: new Quaternion(),
+    qb: new Quaternion(),
     perfT: 0,
     perfFrames: 0,
     perfBad: 0,
@@ -389,17 +396,48 @@ export default function Experience({
       look,
       fs.out,
     );
+    // Debug: window.__sceneTune = { key: 0.9, envRot: 0.3, keyDir: [1, 2, 0.3], ... } overrides the
+    // sampled look values live (only with ?scene-debug=1), for tuning a shot without a rebuild.
+    if (debug) {
+      const tune = (window as unknown as { __sceneTune?: Record<string, number | number[]> }).__sceneTune;
+      if (tune) {
+        const lk = look as unknown as Record<string, number>;
+        const ok = o as unknown as Record<string, unknown>;
+        for (const [k, v] of Object.entries(tune)) {
+          if (Array.isArray(v)) {
+            if (k === 'keyDir') o.keyDir.set(v[0], v[1], v[2]);
+          } else if (k in lk) lk[k] = v;
+          else if (typeof ok[k] === 'number') ok[k] = v;
+        }
+      }
+    }
     const s = o.s;
     const target = o.target;
     const dist = o.dist;
     camera.position.copy(o.position);
     camera.up.copy(o.up);
     camera.lookAt(target);
-    if (Math.abs(camera.near - o.near) > 1e-5 || Math.abs(camera.fov - look.fov) > 1e-3) {
+    // The subject's fixed place on screen is a lens shift (an off-centre frustum), never a turn.
+    // setViewOffset sets camera.aspect = fullWidth / fullHeight, so the "full view" must be the
+    // canvas in pixels (a unit square would draw every frame through a square frustum).
+    const vw = Math.max(1, state.size.width);
+    const vh = Math.max(1, state.size.height);
+    const ox = 0.5 - o.shiftX;
+    const oy = 0.5 - o.shiftY;
+    const v = camera.view;
+    const shiftChanged =
+      !v ||
+      !v.enabled ||
+      v.fullWidth !== vw ||
+      v.fullHeight !== vh ||
+      Math.abs(v.offsetX / v.fullWidth - ox) > 1e-6 ||
+      Math.abs(v.offsetY / v.fullHeight - oy) > 1e-6 ||
+      Math.abs(camera.aspect - vw / vh) > 1e-6;
+    if (shiftChanged || Math.abs(camera.near - o.near) > 1e-5 || Math.abs(camera.fov - look.fov) > 1e-3) {
       camera.near = o.near;
       camera.far = 90;
       camera.fov = look.fov;
-      camera.updateProjectionMatrix();
+      camera.setViewOffset(vw, vh, ox * vw, oy * vh, vw, vh);
     }
 
     // Key light: in wide shots it sweeps slowly on the camera side of the mic
@@ -440,7 +478,11 @@ export default function Experience({
     shared.uCone.value = look.cone;
     shared.uTime.value = t;
     scene.environmentIntensity = o.env;
-    scene.environmentRotation.set(0, Math.sin(t * 0.045) * 0.3 + o.envRot + envOffset, 0);
+    // The studio strips turn slowly about the vertical (idle life) and, per shot, about the barrel:
+    // the camera never circles the mic, so the streak is walked round the barrel instead.
+    fs.qa.setFromAxisAngle(Y_AXIS, Math.sin(t * 0.045) * 0.3);
+    fs.qb.setFromAxisAngle(MIC_AXIS, o.envRot + envOffset);
+    scene.environmentRotation.setFromQuaternion(fs.qa.multiply(fs.qb));
 
     // Haze card behind the subject, facing the camera.
     const h = hazeRef.current;
@@ -522,8 +564,11 @@ export default function Experience({
       <directionalLight position={[0, 7, -8]} intensity={0.3} color="#dfe5f2" onUpdate={reflected} />
       <Microphone quality={tier} engraving={engraving} />
       <Stage quality={tier} />
-      <Seats quality={tier} />
-      <Venue />
+      {/* The house faces the end of the camera's orbit (layout.ts, HOUSE_AZ). */}
+      <group rotation={[0, HOUSE_AZ, 0]}>
+        <Seats quality={tier} />
+        <Venue />
+      </group>
       <mesh ref={hazeRef} geometry={fx.hazeGeo} material={fx.haze} renderOrder={4} frustumCulled={false} />
       <group ref={motesRef}>
         <points geometry={fx.motesGeo} material={fx.motes} renderOrder={10} frustumCulled={false} />

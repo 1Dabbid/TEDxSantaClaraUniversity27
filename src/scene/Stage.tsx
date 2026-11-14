@@ -5,6 +5,7 @@ import { useFrame } from '@react-three/fiber';
 import {
   BufferAttribute,
   BufferGeometry,
+  Color,
   CylinderGeometry,
   PlaneGeometry,
   type Mesh,
@@ -14,7 +15,7 @@ import {
   type SpotLight,
 } from 'three';
 import { machinedLathe } from './geometry';
-import { RUG_RADIUS, SPOT_ANGLE, SPOT_HEIGHT, STAGE_EDGE_Z } from './layout';
+import { HOUSE_AZ, RUG_RADIUS, SPOT_ANGLE, SPOT_HEIGHT, STAGE_EDGE_Z } from './layout';
 import {
   BEAM,
   createConeMaterial,
@@ -29,6 +30,16 @@ import { REFLECT_LAYER } from './reflection';
 const R = RUG_RADIUS;
 /** Makes an object visible to the floor reflection as well as the main camera. */
 export const reflected = (o: Object3D) => o.layers.enable(REFLECT_LAYER);
+
+/**
+ * Colour temperature of the spot and its shaft (look.warm: +1 warm, -1 cool):
+ * neutral, warm and cool ends for the light and for the beam. Kept subtle.
+ */
+const SPOT_TINT = { neutral: new Color('#fff2e4'), warm: new Color('#ffdcb8'), cool: new Color('#e8eeff') };
+const BEAM_TINT = { neutral: new Color('#fff8f2'), warm: new Color('#ffe7cf'), cool: new Color('#eef2ff') };
+function tint(t: typeof SPOT_TINT, w: number, out: Color) {
+  return out.copy(t.neutral).lerp(w >= 0 ? t.warm : t.cool, Math.min(1, Math.abs(w)));
+}
 
 /** Upstage curtain: distance behind the stage centre, width, height. */
 const CURTAIN = { z: -4.6, width: 34, height: 8 };
@@ -65,7 +76,7 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     const cone = new CylinderGeometry(BEAM.r0 * BEAM.pad, BEAM.rBottom * BEAM.pad, SPOT_HEIGHT, high ? 48 : 32, 1, true);
     cone.translate(0, SPOT_HEIGHT / 2, 0);
 
-    const count = high ? 700 : 260;
+    const count = high ? 420 : 160;
     const pos = new Float32Array(count * 3);
     const seed = new Float32Array(count * 4);
     let s = 1337;
@@ -113,20 +124,26 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     if (c) {
       c.uniforms.uTime.value = t;
       c.uniforms.uIntensity.value = look.cone;
+      tint(BEAM_TINT, look.warm, c.uniforms.uColor.value as Color);
     }
     if (d) {
       d.uniforms.uTime.value = t;
-      d.uniforms.uIntensity.value = look.cone;
+      // Dust only shows in the light: it fades with the shaft and with the spot itself.
+      d.uniforms.uIntensity.value = look.cone * Math.min(1, look.spot);
       d.uniforms.uScale.value = (state.size.height * state.viewport.dpr * 0.5) / Math.tan((look.fov * Math.PI) / 360);
     }
     if (cone.current) cone.current.visible = look.cone > 0.01;
-    if (dust.current) dust.current.visible = look.cone > 0.01;
-    if (spot.current) spot.current.intensity = 260 * look.spot;
+    if (dust.current) dust.current.visible = look.cone * look.spot > 0.01;
+    if (spot.current) {
+      spot.current.intensity = 260 * look.spot;
+      tint(SPOT_TINT, look.warm, spot.current.color);
+    }
   });
 
   return (
     <group>
-      <mesh geometry={geo.floor} material={mats.floor} />
+      {/* The deck ends at the stage front, which turns with the house (HOUSE_AZ). */}
+      <mesh geometry={geo.floor} material={mats.floor} rotation={[0, HOUSE_AZ, 0]} />
       <mesh geometry={geo.rug} material={mats.rug} onUpdate={reflected} />
       <mesh geometry={geo.curtain} material={mats.curtain} position={[0, 0, CURTAIN.z]} onUpdate={reflected} />
       <spotLight
@@ -141,7 +158,8 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
         color="#fff2e4"
       />
       <mesh ref={cone} geometry={geo.cone} material={mats.cone} renderOrder={5} frustumCulled={false} onUpdate={reflected} />
-      <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} onUpdate={reflected} />
+      {/* Dust lives only in the air inside the beam: never in the floor reflection (it read as speckles on the deck). */}
+      <points ref={dust} geometry={geo.dust} material={mats.dust} renderOrder={6} frustumCulled={false} />
     </group>
   );
 }
