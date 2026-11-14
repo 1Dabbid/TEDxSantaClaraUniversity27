@@ -130,6 +130,9 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
       d.uniforms.uTime.value = t;
       // Dust only shows in the light: it fades with the shaft and with the spot itself.
       d.uniforms.uIntensity.value = look.cone * Math.min(1, look.spot);
+      const portrait = state.size.width / Math.max(1, state.size.height) < 0.9;
+      d.uniforms.uCopy.value = portrait ? 0 : 1;
+      d.uniforms.uCopyAll.value = portrait ? 0.35 : 0;
       d.uniforms.uScale.value = (state.size.height * state.viewport.dpr * 0.5) / Math.tan((look.fov * Math.PI) / 360);
     }
     if (cone.current) cone.current.visible = look.cone > 0.01;

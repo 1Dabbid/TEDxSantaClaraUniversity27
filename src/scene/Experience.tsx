@@ -36,7 +36,7 @@ import { createStudioEnvironment } from './environment';
 import type { EngravingFacts } from './engraving';
 import { look } from './look';
 import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
-import { createRig, createRigOut, stepRig } from './rig';
+import { createRig, createRigOut, REACT, scrollKickFor, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
 import Microphone from './Microphone';
 import Post from './Post';
@@ -99,6 +99,9 @@ function createState() {
     perfBad: 0,
     darkFrames: 0,
     lastMeasure: 0,
+    /** Touch screens: last scroll position (px; NaN until the first frame) and the smoothed kick. */
+    scrollY: NaN,
+    kick: 0,
   };
 }
 type FrameState = ReturnType<typeof createState>;
@@ -404,6 +407,15 @@ export default function Experience({
 
     const J = currentJourney();
     const tl = tiltLive(tilt);
+    // Touch screens: the scroll speed swings the room a little (a hand on the page moves the view
+    // even without tilt). Reads the scroll position only; no allocation.
+    if (coarse) {
+      const y = window.scrollY;
+      const v = Number.isFinite(fs.scrollY) && dt > 1e-4 ? (y - fs.scrollY) / dt : 0;
+      fs.scrollY = y;
+      fs.kick += (scrollKickFor(v) - fs.kick) * (1 - Math.exp(-dt / REACT.scrollKickSmooth));
+      if (!Number.isFinite(fs.kick)) fs.kick = 0;
+    }
     const o = stepRig(
       fs.rig,
       shots,
@@ -418,7 +430,9 @@ export default function Experience({
         camOverride,
         aspect: state.size.width / Math.max(1, state.size.height),
         react: camOverride ? 0 : 1,
-        sway: coarse && !tl ? 1 : 0,
+        // Tilt where it is trusted, handing over to the sway as the phone nears upright.
+        sway: coarse ? (tl ? 1 - tilt.weight : 1) : 0,
+        kick: coarse ? fs.kick : 0,
         portrait,
       },
       look,
@@ -531,15 +545,18 @@ export default function Experience({
     // Motes ride the camera, scaled to the focus distance.
     const m = motesRef.current;
     if (m) {
-      m.visible = Math.max(look.motes, look.haze * Math.max(0, 1 - look.cone * 4)) > 0.01;
+      // Where the shot has no beam to carry dust (the hero), a few motes float in the haze instead:
+      // high tier only, so the low tier keeps the draw call off where the shot asks for no motes.
+      const heroMotes = tier === 'high' ? look.haze * 0.55 * Math.max(0, 1 - look.cone * 4) : 0;
+      const motes = Math.max(look.motes, heroMotes);
+      m.visible = motes > 0.01;
       m.position.copy(camera.position);
       m.quaternion.copy(camera.quaternion);
       m.scale.setScalar(dist);
       const u = ((m.children[0] as Mesh).material as ShaderMaterial).uniforms;
       const ty = Math.tan((look.fov * Math.PI) / 360);
       u.uTime.value = t;
-      // Where the shot has no beam to carry dust (the hero), a few motes float in the haze instead.
-      u.uIntensity.value = Math.max(look.motes, look.haze * 0.55 * Math.max(0, 1 - look.cone * 4));
+      u.uIntensity.value = motes;
       u.uTanY.value = ty;
       u.uTanX.value = ty * (state.size.width / Math.max(1, state.size.height));
       u.uScale.value = (state.size.height * state.viewport.dpr * 0.5) / ty;
@@ -567,7 +584,7 @@ export default function Experience({
         post,
         dt: rawDt,
         scene,
-        react: { px: o.px, py: o.py, lagX: o.lagX, lagY: o.lagY, roll: o.roll, tilt: tl, sway: coarse && !tl },
+        react: { px: o.px, py: o.py, lagX: o.lagX, lagY: o.lagY, roll: o.roll, tilt: tl, sway: coarse && !tl, kick: fs.kick },
         cam: [camera.position.x, camera.position.y, camera.position.z, target.x, target.y, target.z],
       };
     }

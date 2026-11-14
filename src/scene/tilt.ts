@@ -17,9 +17,10 @@
  * unmounting the scene removes the listener.
  */
 
-export type Tilt = { x: number; y: number; active: boolean; lastAt: number };
+/** `weight` (0..1) is how far the tilt can be trusted: it fades out as the device nears upright. */
+export type Tilt = { x: number; y: number; weight: number; active: boolean; lastAt: number };
 
-export const createTilt = (): Tilt => ({ x: 0, y: 0, active: false, lastAt: 0 });
+export const createTilt = (): Tilt => ({ x: 0, y: 0, weight: 0, active: false, lastAt: 0 });
 
 /** Degrees of tilt (away from the resting angle) for a full -1..1 swing. */
 const RANGE_DEG = 18;
@@ -27,6 +28,13 @@ const RANGE_DEG = 18;
 const REST_TAU = 3.5;
 /** No event for this long (ms): the tilt is no longer live. */
 const STALE_MS = 1500;
+/**
+ * A jump larger than this (deg) between two events is not the hand: near upright (beta near 90)
+ * gamma is unstable and can flip sign. The resting angle takes the jump, so the output carries on.
+ */
+const JUMP_DEG = 25;
+/** The tilt fades out as |beta| goes from the first to the second angle (deg): Euler angles degenerate there. */
+const UPRIGHT_FADE: [number, number] = [62, 82];
 
 const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
 
@@ -36,6 +44,8 @@ export function watchTilt(tilt: Tilt): () => void {
   if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return () => {};
   let restA = NaN;
   let restB = NaN;
+  let prevA = NaN;
+  let prevB = NaN;
   let prevAt = 0;
   const onOrient = (e: DeviceOrientationEvent) => {
     if (e.beta == null || e.gamma == null || !Number.isFinite(e.beta) || !Number.isFinite(e.gamma)) return;
@@ -53,10 +63,20 @@ export function watchTilt(tilt: Tilt): () => void {
       restA = a;
       restB = b;
     } else {
+      // A flip (gamma near upright, or a wrap past 180) moves the reference with it: no lurch.
+      if (Math.abs(a - prevA) > JUMP_DEG) restA += a - prevA;
+      if (Math.abs(b - prevB) > JUMP_DEG) restB += b - prevB;
       const k = 1 - Math.exp(-dt / REST_TAU);
       restA += (a - restA) * k;
       restB += (b - restB) * k;
     }
+    prevA = a;
+    prevB = b;
+    // Near upright the angles stop meaning anything: the weight fades out and the scene hands over
+    // to the automatic sway (Experience blends them).
+    const ab = Math.abs(e.beta);
+    const u = Math.min(1, Math.max(0, (ab - UPRIGHT_FADE[0]) / (UPRIGHT_FADE[1] - UPRIGHT_FADE[0])));
+    tilt.weight = 1 - u * u * (3 - 2 * u);
     tilt.x = clamp1((a - restA) / RANGE_DEG);
     // Tipping the top of the phone away (beta down) looks up, like raising a window.
     tilt.y = clamp1((restB - b) / RANGE_DEG);
@@ -67,6 +87,7 @@ export function watchTilt(tilt: Tilt): () => void {
   return () => {
     window.removeEventListener('deviceorientation', onOrient);
     tilt.active = false;
+    tilt.weight = 0;
     tilt.x = 0;
     tilt.y = 0;
   };

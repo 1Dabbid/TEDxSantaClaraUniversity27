@@ -879,7 +879,8 @@ export function createConeMaterial(cheap = false) {
         float n = 1.0;
         ${
           cheap
-            ? ''
+            ? `// One slow 2D noise term: the haze still drifts at rest on the cheap path.
+        n = 0.78 + 0.44 * vnoise(p.xz * 1.3 + vec2(p.y * 0.5 + uTime * 0.05, -uTime * 0.08));`
             : `// The haze rolls: two layers drifting at different rates (sinking, and turning across the
         // shaft), so the light visibly moves while the page is still.
         vec3 np = p * vec3(1.1, 0.55, 1.1) + vec3(uTime * 0.045, -uTime * 0.085, uTime * 0.03);
@@ -959,10 +960,15 @@ export function createDustMaterial() {
       uIntensity: { value: 1 },
       uHeight: { value: SPOT_HEIGHT },
       uTan: { value: BEAM_K },
+      /** How much the dust keeps off the copy column (left of the frame on landscape screens). */
+      uCopy: { value: 1 },
+      /** Overall dimming where the copy is spread over the frame (portrait). */
+      uCopyAll: { value: 0 },
     },
     vertexShader: /* glsl */ `
       attribute vec4 seed;
       uniform float uTime; uniform float uScale; uniform float uHeight; uniform float uTan;
+      uniform float uCopy; uniform float uCopyAll;
       varying float vA;
       void main() {
         vec3 p = position;
@@ -995,7 +1001,11 @@ export function createDustMaterial() {
         // Not in the lowest air of the beam: dust there sits in front of the rug on screen and read
         // as specks on it.
         float high = smoothstep(0.6, 1.5, p.y);
-        vA = inside * twinkle * fadeNear * high * min(1.0, px / 2.5) / max(1.0, gl_PointSize * gl_PointSize / 16.0);
+        // Keep off the copy: dust over a text card reads as specks on the screen, not in the air. The
+        // column matches the scrim's (Post.tsx), reaching a little further right to cover the cards.
+        float sx = gl_Position.x / max(gl_Position.w, 1e-4) * 0.5 + 0.5;
+        float copy = (1.0 - uCopy * 0.85 * (1.0 - smoothstep(0.42, 0.7, sx))) * (1.0 - uCopyAll);
+        vA = copy * inside * twinkle * fadeNear * high * min(1.0, px / 2.5) / max(1.0, gl_PointSize * gl_PointSize / 16.0);
       }`,
     fragmentShader: /* glsl */ `
       uniform float uIntensity;
