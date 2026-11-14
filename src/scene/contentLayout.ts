@@ -77,3 +77,23 @@ function textRight(root: Node, limit: number): number {
   }
   return right;
 }
+
+/**
+ * Screen x (fraction of the width) for the hero's anchor so the grille keeps
+ * clear of the end of the headline: the grille's left edge sits about 11% of
+ * the width left of the anchor; it keeps 2.5% of the width of air, plus 1% for
+ * the words drifting apart as the hero scrolls out (HeroMotion).
+ */
+export function measureHeroX(): number | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const vw = window.innerWidth;
+  if (vw < 1 || vw / Math.max(1, window.innerHeight) < 0.9) return undefined;
+  let right = -1;
+  for (const w of document.querySelectorAll<HTMLElement>('#hero-title [data-hero-word]')) {
+    // The words' own scroll-out drift is a transform: measure where they sit without it.
+    const tx = new DOMMatrixReadOnly(getComputedStyle(w).transform === 'none' ? undefined : getComputedStyle(w).transform).m41;
+    right = Math.max(right, w.getBoundingClientRect().right - tx);
+  }
+  if (right < 0) return undefined;
+  return Math.round((right / vw + 0.145) * 200) / 200;
+}

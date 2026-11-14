@@ -597,7 +597,20 @@ const TURN: Keys = [
  * height, looking slightly up, to a crane view about 19 degrees down, pulling
  * back over the seats at the end.
  */
-/** Speakers, Venue and Tickets x when the layout is not measured (1440 wide). */
+/**
+ * The hero's anchor x: held, then the slide right into the macro starts a
+ * little ahead of the push in, so the growing grille keeps its air from the
+ * headline while the headline drifts out.
+ */
+function heroAx(hx: number): [number, number][] {
+  return [
+    [0.45, hx],
+    [0.6, hx + 0.022],
+  ];
+}
+
+/** Hero, Speakers, Venue and Tickets x when the layout is not measured (1440 wide). */
+const HERO_X = 0.68;
 const SPEAKERS_X = 0.73;
 const VENUE_X = 0.64;
 const TICKETS_X = 0.56;
@@ -668,8 +681,7 @@ const DESKTOP_MOVE: Move = {
   // into the gutter between the Venue facts and the location plate; over Tickets into the gap between
   // the heading and the ticket details (stageAx).
   ax: [
-    [0.45, 0.68],
-    [0.6, 0.69],
+    ...heroAx(HERO_X),
     [1.3, 0.79],
     [1.45, ANCHOR_MACRO[0]],
     [1.75, 0.798],
@@ -677,7 +689,7 @@ const DESKTOP_MOVE: Move = {
   ],
   ay: [
     [0.45, 0.4],
-    [0.6, 0.405],
+    [0.6, 0.418],
     [1.3, 0.495],
     [1.45, ANCHOR_MACRO[1]],
     [1.9, 0.49],
@@ -1044,6 +1056,8 @@ export type ShotOptions = {
   speakersX?: number;
   venueX?: number;
   ticketsX?: number;
+  /** Landscape: the hero's anchor x, so the grille clears the headline (measured). */
+  heroX?: number;
 };
 
 /** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
@@ -1055,9 +1069,12 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
   // screens the content column, and with it everything, sits nearer the middle).
   const sx = Math.min(0.82, Math.max(vx + 0.085, opts.speakersTba ? (opts.speakersX ?? SPEAKERS_X) : 0));
   const tx = opts.ticketsX === undefined ? TICKETS_X : Math.min(0.62, Math.max(0.5, opts.ticketsX));
-  const measured = vx !== VENUE_X || sx !== SPEAKERS_X || tx !== TICKETS_X;
+  const hx = opts.heroX === undefined ? HERO_X : Math.min(0.74, Math.max(HERO_X, opts.heroX));
+  const measured = vx !== VENUE_X || sx !== SPEAKERS_X || tx !== TICKETS_X || hx !== HERO_X;
   if (opts.speakersTba && !measured) return DESKTOP_SHOTS;
-  const ax = measured ? { ax: [...DESKTOP_MOVE.ax.filter(([j]) => j < 2.9), ...stageAx(sx, vx, tx)] } : {};
+  const ax = measured
+    ? { ax: [...heroAx(hx), ...DESKTOP_MOVE.ax.filter(([j]) => j > 0.6 && j < 2.9), ...stageAx(sx, vx, tx)] }
+    : {};
   return moveShots(DESKTOP_MOVE, opts.speakersTba ? ax : { ...DESKTOP_ANNOUNCED, ...ax });
 }
 

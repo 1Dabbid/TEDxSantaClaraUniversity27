@@ -2,7 +2,7 @@ import { Vector3 } from 'three';
 import { MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
 import { STAND_BASE, STAND_TOP_Y } from './layout';
 import { clearance } from './clearance';
-import { measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
+import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, nearCorner, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
 
@@ -106,6 +106,7 @@ function contentShots(L: Layout, over: Partial<ShotOptions>): ResolvedShot[] {
     speakersX: measureSpeakersX(),
     venueX: measureVenueX(),
     ticketsX: measureTicketsX(),
+    heroX: measureHeroX(),
   };
   return resolveShots(shotsFor(portrait, { ...base, ...over }));
 }
