@@ -273,6 +273,12 @@ export const MOTION_LIMITS = {
   stillRun: 3,
   /** Landscape: the subject stays right of this fraction of the width (the copy column is left of it). */
   copyX: 0.55,
+  /**
+   * Landscape, Venue: the location card at the top right starts near this fraction of the width
+   * while `cardJ` is on screen; the subject stays left of it (and right of `copyX`).
+   */
+  cardX: 0.67,
+  cardJ: [4.15, 4.8] as const,
 };
 
 /** World position of an aim point. */
@@ -305,7 +311,8 @@ function trackOrigin(aim: Aim, out = new Vector3()): Vector3 {
  *   from early in the pin
  * - schedule J 3..4: a column on the left 40%
  * - venue J 4..5: heading top left, details across the lower half over a scrim,
- *   a location card with a small map at the top right (over the upper beam)
+ *   a location card with a small map at the top right (over the upper beam,
+ *   left edge near 68%): the anchor drifts to about 62% while it is up
  * - tickets J 5..6: text left, big numerals at the bottom
  */
 
@@ -488,14 +495,21 @@ const DESKTOP_MOVE: Move = {
     [5.85, 0.52],
     [6.0, 0.52],
   ],
-  // The barrel's slide right in the macro unwinds evenly (about 1.8% of the width per step).
+  // The barrel's slide right in the macro unwinds evenly (about 1.8% of the width per step). Over
+  // Venue the subject drifts a little left, between the heading and the location card at the top
+  // right (its left edge near 68% of the width); the eased keys keep
+  // the drift under half a percent of the width per step. It does not come back: over Tickets the
+  // stage rises into the upper right on its own, and a drift back there would double the move.
   ax: [
     [1.66, ANCHOR_MACRO[0]],
     [1.9, 0.77],
     [2.2, 0.725],
     [2.55, 0.69],
     [2.9, 0.68],
-    [6.0, 0.68],
+    [3.6, 0.68],
+    [4.15, 0.627],
+    [4.8, 0.625],
+    [6.0, 0.64],
   ],
   ay: [
     [1.66, ANCHOR_MACRO[1]],

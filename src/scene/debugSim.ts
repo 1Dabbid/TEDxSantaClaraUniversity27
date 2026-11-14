@@ -516,7 +516,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
         frame.yMin = Math.min(frame.yMin, q.y);
         frame.yMax = Math.max(frame.yMax, q.y);
         const out = q.z <= 0 || q.x < 0.02 || q.x > 0.98 || q.y < 0.02 || q.y > 0.98;
-        const copy = !portrait && q.x < MOTION_LIMITS.copyX;
+        const onCard = f.J >= MOTION_LIMITS.cardJ[0] && f.J <= MOTION_LIMITS.cardJ[1] && q.x > MOTION_LIMITS.cardX;
+        const copy = !portrait && (q.x < MOTION_LIMITS.copyX || onCard);
         if (out || copy) frameFails++;
       }
     }
