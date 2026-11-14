@@ -237,12 +237,14 @@ export function stepRig(
   const py = rig.py.step(input.pointerY, 1.1, dt);
   const dx = Math.sin(t * 0.21) * 0.6 + Math.sin(t * 0.13 + 1.7) * 0.4;
   const dy = Math.sin(t * 0.17 + 0.6) * 0.6 + Math.sin(t * 0.07) * 0.4;
-  const breathe = 1 + Math.sin(t * 0.31) * 0.004 * (s.drift > 0 ? 1 : 0);
+  // Breathing along the view axis: 0.4% of the distance close in, capped at 5 mm on the wide stage
+  // shots, so the idle float stays a few millimetres however far the camera has pulled back.
+  const breathe = s.drift > 0 ? Math.sin(t * 0.31) * Math.min(0.004 * dist, 0.005) : 0;
   const ox = dx * s.drift + px * s.parallax;
   const oy = dy * s.drift * 0.6 + py * s.parallax * 0.6;
   out.position
     .copy(target)
-    .addScaledVector(out.fwd, -dist * breathe)
+    .addScaledVector(out.fwd, -(dist + breathe))
     .addScaledVector(out.right, ox)
     .addScaledVector(out.camUp, oy);
   out.target.copy(target);
