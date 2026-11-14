@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
-import { MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
-import { STAND_BASE, STAND_TOP_Y } from './layout';
+import { DESCENT_J, MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
+import { MIC, MIC_MATRIX_INV, STAND_BASE, STAND_TOP_Y } from './layout';
 import { clearance } from './clearance';
 import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, nearCorner, stepRig, type LookOut } from './rig';
@@ -16,7 +16,8 @@ import { SECTION_IDS, type SectionId } from './scrollState';
  * continuous move (choreography.ts): per filmstrip step (J 0.125) the turn of
  * the view direction and the move of the subject on screen against
  * MOTION_LIMITS, spikes against the median of each beat, runs of steps
- * without camera change, a monotonic orbit / distance / rise, and the subject
+ * without camera change, a monotonic orbit / distance / rise, the macro's
+ * descent down the engraved band through the Theme pin, and the subject
  * in frame and clear of the copy column. It returns the numbers and a list of
  * failures. `metrics()` reports the older path figures (heading range,
  * anchor drift, roll across the pull back, light steps, fast-scroll rates).
@@ -607,6 +608,45 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       height: reversals(2.75, 6.0, (f) => f.pos[1], 1e-3),
     };
     for (const [k, v] of Object.entries(mono)) if (v.reversals) fails.push(`monotonic ${k}: ${v.reversals} reversals (first at J${v.firstAtJ})`);
+    // The descent down the engraved band through the Theme pin (DESCENT_J): the aim's height along the
+    // barrel axis (mic space) falls at every filmstrip step, never rises on the fine sweep, never
+    // passes more than descentMax of the frame's height in one step, and covers descentMin of the band.
+    const along = (f: Frame) => new Vector3(...f.tgt).applyMatrix4(MIC_MATRIX_INV).y;
+    const frameH = (f: Frame) => 2 * new Vector3(...f.pos).distanceTo(new Vector3(...f.tgt)) * Math.tan((f.fov * Math.PI) / 360);
+    const bandH = MIC.bandY[1] - MIC.bandY[0];
+    const dSteps: { J: number; downMm: number; frameShare: number }[] = [];
+    for (let J = DESCENT_J[0]; J <= DESCENT_J[1] - step + 1e-9; J += step) {
+      const f0 = at(J);
+      const f1 = at(J + step);
+      if (!f0 || !f1) continue;
+      const down = along(f0) - along(f1);
+      dSteps.push({ J: +J.toFixed(3), downMm: +(down * 1000).toFixed(2), frameShare: +(down / frameH(f0)).toFixed(3) });
+    }
+    let dBack = 0;
+    let dBackAt = -1;
+    let dLow = Infinity;
+    for (const f of F) {
+      if (f.J < DESCENT_J[0] || f.J > DESCENT_J[1]) continue;
+      const a = along(f);
+      if (a > dLow + MOTION_LIMITS.descentBackTol && a - dLow > dBack) [dBack, dBackAt] = [a - dLow, f.J];
+      dLow = Math.min(dLow, a);
+    }
+    const dTotal = along(at(DESCENT_J[0])) - along(at(DESCENT_J[1]));
+    const descent = {
+      fromMm: +(along(at(DESCENT_J[0])) * 1000).toFixed(1),
+      toMm: +(along(at(DESCENT_J[1])) * 1000).toFixed(1),
+      bandShare: +(dTotal / bandH).toFixed(2),
+      minStepMm: dSteps.length ? Math.min(...dSteps.map((d) => d.downMm)) : 0,
+      maxFrameShare: dSteps.length ? Math.max(...dSteps.map((d) => d.frameShare)) : 0,
+      backMm: +(dBack * 1000).toFixed(2),
+      steps: dSteps,
+    };
+    if (dBackAt >= 0) fails.push(`descent: the aim goes back up the barrel by ${descent.backMm} mm at J${dBackAt}`);
+    for (const d of dSteps) {
+      if (d.downMm < MOTION_LIMITS.descentStepMin * 1000) fails.push(`descent: ${d.downMm} mm down the barrel at J${d.J} (still or reversing; at least ${MOTION_LIMITS.descentStepMin * 1000} mm)`);
+      if (d.frameShare > MOTION_LIMITS.descentMax) fails.push(`descent: ${(d.frameShare * 100).toFixed(0)}% of the frame's height at J${d.J} > ${MOTION_LIMITS.descentMax * 100}%`);
+    }
+    if (dTotal < MOTION_LIMITS.descentMin * bandH) fails.push(`descent: covers ${(descent.bandShare * 100).toFixed(0)}% of the engraved band < ${MOTION_LIMITS.descentMin * 100}%`);
     // Frame and copy column: the head and the tail of the mic from J 2.1 (the whole microphone has
     // arrived), the stand's foot from 2.45 (the pull out has landed on the stage).
     const frame = { xMin: 1, xMax: 0, yMin: 1, yMax: 0, xMinAtJ: 0 };
@@ -705,6 +745,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       perBeat,
       liveness: { longestStillRun: longest, endsAtJ: longestAt },
       monotonic: mono,
+      descent,
       orbitDeg: { at2_5: orbitAt(2.5), at3: orbitAt(3), at4: orbitAt(4), at5: orbitAt(5), at6: orbitAt(6) },
       heightM: { at2_5: +at(2.5).pos[1].toFixed(2), at4: +at(4).pos[1].toFixed(2), at5: +at(5).pos[1].toFixed(2), at6: +at(6).pos[1].toFixed(2) },
       frame: { ...frame, xMin: +frame.xMin.toFixed(3), xMax: +frame.xMax.toFixed(3), yMin: +frame.yMin.toFixed(3), yMax: +frame.yMax.toFixed(3) },
