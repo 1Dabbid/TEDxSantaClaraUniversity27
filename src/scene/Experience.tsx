@@ -444,7 +444,7 @@ export default function Experience({
     const lit = fs.seatsLit.step(litTarget, 0.12, dt);
     shared.uSeatLit.value = lit < 0.01 ? 0 : lit;
     shared.uHouseFill.value = lit / HOUSE_SEATS;
-    shared.uSeatGain.value = 1 / Math.max(look.exposure, 0.55);
+    shared.uSeatGain.value = 1 / Math.max(look.exposure, 0.75);
     const s = o.s;
     const target = o.target;
     const dist = o.dist;

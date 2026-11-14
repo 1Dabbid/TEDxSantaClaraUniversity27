@@ -55,7 +55,7 @@ export const shared = {
   /**
    * House lights (houseLights.ts): seats lit so far (continuous, 0 .. the house's seat count), the
    * fraction of the house lit (the warm fill the lit seats give the room), and the gain on both
-   * (keeps the lit house at its level while the stage light goes down at the end of Tickets).
+   * (holds the lit house up a little longer than the stage while the light goes down after Tickets).
    */
   uSeatLit: { value: 0 },
   uHouseFill: { value: 0 },
