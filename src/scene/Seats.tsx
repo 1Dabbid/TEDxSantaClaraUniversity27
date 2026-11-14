@@ -1,10 +1,20 @@
 'use client';
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from 'react';
-import { BoxGeometry, BufferGeometry, Color, Matrix4, Quaternion, Shape, Vector3, type InstancedMesh } from 'three';
+import {
+  BoxGeometry,
+  BufferGeometry,
+  Color,
+  InstancedBufferAttribute,
+  Matrix4,
+  Quaternion,
+  Shape,
+  Vector3,
+  type InstancedMesh,
+} from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bevelledExtrude, roundedBox } from './geometry';
-import { SEATING, rowHeight } from './layout';
+import { SEATING, rowHeight, seatOrder } from './layout';
 import { createSeatMaterial } from './materials';
 
 /** One upholstered auditorium seat, facing -Z, origin on the floor. */
@@ -39,12 +49,21 @@ function seatGeometry(detail: number) {
   return merged;
 }
 
-/** 100 seats in curved rows with a centre aisle, facing the stage. */
+/**
+ * 100 seats in curved rows with a centre aisle, facing the stage. Each seat
+ * carries its place in the lighting order (`aSeat`: a sweep across the house,
+ * left to right as seen from the back, layout.ts SEAT_ORDER), and lights up when the
+ * Tickets counter reaches it (houseLights.ts; the material does the light).
+ */
 export default function Seats({ quality }: { quality: 'high' | 'low' }) {
   const ref = useRef<InstancedMesh>(null);
-  const geometry = useMemo(() => seatGeometry(quality === 'high' ? 4 : 2), [quality]);
-  const material = useMemo(() => createSeatMaterial(), []);
   const count = SEATING.rows.reduce((a, b) => a + b, 0);
+  const geometry = useMemo(() => {
+    const g = seatGeometry(quality === 'high' ? 4 : 2);
+    g.setAttribute('aSeat', new InstancedBufferAttribute(new Float32Array(count), 1));
+    return g;
+  }, [quality, count]);
+  const material = useMemo(() => createSeatMaterial(), []);
 
   useLayoutEffect(() => {
     const mesh = ref.current;
@@ -55,6 +74,7 @@ export default function Seats({ quality }: { quality: 'high' | 'low' }) {
     const p = new Vector3();
     const one = new Vector3(1, 1, 1);
     const c = new Color();
+    const order = geometry.getAttribute('aSeat') as InstancedBufferAttribute;
     let i = 0;
     SEATING.rows.forEach((n, row) => {
       const R = SEATING.firstRadius + row * SEATING.rowGap;
@@ -69,10 +89,12 @@ export default function Seats({ quality }: { quality: 'high' | 'low' }) {
           mesh.setMatrixAt(i, m);
           const v = 0.9 + ((i * 7919) % 13) / 13 * 0.2;
           mesh.setColorAt(i, c.setScalar(v));
+          order.setX(i, seatOrder(row, side, k));
           i++;
         }
       }
     });
+    order.needsUpdate = true;
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();

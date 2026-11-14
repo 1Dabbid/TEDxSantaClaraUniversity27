@@ -11,7 +11,20 @@ import {
   type Texture,
   type WebGLProgramParametersWithUniforms,
 } from 'three';
-import { ENGRAVING_START_PHI, HOUSE_AZ, MIC, PIVOT_WORLD, RUG_RADIUS, SEATING, SPOT_HEIGHT, STAGE_EDGE_Z, STAND_BASE } from './layout';
+import {
+  ENGRAVING_START_PHI,
+  HOUSE_AZ,
+  MIC,
+  PIVOT_WORLD,
+  ROW_STARTS,
+  RUG_RADIUS,
+  SEATING,
+  SEAT_ORDER,
+  SPOT_HEIGHT,
+  STAGE_EDGE_Z,
+  STAND_BASE,
+  rowHeight,
+} from './layout';
 import { EMPTY_MASK } from './textures';
 
 /** Tangent of the overhead spot's nominal half-angle (the beam just covers the rug). */
@@ -40,6 +53,14 @@ export const shared = {
   /** Volumetric cone multiplier (floor reflection of the beam). */
   uCone: { value: 1 },
   uTime: { value: 0 },
+  /**
+   * House lights (houseLights.ts): seats lit so far (continuous, 0 .. the house's seat count), the
+   * fraction of the house lit (the warm fill the lit seats give the room), and the gain on both
+   * (holds the lit house up a little longer than the stage while the light goes down after Tickets).
+   */
+  uSeatLit: { value: 0 },
+  uHouseFill: { value: 0 },
+  uSeatGain: { value: 1 },
   /** Planar floor reflection (high tier): texture, world -> texture matrix, 0..1 strength. */
   uRefl: { value: EMPTY_MASK as Texture },
   uReflMat: { value: new Matrix4() },
@@ -84,6 +105,7 @@ vec3 bumpNormal(vec3 n, vec3 viewPos, float h, float scale) {
 const GLSL_LIGHT = /* glsl */ `
 uniform vec3 uKeyPos; uniform vec3 uKeyColor; uniform vec3 uRimDir; uniform vec3 uRimColor;
 uniform float uSpot; uniform float uCone; uniform float uTime;
+uniform float uSeatLit; uniform float uHouseFill; uniform float uSeatGain;
 vec3 toWorld(vec3 nView) { return normalize((vec4(nView, 0.0) * viewMatrix).xyz); }
 // Thin, hard rim: grazing normals that face the rim light.
 float rimTerm(vec3 nView, float width) {
@@ -139,6 +161,83 @@ float glitter(vec2 sp, vec3 n, vec3 T, vec3 B, float density, float tilt, float 
   vec2 j = vec2(hash12(gc + 3.1 + lvl), hash12(gc + 5.7 - lvl)) * 2.0 - 1.0;
   vec3 ng = normalize(n + (j.x * T + j.y * B) * tilt);
   return on * keyGlint(toWorld(ng), sharp);
+}
+`;
+
+
+/**
+ * The seat lamps (house lights, houseLights.ts). Each seat has its own small warm downlight hung
+ * SEAT_LAMP.height above its tread, with two soft lobes: one straight over the arched top of the back
+ * (SEAT_LAMP.crown, behind the seat's centre), which the back of the house sees as a warm arc along
+ * every lit crown, and one a little forward over the cushion (SEAT_LAMP.back < 0: towards the stage),
+ * which lights the cushion, the arm tops and the stage-facing front of the back, so a view from the
+ * stage sees the lit seats themselves, not only their tops. The forward lobe leaves a soft warm spill
+ * on the tread in front of the row (and a glow on the riser behind the row in front). A seat comes up
+ * like a tungsten lamp on a dimmer: deep amber while it warms, warm white at full.
+ */
+export const SEAT_LAMP = { height: 1.5, back: -0.18, crown: 0.2 };
+const GLSL_SEAT_LAMP = /* glsl */ `
+vec3 seatLampTint(float lv) { return mix(vec3(1.0, 0.36, 0.1), vec3(1.0, 0.68, 0.4), lv); }
+// Light of one seat lamp (at lampW) on a surface at p with world normal n: soft cone, inverse square,
+// wrapped so the light falls over the top of a form onto both of its faces.
+float seatLamp(vec3 lampW, vec3 p, vec3 n, float wrap) {
+  vec3 Lv = lampW - p;
+  float d2 = dot(Lv, Lv);
+  vec3 L = Lv * inversesqrt(d2);
+  float cone = pow(max(L.y, 0.0), 18.0);
+  float nl = clamp((dot(n, L) + wrap) / (1.0 + wrap), 0.0, 1.0);
+  return cone * nl / (d2 + 0.12);
+}
+`;
+
+/**
+ * Spill of the seat lamps on the house (house space; high tier only). Each row's lamps are taken
+ * together as one soft line of light along the row, lit as far along it as its seats are (blended
+ * from seat to seat), so the treads warm in soft strips rather than tiles; the two rows either side
+ * of the point. Pixels away from the seating (the stage, the aisle floor in front) leave early.
+ */
+const SEAT_SPILL_RX = [SEATING.firstRadius + SEAT_LAMP.back - 1.2, SEATING.firstRadius + (SEATING.rows.length - 1) * SEATING.rowGap + 1.2];
+const GLSL_SEAT_POOLS = /* glsl */ `
+const int SEAT_ROWS = ${SEATING.rows.length};
+const float ROW_N[SEAT_ROWS] = float[SEAT_ROWS](${SEATING.rows.map((n) => n.toFixed(1)).join(', ')});
+const float ROW_START[SEAT_ROWS] = float[SEAT_ROWS](${ROW_STARTS.map((n) => n.toFixed(1)).join(', ')});
+const float ROW_Y[SEAT_ROWS] = float[SEAT_ROWS](${SEATING.rows.map((_, k) => rowHeight(k).toFixed(4)).join(', ')});
+const float SEAT_ORD[${SEAT_ORDER.length}] = float[${SEAT_ORDER.length}](${SEAT_ORDER.map((n) => n.toFixed(1)).join(', ')});
+float seatLv(int k, float side, float q) {
+  int i = int(ROW_START[k] + (side < 0.0 ? 0.0 : ROW_N[k] * 0.5) + q);
+  return clamp(uSeatLit - SEAT_ORD[i], 0.0, 1.0);
+}
+vec3 rowSpill(int k, float ang, float side, float R, vec2 rN, vec3 p, vec3 n) {
+  float Rk = ${SEATING.firstRadius.toFixed(3)} + float(k) * ${SEATING.rowGap.toFixed(3)};
+  float half_ = ROW_N[k] * 0.5;
+  // Continuous seat index from the aisle along this row.
+  float u = (abs(ang) * Rk - ${(SEATING.aisle / 2).toFixed(4)}) / ${SEATING.pitch.toFixed(4)} - 0.5;
+  float q0 = clamp(floor(u), 0.0, half_ - 1.0);
+  float q1 = min(q0 + 1.0, half_ - 1.0);
+  float lv = mix(seatLv(k, side, q0), seatLv(k, side, q1), smoothstep(0.0, 1.0, clamp(u - q0, 0.0, 1.0)));
+  lv *= smoothstep(-1.1, -0.3, u) * (1.0 - smoothstep(half_ - 0.8, half_ + 0.2, u));
+  if (lv <= 0.0) return vec3(0.0);
+  float dr = Rk + ${SEAT_LAMP.back.toFixed(3)} - R;
+  float dy = ROW_Y[k] + ${SEAT_LAMP.height.toFixed(3)} - p.y;
+  float d2 = dr * dr + dy * dy;
+  float ir = inversesqrt(d2);
+  float Ly = dy * ir;
+  float nl = clamp(n.y * Ly + dot(n.xz, rN) * dr * ir, 0.0, 1.0);
+  return seatLampTint(lv) * (lv * sqrt(lv) * Ly * Ly * Ly * Ly * nl / (d2 + 0.7));
+}
+vec3 seatPools(vec3 p, vec3 n) {
+  vec2 d = p.xz - vec2(${SEATING.centre.x.toFixed(4)}, ${SEATING.centre.z.toFixed(4)});
+  float R = length(d);
+  if (R < ${SEAT_SPILL_RX[0].toFixed(3)} || R > ${SEAT_SPILL_RX[1].toFixed(3)}) return vec3(0.0);
+  vec2 rN = d / R;
+  float ang = atan(d.x, d.y);
+  float side = ang < 0.0 ? -1.0 : 1.0;
+  float t = (R - ${(SEATING.firstRadius + SEAT_LAMP.back).toFixed(3)}) / ${SEATING.rowGap.toFixed(3)};
+  int k0 = int(clamp(floor(t), 0.0, float(SEAT_ROWS - 1)));
+  int k1 = min(k0 + 1, SEAT_ROWS - 1);
+  vec3 sum = rowSpill(k0, ang, side, R, rN, p, n);
+  if (k1 != k0) sum += rowSpill(k1, ang, side, R, rN, p, n);
+  return sum;
 }
 `;
 
@@ -610,6 +709,11 @@ export function createFloorMaterial(cheap: boolean) {
       totalEmissiveRadiance += diffuseColor.rgb * vec3(1.0, 0.93, 0.85) * spill * outside * uSpot * 3.2;
       // Red bounce spilling off the rug onto the polished deck.
       totalEmissiveRadiance += vec3(0.8, 0.0, 0.021) * (exp(-dr / 0.3) * 0.075 + exp(-dr / 0.9) * 0.02) * outside * uSpot;
+      // The house lights (houseLights.ts) spill warm onto the downstage deck as the room fills.
+      if (uHouseFill > 0.0) {
+        float hz = p.x * ${Math.sin(HOUSE_AZ).toFixed(4)} + p.y * ${Math.cos(HOUSE_AZ).toFixed(4)};
+        totalEmissiveRadiance += vec3(1.0, 0.52, 0.26) * smoothstep(0.5, ${STAGE_EDGE_Z.toFixed(1)}, hz) * outside * uHouseFill * uSeatGain * 0.006;
+      }
       // Scuffs: faint, continuous drag marks that break the reflection up (no thresholds, so no
       // islands or speckles for the bloom to find).
       float sc1 = vnoise(vec2(dot(p, vec2(0.8, 0.6)) * 3.0, dot(p, vec2(-0.6, 0.8)) * 40.0));
@@ -756,6 +860,13 @@ export function createCurtainMaterial() {
       totalEmissiveRadiance += vec3(1.0, 0.82, 0.78) * (lam * lam * 0.055 + sheen * 0.025) * pool * uSpot;
       // Faint red bounce from the rug on the bottom of the folds.
       totalEmissiveRadiance += vec3(0.8, 0.0, 0.021) * lam * exp(-vWorld.y / 0.7) * exp(-pow(vWorld.x / 2.0, 2.0)) * uSpot * 0.03;
+      // The house lights (houseLights.ts) wash the folds warm from the auditorium as the room fills:
+      // the end of the Tickets count lights the back of the stage as well as the seats.
+      if (uHouseFill > 0.0) {
+        float lamH = clamp(dot(Nw, normalize(vec3(${(Math.sin(HOUSE_AZ) * 0.8).toFixed(3)}, 0.35, ${(Math.cos(HOUSE_AZ) * 0.8).toFixed(3)}))), 0.0, 1.0);
+        float washH = smoothstep(0.0, 0.8, vWorld.y) * (1.0 - smoothstep(1.2, 5.0, vWorld.y)) * exp(-pow((vWorld.x + 2.5) / 7.0, 2.0));
+        totalEmissiveRadiance += vec3(1.0, 0.5, 0.24) * (0.35 + 0.65 * lamH) * washH * uHouseFill * uSeatGain * 0.022;
+      }
       diffuseColor.rgb *= 0.6 + 0.4 * lam;`,
   });
   return m;
@@ -766,9 +877,9 @@ export function createCurtainMaterial() {
  * stage front's top edge catches the spot's spill; warm pools from the aisle
  * step lights sit on the tread fronts either side of the centre aisle.
  */
-export function createVenueMaterial() {
+export function createVenueMaterial(cheap = false) {
   const m = new MeshStandardMaterial({ color: lin('#0b0b0c'), metalness: 0, roughness: 0.9, envMapIntensity: 0 });
-  patch(m, 'venue', {
+  patch(m, `venue-${cheap ? 1 : 0}`, {
     noEnv: true,
     uniforms: {
       uSeat: { value: [SEATING.centre.x, SEATING.centre.z, SEATING.firstRadius, SEATING.rowGap] },
@@ -776,7 +887,7 @@ export function createVenueMaterial() {
       uEdgeZ: { value: STAGE_EDGE_Z },
       uHouse: { value: [Math.cos(HOUSE_AZ), Math.sin(HOUSE_AZ)] },
     },
-    fragmentHead: 'uniform vec4 uSeat; uniform float uAisle; uniform float uEdgeZ; uniform vec2 uHouse;',
+    fragmentHead: `uniform vec4 uSeat; uniform float uAisle; uniform float uEdgeZ; uniform vec2 uHouse;\n${cheap ? '' : `${GLSL_SEAT_LAMP}\n${GLSL_SEAT_POOLS}`}`,
     fragmentBody: `
       // House space: the house is turned by HOUSE_AZ about the stage centre (layout.ts).
       vec3 nW0 = toWorld(normal);
@@ -794,12 +905,20 @@ export function createVenueMaterial() {
       float s = atan(d.x, d.y) * R;
       float fr = fract((R - uSeat.z + uSeat.w * 0.5) / uSeat.w);
       float pool = exp(-pow(abs(s) - uAisle * 0.5 + 0.08, 2.0) / 0.03) * exp(-fr * 7.0) * step(0.5, nW.y) * step(uEdgeZ + 0.3, hW.z);
-      totalEmissiveRadiance += vec3(1.0, 0.6, 0.3) * pool * 0.012;`,
+      totalEmissiveRadiance += vec3(1.0, 0.6, 0.3) * pool * 0.012;
+      // The seat lamps (high tier): a soft amber spill on the treads along each lit row and a glow on the
+      // riser behind the row in front. Both tiers: the room's warm fill as the house fills.
+      ${cheap ? '' : 'if (uSeatLit > 0.0) totalEmissiveRadiance += seatPools(hW, nW) * vec3(1.0, 0.7, 0.5) * uSeatGain * 0.06;'}
+      totalEmissiveRadiance += vec3(1.0, 0.6, 0.32) * uHouseFill * uSeatGain * 0.0026 * step(uEdgeZ + 0.3, hW.z);`,
   });
   return m;
 }
 
-/** Upholstered seats: fabric noise, a thin warm highlight along the curved top edge, cool rim. */
+/**
+ * Upholstered seats: fabric noise, a thin warm highlight along the curved top edge, cool rim; and
+ * each seat's own lamp (GLSL_SEAT_LAMP) once the Tickets counter has reached it: the seat's level
+ * comes from its place in the lighting order (the instanced `aSeat`) against uSeatLit.
+ */
 export function createSeatMaterial() {
   const m = new MeshStandardMaterial({ color: lin('#1e1e22'), metalness: 0.0, roughness: 0.6, envMapIntensity: 0.2 });
   patch(m, 'seat', {
@@ -807,9 +926,21 @@ export function createSeatMaterial() {
       uEdge: { value: lin('#ffd9c4').multiplyScalar(0.34) },
       uSeatRim: { value: lin('#b8c4dc').multiplyScalar(0.08) },
     },
-    fragmentHead: 'uniform vec3 uEdge; uniform vec3 uSeatRim;',
+    vertexHead: 'attribute float aSeat; uniform float uSeatLit; varying vec3 vLampW; varying vec3 vCrownW; varying float vSeatLv;',
+    vertexBody: `
+      #ifdef USE_INSTANCING
+        // Each seat's own world position (the shared patch writes the mesh's, without the instance).
+        vWorld = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xyz;
+        vLampW = (modelMatrix * instanceMatrix * vec4(0.0, ${SEAT_LAMP.height.toFixed(3)}, ${SEAT_LAMP.back.toFixed(3)}, 1.0)).xyz;
+        vCrownW = (modelMatrix * instanceMatrix * vec4(0.0, ${SEAT_LAMP.height.toFixed(3)}, ${SEAT_LAMP.crown.toFixed(3)}, 1.0)).xyz;
+      #else
+        vLampW = (modelMatrix * vec4(0.0, ${SEAT_LAMP.height.toFixed(3)}, ${SEAT_LAMP.back.toFixed(3)}, 1.0)).xyz;
+        vCrownW = (modelMatrix * vec4(0.0, ${SEAT_LAMP.height.toFixed(3)}, ${SEAT_LAMP.crown.toFixed(3)}, 1.0)).xyz;
+      #endif
+      vSeatLv = clamp(uSeatLit - aSeat, 0.0, 1.0);`,
+    fragmentHead: `uniform vec3 uEdge; uniform vec3 uSeatRim; varying vec3 vLampW; varying vec3 vCrownW; varying float vSeatLv;\n${GLSL_SEAT_LAMP}`,
     fragmentBody: `
-      float n = vnoise(vWorld.xy * 260.0 + vWorld.zx * 190.0);
+      float n = vnoise(vObj.xy * 260.0 + vObj.zx * 190.0);
       diffuseColor.rgb *= 0.85 + 0.3 * n;
       vec3 Nw = toWorld(normal);
       float ndv = clamp(dot(normal, normalize(vViewPosition)), 0.0, 1.0);
@@ -820,6 +951,25 @@ export function createSeatMaterial() {
       float near = 1.0 - smoothstep(4.0, 11.0, length(cameraPosition - vWorld));
       totalEmissiveRadiance += uEdge * edge * (0.5 + 0.5 * pow(1.0 - ndv, 2.0)) * (0.7 + 0.6 * near) * uSpot;
       totalEmissiveRadiance += uSeatRim * smoothstep(0.72, 0.97, 1.0 - ndv) * smoothstep(0.0, 0.8, Nw.y) * (0.6 + 0.8 * near);
+      // The seat's own lamp: a dimmer curve (slow at the bottom, like a filament), the light on the
+      // fabric (a warm mid-grey nap: the seats only show their colour once lit), a velvet sheen at
+      // grazing angles, and the arched top of the back catching it as a bright edge.
+      float lv = vSeatLv;
+      if (lv > 0.0) {
+        float dim = lv * sqrt(lv) * uSeatGain;
+        vec3 tint = seatLampTint(lv);
+        float sheen = pow(1.0 - ndv, 3.0);
+        float crown = smoothstep(0.5, 0.92, Nw.y) * smoothstep(0.93, 1.06, vObj.y);
+        vec3 nap = vec3(0.062, 0.048, 0.041) * (0.85 + 0.3 * n);
+        // The crown lobe: the arched top of the back as a bright edge, a little on the fabric round it.
+        float lc = seatLamp(vCrownW, vWorld, Nw, 0.2);
+        // The forward lobe, wrapped well round (the cushion and the front of the back face it at an
+        // angle): the fabric itself and a velvet sheen at grazing angles, as the stage sees them.
+        float lf = seatLamp(vLampW, vWorld, Nw, 0.4);
+        totalEmissiveRadiance += tint * dim * (lc * (nap + sheen * 0.04 + crown * 0.3) + lf * (nap * 2.2 + sheen * 0.06));
+      }
+      // The room's fill: the more seats are lit, the more the house reads as a warm room.
+      totalEmissiveRadiance += vec3(1.0, 0.62, 0.34) * uHouseFill * uSeatGain * 0.006 * (0.55 + 0.45 * Nw.y);
       diffuseColor.rgb *= 0.75;`,
   });
   return m;

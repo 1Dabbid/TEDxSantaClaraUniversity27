@@ -112,13 +112,15 @@ function lampMaterial() {
  * step lights mark the centre aisle: just enough to read as a small
  * auditorium in the dark.
  */
-export default function Venue() {
+export default function Venue({ quality }: { quality: 'high' | 'low' }) {
   const geo = useMemo(() => ({ house: houseGeometry(), lamps: aisleLights() }), []);
   const mats = useMemo(() => {
-    const house: MeshStandardMaterial = createVenueMaterial();
+    // The low tier leaves out the seat lamps' spill on the treads (seatPools: per-pixel work over the
+    // whole house); the seats themselves and the room's warm fill still light with the counter.
+    const house: MeshStandardMaterial = createVenueMaterial(quality === 'low');
     house.side = DoubleSide;
     return { house, lamps: lampMaterial() };
-  }, []);
+  }, [quality]);
   useEffect(
     () => () => {
       geo.house.dispose();

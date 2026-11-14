@@ -38,6 +38,13 @@ export const look = {
   warm: 0,
   /** Turn of the mic's barrel sleeve (engraving, knurl) about its axis, radians. */
   turn: 0,
+  /**
+   * How squarely the camera looks out at the house from the stage side, 0..1 (Experience, from the
+   * camera's heading; never authored in the shot keys). Thins the overhead beam, its dust and the haze
+   * card, which would otherwise hang between a camera on the stage and the seats as a grey veil, so a
+   * speaker's-eye view sees the lit house clearly. 0 for every view that looks at the stage.
+   */
+  houseView: 0,
   /** True while the scene is fully faded out (rendering can stop). */
   dark: false,
 };

@@ -14,6 +14,7 @@ import {
   Vector3,
   WebGLRenderTarget,
   UnsignedByteType,
+  type DirectionalLight,
   type Group,
   type Mesh,
   type PerspectiveCamera,
@@ -38,15 +39,27 @@ import { look } from './look';
 import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
+import { houseLights, houseSeatsLit } from './houseLights';
+import { STRIKE, createStrike, stepStrike } from './lampStrike';
+import { Damped } from './damp';
 import Microphone from './Microphone';
 import Post from './Post';
 import Seats from './Seats';
 import Stage, { reflected } from './Stage';
 import Venue from './Venue';
 import { SECTION_IDS, scrollState, type SectionId } from './scrollState';
-import { HOUSE_AZ, MIC_AXIS } from './layout';
+import { HOUSE_AZ, HOUSE_SEATS, MIC_AXIS } from './layout';
 
 const Y_AXIS = new Vector3(0, 1, 0);
+/** The house axis (world, horizontal): from the stage out towards the seats (layout.ts, HOUSE_AZ). */
+const HOUSE_DIR_X = Math.sin(HOUSE_AZ);
+const HOUSE_DIR_Z = Math.cos(HOUSE_AZ);
+/** Cool backlight from high upstage (rims the stand and the tops of the seat backs seen from the rear). */
+const BACKLIGHT = 0.3;
+const smoothstep = (a: number, b: number, x: number) => {
+  const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+};
 
 type Tier = 'high' | 'low';
 
@@ -97,6 +110,11 @@ function createState() {
     perfBad: 0,
     darkFrames: 0,
     lastMeasure: 0,
+    strike: createStrike(),
+    /** House seats lit (damped: each seat warms up like a filament). */
+    seatsLit: new Damped(0),
+    /** look.houseView, damped (a camera turning to face the house thins the beam over a moment). */
+    houseView: new Damped(0),
   };
 }
 type FrameState = ReturnType<typeof createState>;
@@ -126,7 +144,8 @@ function motesGeometry() {
 
 /**
  * The whole scene: microphone on its stand, the red rug under an overhead
- * spot, 100 seats, one camera driven by scroll. Rendering is owned by <Post>.
+ * spot, 100 seats (lit one by one with the Tickets counter), one camera
+ * driven by scroll. Rendering is owned by <Post>.
  */
 export default function Experience({
   quality,
@@ -365,6 +384,7 @@ export default function Experience({
     [fx],
   );
   const hazeRef = useRef<Mesh>(null);
+  const backRef = useRef<DirectionalLight>(null);
   const motesRef = useRef<Group>(null);
 
   const adaptive = searchFlag('perf') !== 'off';
@@ -372,7 +392,8 @@ export default function Experience({
   const snap = debug && searchFlag('snap') !== null;
   const envOffset = debug ? Number(searchFlag('envrot') ?? 0) : 0;
   const keyMul = debug ? Number(searchFlag('keymul') ?? 1) : 1;
-  // Debug: ?scene-debug=1&cam=px,py,pz,tx,ty,tz overrides the camera (world metres).
+  // Debug: ?scene-debug=1&cam=px,py,pz,tx,ty,tz[,fov] puts the camera at that point looking at that
+  // target (world metres; rig.ts), whatever the scroll; the look still follows the journey.
   const camOverride = debug ? (searchFlag('cam')?.split(',').map(Number) ?? null) : null;
 
   useFrame((state, rawDt) => {
@@ -411,6 +432,43 @@ export default function Experience({
         }
       }
     }
+    // The overhead spot strikes as the camera draws back off the microphone (lampStrike.ts): dimmer before,
+    // one soft overshoot of the spot, its shaft, the haze it catches and the bloom, then a settle on
+    // the clock. Rides on the authored look, never written back into the rig.
+    // Debug: window.__strikeAge = seconds holds the strike at that age (filmstrips of the strike).
+    const hold = debug ? (window as unknown as { __strikeAge?: number }).__strikeAge : undefined;
+    const st = stepStrike(fs.strike, o.Js, t, dt, typeof hold === 'number' ? hold : undefined);
+    const pre = 1 - (1 - st.on) * smoothstep(1.7, 1.95, o.Js);
+    if (pre < 1 || st.env > 0) {
+      look.spot *= pre * (1 + STRIKE.spot * st.env);
+      look.cone *= pre * (1 + STRIKE.cone * st.env);
+      look.bloom *= 1 + STRIKE.bloom * st.env;
+      look.haze += STRIKE.haze * st.env;
+    }
+    // Looking out at the house from the stage (look.houseView): the beam, its dust and the haze card
+    // thin out so they do not veil the seats. From the camera's heading and focus distance (a wide view,
+    // never a close-up of the microphone), so it needs no shot keys.
+    const hx = o.fwd.x * HOUSE_DIR_X + o.fwd.z * HOUSE_DIR_Z;
+    const hxz = Math.hypot(o.fwd.x, o.fwd.z);
+    const facing = hxz > 1e-4 ? smoothstep(0.3, 0.8, hx / hxz) * smoothstep(1.0, 2.5, o.dist) : 0;
+    look.houseView = fs.houseView.step(facing, 0.4, dt);
+    if (look.houseView > 0.001) {
+      look.cone *= 1 - 0.92 * look.houseView;
+      look.haze *= 1 - 0.92 * look.houseView;
+    }
+    // The cool backlight rims the seat backs for a camera behind the house; seen from the stage it
+    // would light their fronts a flat blue-grey over the warm seat lamps.
+    if (backRef.current) backRef.current.intensity = BACKLIGHT * (1 - 0.75 * look.houseView);
+    // The house lights follow the Tickets seat counter (houseLights.ts). Without a running counter the
+    // house fills on its own over the end of Tickets. Never before Tickets (a phone's counter plays
+    // once and stays full), and held up while the stage light goes down after it, then out with it.
+    const cap = houseLights.capacity;
+    const count = houseLights.count ?? smoothstep(5.55, 5.9, o.Js) * cap;
+    const litTarget = houseSeatsLit(count, cap, HOUSE_SEATS) * smoothstep(4.7, 5.0, o.Js);
+    const lit = fs.seatsLit.step(litTarget, 0.12, dt);
+    shared.uSeatLit.value = lit < 0.01 ? 0 : lit;
+    shared.uHouseFill.value = lit / HOUSE_SEATS;
+    shared.uSeatGain.value = 1 / Math.max(look.exposure, 0.75);
     const s = o.s;
     const target = o.target;
     const dist = o.dist;
@@ -525,7 +583,7 @@ export default function Experience({
     if (debug) {
       const w = window as unknown as { __scene?: Record<string, unknown> };
       const prev = (w.__scene?.frame as number) ?? 0;
-      w.__scene = { J, frame: prev + 1, exposure: look.exposure, step, tier, post, dt: rawDt, scene };
+      w.__scene = { J, frame: prev + 1, exposure: look.exposure, step, tier, post, dt: rawDt, scene, strike: st.env, lampOn: st.on, seatsLit: lit, houseView: look.houseView };
     }
 
     // Adaptive quality: step down when sustained frame time is poor.
@@ -561,13 +619,13 @@ export default function Experience({
         color="#f6f2ec"
       />
       {/* Cool backlight from high upstage: rims the stand and the tops of the seat backs seen from the rear */}
-      <directionalLight position={[0, 7, -8]} intensity={0.3} color="#dfe5f2" onUpdate={reflected} />
+      <directionalLight ref={backRef} position={[0, 7, -8]} intensity={BACKLIGHT} color="#dfe5f2" onUpdate={reflected} />
       <Microphone quality={tier} engraving={engraving} />
       <Stage quality={tier} />
       {/* The house faces the end of the camera's orbit (layout.ts, HOUSE_AZ). */}
       <group rotation={[0, HOUSE_AZ, 0]}>
         <Seats quality={tier} />
-        <Venue />
+        <Venue quality={tier} />
       </group>
       <mesh ref={hazeRef} geometry={fx.hazeGeo} material={fx.haze} renderOrder={4} frustumCulled={false} />
       <group ref={motesRef}>
