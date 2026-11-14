@@ -314,8 +314,9 @@ function connectorGeometry(high: boolean) {
 }
 
 /**
- * Cable from the connector down the back of the stand, over the base, across
- * the pile to the rug's edge, down its lip and off upstage right on the deck.
+ * Cable from the connector down the back of the stand, over the base, in a
+ * loose S across the pile to the rug's edge, down its lip and off upstage
+ * right on the deck.
  */
 function cableGeometry(high: boolean) {
   const sx = STAND_BASE.x;
@@ -342,9 +343,11 @@ function cableGeometry(high: boolean) {
     along(0.08, fy + 0.034, 0.01),
     along(0.142, fy + 0.019),
     along(0.2, fy + 0.0045),
-    along(0.42, fy + 0.0035, 0.05),
-    along(0.78, fy + 0.0035, -0.04),
-    along(1.15, fy + 0.0035, 0.06),
+    // A loose S across the pile: an asymmetric line on the round rug, so the orbit reads as a turn.
+    along(0.36, fy + 0.0035, 0.12),
+    along(0.62, fy + 0.0035, 0.2),
+    along(0.9, fy + 0.0035, -0.06),
+    along(1.15, fy + 0.0035, -0.12),
     along(rugEdge - 0.02, fy + 0.0035, 0.03),
     along(rugEdge + 0.01, 0.009, 0.03),
     along(rugEdge + 0.06, 0.0035, 0.035),
