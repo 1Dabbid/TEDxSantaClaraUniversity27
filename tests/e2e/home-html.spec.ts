@@ -25,13 +25,16 @@ test.describe('home page without JavaScript', () => {
     expect(html).not.toMatch(/%2Fimages%2Fsponsors%2F/);
   });
 
-  test('header nav anchors point at ids that exist', async ({ page }) => {
+  test('in-page anchors point at ids that exist; header links are pages', async ({ page }) => {
     await page.goto('/');
+    // The header always opens the topic pages (rule at the top of src/components/nav.ts).
+    const headerHrefs = await page.locator('header nav a[href]').evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
+    expect(headerHrefs.filter((h) => h.includes('#'))).toEqual([]);
     const hrefs = await page
       .locator('header nav a[href], footer nav a[href], #main a[href^="#"], #main a[href^="/#"]')
       .evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
     const anchors = [...new Set(hrefs.filter((h) => h.includes('#')))];
-    expect(anchors.length).toBeGreaterThan(3);
+    expect(anchors.length).toBeGreaterThan(2);
     const missing = await page.evaluate(
       (list) => list.filter((h) => !document.getElementById(decodeURIComponent(h.split('#')[1] ?? ''))),
       anchors,

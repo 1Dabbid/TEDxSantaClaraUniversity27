@@ -1,7 +1,7 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { publishedSpeakers, themeCopy } from './helpers';
+import { publishedSpeakers, themeCopy, topicRoutes } from './helpers';
 
 /*
  * The home page follows content state: what is not announced is said once,
@@ -12,7 +12,6 @@ import { publishedSpeakers, themeCopy } from './helpers';
 const yaml = (rel: string) => readFileSync(join(process.cwd(), rel), 'utf8');
 const flag = (text: string, key: string) => new RegExp(`^${key}:\\s*true\\s*$`, 'm').test(text);
 
-const schedulePublished = () => flag(yaml('content/schedule.yaml'), 'published');
 const anyTeamName = () =>
   readdirSync(join(process.cwd(), 'content/team'))
     .filter((f) => f.endsWith('.yaml'))
@@ -37,11 +36,12 @@ test.describe('home page follows content state (no JavaScript)', () => {
     }
   });
 
-  test('Schedule and Team appear in the nav only when they have content', async ({ page }) => {
+  test('the nav links Schedule always and Team only when its page exists', async ({ page }) => {
     await page.goto('/');
     const nav = page.locator('nav[aria-label="Primary"]');
-    await expect(nav.getByRole('link', { name: 'Schedule' })).toHaveCount(schedulePublished() ? 1 : 0);
-    await expect(nav.getByRole('link', { name: 'Team' })).toHaveCount(anyTeamName() ? 1 : 0);
+    // /schedule always exists (it states the date); /team whenever the Team switch is on.
+    await expect(nav.getByRole('link', { name: 'Schedule' })).toHaveAttribute('href', '/schedule');
+    await expect(nav.getByRole('link', { name: 'Team' })).toHaveCount(topicRoutes().includes('/team') ? 1 : 0);
     await expect(page.locator('[data-section="team"]')).toHaveCount(anyTeamName() ? 1 : 0);
     // The schedule section always exists (the 3D journey keys off it).
     await expect(page.locator('[data-section="schedule"]')).toHaveCount(1);

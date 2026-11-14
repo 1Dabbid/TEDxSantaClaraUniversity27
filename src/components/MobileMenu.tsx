@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useId, useRef, useState, type CSSProperties } from 'react';
 import { lenisRef } from '@/motion/lenisRef';
 import { MotionToggle } from './ui/MotionToggle';
-import { headerItems, navCurrent, navHref, type NavItem as Item } from './nav-links';
+import { navCurrent, type NavItem as Item } from './nav-links';
 
 /**
  * Accessible disclosure menu for small screens. Escape closes; focus returns to
@@ -14,13 +14,12 @@ import { headerItems, navCurrent, navHref, type NavItem as Item } from './nav-li
  * (the panel covers the page). With motion on, the panel wipes down and the
  * clauses rise in (CSS, see globals.css).
  */
-export function MobileMenu({ items: allItems, dateLong, dateISO }: { items: readonly Item[]; dateLong: string; dateISO: string }) {
+export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[]; dateLong: string; dateISO: string }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const toggleRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const pathname = usePathname();
-  const items = headerItems(allItems, pathname);
 
   const close = useCallback((returnFocus = true) => {
     setOpen(false);
@@ -131,7 +130,7 @@ export function MobileMenu({ items: allItems, dateLong, dateISO }: { items: read
                 className="border-b border-white/10"
               >
                 <Link
-                  href={navHref(item, pathname)}
+                  href={item.href}
                   aria-current={navCurrent(item, pathname)}
                   onClick={() => close(false)}
                   className="menu-link flex min-h-14 items-baseline gap-4 py-5 text-3xl font-semibold tracking-tight"

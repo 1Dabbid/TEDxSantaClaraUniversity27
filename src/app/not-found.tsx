@@ -22,15 +22,15 @@ export const metadata: Metadata = {
  * brings the site's header and footer itself.
  */
 export default async function NotFound() {
-  // Never point at a section that is not rendered.
+  // Topic links open their pages, like the header (rule at the top of components/nav.ts); never one that is a 404.
   const [settings, faq] = await Promise.all([getSettings(), getFaq()]);
   const showFaq = settings.sections.showFaq && faq.length > 0;
   const links = [
-    { href: '/#speakers', label: 'Speakers' },
+    { href: '/speakers', label: 'Speakers' },
     { href: '/#tickets', label: 'Tickets' },
-    { href: '/#venue', label: 'Venue' },
+    { href: '/venue', label: 'Venue' },
     { href: '/partners', label: 'Partners' },
-    ...(showFaq ? [{ href: '/#faq', label: 'FAQ' }] : []),
+    ...(showFaq ? [{ href: '/faq', label: 'FAQ' }] : []),
   ];
   return (
     <SiteShell>
@@ -63,7 +63,7 @@ export default async function NotFound() {
                 Back to the event
               </Button>
               {showFaq ? (
-                <Button href="/#faq" variant="ghost" size="lg">
+                <Button href="/faq" variant="ghost" size="lg">
                   Read the FAQ
                 </Button>
               ) : null}
