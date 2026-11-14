@@ -132,14 +132,51 @@ export const ROW_STARTS: readonly number[] = SEATING.rows.map((_, r) => SEATING.
 /** Total seats in the house. */
 export const HOUSE_SEATS = SEATING.rows.reduce((a, b) => a + b, 0);
 /**
- * A seat's place in the lighting order (0-based): row by row from the front,
- * and along each row from house -X to +X (left to right seen from the back of
- * the house, where the Tickets camera stands). `side` is -1 / +1 (which half
- * of the row), `k` the seat's index in its half counted from the aisle.
+ * A seat's place in the build order (Seats.tsx): row by row from the front,
+ * the -X half of each row then the +X half, each half counted from the aisle.
+ * `side` is -1 / +1 (which half of the row), `k` the seat's index in its half.
  */
+export function seatIndex(row: number, side: number, k: number): number {
+  return ROW_STARTS[row] + (side < 0 ? 0 : SEATING.rows[row] / 2) + k;
+}
+
+/** A seat's angle about the seating centre (house space, radians, + towards house +X). */
+function seatAngle(row: number, side: number, k: number): number {
+  return (side * (SEATING.aisle / 2 + SEATING.pitch * (k + 0.5))) / (SEATING.firstRadius + row * SEATING.rowGap);
+}
+
+/**
+ * The lighting order sweeps across the whole house, left to right as seen from
+ * the back (house -X to +X, where the Tickets camera stands), like the ruler
+ * under the counter printing its ticks, with the front rows a little ahead of
+ * the back ones (SEAT_SWEEP_ROW of the sweep). So every row the camera shows
+ * keeps lighting up for the whole count, 1 to 100, on any screen.
+ */
+export const SEAT_SWEEP_ROW = 0.22;
+/** Build index (seatIndex) -> place in the lighting order (0-based; a permutation of 0 .. HOUSE_SEATS - 1). */
+export const SEAT_ORDER: readonly number[] = (() => {
+  const seats: { i: number; key: number }[] = [];
+  const aMax = seatAngle(0, 1, SEATING.rows[0] / 2 - 1);
+  SEATING.rows.forEach((n, row) => {
+    for (let side = -1; side <= 1; side += 2) {
+      for (let k = 0; k < n / 2; k++) {
+        const u = (seatAngle(row, side, k) + aMax) / (2 * aMax);
+        seats.push({ i: seatIndex(row, side, k), key: u * (1 - SEAT_SWEEP_ROW) + (row / (SEATING.rows.length - 1)) * SEAT_SWEEP_ROW });
+      }
+    }
+  });
+  const order = new Array<number>(seats.length);
+  seats
+    .slice()
+    .sort((a, b) => a.key - b.key || a.i - b.i)
+    .forEach((s, rank) => {
+      order[s.i] = rank;
+    });
+  return order;
+})();
+/** A seat's place in the lighting order (0-based): seat n + 1 lights when the counter reaches n + 1. */
 export function seatOrder(row: number, side: number, k: number): number {
-  const half = SEATING.rows[row] / 2;
-  return ROW_STARTS[row] + (side < 0 ? half - 1 - k : half + k);
+  return SEAT_ORDER[seatIndex(row, side, k)];
 }
 
 /** Front edge of the raised stage (z), the audience floor below it, and each seating row's tread height (raked). */

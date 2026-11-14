@@ -4,8 +4,9 @@
  * Over the pull out the spot's level is authored by scroll (choreography.ts,
  * the pull looks). Until the stage arrives the lamp burns at STRIKE.pre of
  * that level (a glow in the haze while the microphone is on its own, so the
- * stage is never dark). When the camera has drawn back far enough for the
- * stage to appear (STRIKE.at on the smoothed journey), the lamp "strikes": it
+ * stage is never dark). When the camera draws back off the microphone
+ * (STRIKE.at on the smoothed journey, a mic close-up on the lit curtain just
+ * before the stage floor comes into frame), the lamp "strikes": it
  * comes up to full with one soft overshoot of the spot, the shaft, the haze it
  * catches and the bloom, then settles onto the authored level, on the clock
  * (about a second), so it feels like hardware rather than a scroll curve.
@@ -13,14 +14,16 @@
  * Photosensitivity: a single rise and settle, never repeated faster than
  * STRIKE.refractory (a strike at most every few seconds, far under three
  * flashes a second); no flicker; the overshoot is a fraction of the authored
- * level (the beam is a small, soft part of the frame).
+ * level (the beam is a small, soft part of the frame). Crossing the reveal
+ * again inside that time brings the lamp back up slowly (STRIKE.settle, no
+ * overshoot), so wiggling the scroll round the reveal never makes it twitch.
  *
  * Re-arms only once the camera is back before STRIKE.rearm (scrolling back up
  * past the reveal), so it plays again on the next way down. A page that opens
  * past the reveal starts struck (no strike on load).
  */
 export const STRIKE = {
-  /** Smoothed journey position where the lamp strikes (the stage arrives in the pull out). */
+  /** Smoothed journey position where the lamp strikes (the camera draws back off the microphone). */
   at: 2.3,
   /** Back before this to re-arm. */
   rearm: 2.1,
@@ -47,7 +50,7 @@ const PEAK = (() => {
 })();
 
 export function createStrike() {
-  return { armed: false, started: false, t0: -1e9, last: -1e9, on: 1, env: 0 };
+  return { armed: false, started: false, t0: -1e9, last: -1e9, on: 1, env: 0, soft: false };
 }
 export type Strike = ReturnType<typeof createStrike>;
 
@@ -71,13 +74,16 @@ export function stepStrike(st: Strike, J: number, t: number, dt: number, holdAge
   if (J < STRIKE.rearm) st.armed = true;
   if (st.armed && J >= STRIKE.at) {
     st.armed = false;
-    if (t - st.last >= STRIKE.refractory) {
+    // Inside the lockout: no strike, and the lamp comes up slowly instead of with the strike's snap.
+    st.soft = t - st.last < STRIKE.refractory;
+    if (!st.soft) {
       st.t0 = t;
       st.last = t;
     }
   }
   const target = st.armed ? STRIKE.pre : 1;
-  st.on += (target - st.on) * (1 - Math.exp(-dt / (target > st.on ? STRIKE.rise : STRIKE.dim)));
+  const tau = target > st.on ? (st.soft ? STRIKE.settle : STRIKE.rise) : STRIKE.dim;
+  st.on += (target - st.on) * (1 - Math.exp(-dt / tau));
   const a = t - st.t0;
   if (a < 0 || a > STRIKE.settle * 8) st.env = 0;
   else {

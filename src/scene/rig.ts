@@ -119,7 +119,7 @@ export type RigInput = {
   pointerY: number;
   /** Jump straight to the shot (debug snapshots). */
   snap: boolean;
-  /** Optional camera override [px,py,pz,tx,ty,tz] (debug). */
+  /** Optional camera override [px,py,pz,tx,ty,tz] or [px,py,pz,tx,ty,tz,fov] (debug). */
   camOverride?: number[] | null;
   /** Viewport width / height (near-plane corner distance). */
   aspect?: number;
@@ -142,10 +142,22 @@ export function stepRig(
   if (J < 0) rig.J.snap(0);
   out.Js = rig.J.value;
   const co = input.camOverride;
-  if (co && co.length === 6) {
+  if (co && co.length >= 6 && co.every(Number.isFinite)) {
+    // The rig places the camera at pivot + dir * exp(logDist), so the override sets those too (not
+    // only pos and target): the camera really stands at the given point. Centred on screen (no lens
+    // shift), no drift or parallax; an optional seventh value is the vertical fov in degrees.
     s.pos.set(co[0], co[1], co[2]);
     s.target.set(co[3], co[4], co[5]);
+    s.dir.subVectors(s.pos, s.target);
+    s.logDist = Math.log(Math.max(1e-3, s.dir.length()));
+    s.dir.normalize();
     s.up.set(0, 1, 0);
+    s.roll = 0;
+    s.shiftX = 0.5;
+    s.shiftY = 0.5;
+    s.drift = 0;
+    s.parallax = 0;
+    if (co.length >= 7) s.fov = co[6];
   }
 
   // Position: critically damped. Look-at: under-damped (overshoot + settle).

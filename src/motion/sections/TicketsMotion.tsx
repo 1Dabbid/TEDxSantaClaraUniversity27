@@ -1,6 +1,6 @@
 'use client';
 
-import { houseLights } from '@/scene/houseLights';
+import { counterSeats, houseLights } from '@/scene/houseLights';
 import { useSectionMotion, type MotionKit } from '../useSectionMotion';
 import { belowFold, COMPACT, FULL, maskText, moment, scrubbable } from './kit';
 
@@ -24,7 +24,10 @@ const STEP = 0.05; // timeline seconds between two ticks
  *   status is read, not performed).
  * - The 3D house lights up with the counter: every update writes the number
  *   shown to `houseLights` (src/scene/houseLights.ts), and the scene lights
- *   seat n when the counter reaches n. Scrubbing back un-lights them.
+ *   seat n when the counter reaches n. Scrubbing back un-lights them. The
+ *   scrub window (top 80% to top 40%) runs while the camera's slow rise over
+ *   the back rows has the seats in frame and the stage light is still up, so
+ *   the count is seen in the room.
  *
  * Touch / small screens: the same timeline, played once in 1.6s when the ruler
  * enters. Nothing is hidden unless it is still below the fold at setup.
@@ -76,8 +79,8 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
         onUpdate: () => {
           const p = Math.min(1, tl.progress() / 0.94);
           setCount(1 + (seats - 1) * p);
-          // The house: nothing lit before the count starts, seat 1 warming up over the first step.
-          houseLights.count = p > 0 ? (seats - 1) * p + Math.min(1, p * (seats - 1)) : 0;
+          // The house: nothing lit before the count starts (houseLights.ts).
+          houseLights.count = counterSeats(p, seats);
         },
       });
       if (dash) tl.fromTo(dash, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 1.4, ease: 'power3.inOut' }, 0);
@@ -96,7 +99,7 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       });
 
       if (full) {
-        ScrollTrigger.create({ trigger: ruler, start: 'top 92%', end: 'top 40%', scrub: 0.9, animation: tl });
+        ScrollTrigger.create({ trigger: ruler, start: 'top 80%', end: 'top 40%', scrub: 0.9, animation: tl });
       } else {
         ScrollTrigger.create({
           trigger: ruler,

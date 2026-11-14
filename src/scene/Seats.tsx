@@ -51,8 +51,8 @@ function seatGeometry(detail: number) {
 
 /**
  * 100 seats in curved rows with a centre aisle, facing the stage. Each seat
- * carries its place in the lighting order (`aSeat`: row by row from the front,
- * left to right as seen from the back of the house), and lights up when the
+ * carries its place in the lighting order (`aSeat`: a sweep across the house,
+ * left to right as seen from the back, layout.ts SEAT_ORDER), and lights up when the
  * Tickets counter reaches it (houseLights.ts; the material does the light).
  */
 export default function Seats({ quality }: { quality: 'high' | 'low' }) {
