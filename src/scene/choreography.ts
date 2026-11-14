@@ -345,19 +345,23 @@ function trackOrigin(aim: Aim, out = new Vector3()): Vector3 {
 /* ------------------------------------------------------------------------- */
 
 /**
- * Where the page puts its copy (desktop 1440x900; phones in brackets), which
- * the anchor (about 68% across) keeps clear of:
+ * Where the page puts its copy (desktop 1440x900), which the subject keeps
+ * clear of (the audit checks it against the real copy boxes at every width):
  * - hero 0..0.55 (scroll 0 lands near J 0.45): the text column covers the left 60%
  * - theme J 0.8..2.02: headline phrases left / centre, the right 42% open for the engraving
- * - speakers J 2..3: heading top left (left 45%), a glass panel along the
- *   bottom (x 2-72%, y 72-96%; it has its own backing, the rug may pass behind
- *   it); when speakers are announced, a strip of cards along the lower edge
- *   from early in the pin
+ * - speakers J 2..3: heading top left, a glass panel along the bottom (at most
+ *   60% of the width on large screens); the subject sits right of it; when
+ *   speakers are announced, a strip of cards along the lower edge
  * - schedule J 3..4: a column on the left 40%
- * - venue J 4..5: heading top left, details across the lower half over a scrim,
- *   a location card with a small map at the top right (over the upper beam,
- *   left edge near 68%): the anchor drifts to about 62% while it is up
- * - tickets J 5..6: text left, big numerals at the bottom
+ * - venue J 4..5: heading top left, a location plate on its own dark ground at
+ *   the top right, then a full-width row of facts: the subject rides in the
+ *   gutter between the facts' text and the plate (measured)
+ * - tickets J 5..6: heading left, ticket details right (the subject in the gap
+ *   between them, measured), big numerals at the bottom
+ *
+ * Phones: the copy runs the full width and scrolls through the whole height;
+ * the subject sits small in the upper middle, and the band veil takes it down
+ * while a section's opening lines pass it.
  */
 
 const DARK = { exposure: 0, drift: 0, parallax: 0, key: 0, spot: 0, cone: 1, vignette: 0.8 };
