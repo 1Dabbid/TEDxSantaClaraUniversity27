@@ -205,7 +205,7 @@ export function Speakers({ speakers, settings }: { speakers: Speaker[]; settings
           ) : (
             <div data-speakers-track className="speakers-track mt-14 sm:mt-16">
               <div
-                className={`speakers-panel grid grid-cols-1 gap-10 p-6 sm:p-8 md:grid-cols-2 md:gap-12 ${glass}`}
+                className={`speakers-panel grid grid-cols-1 gap-10 p-6 sm:p-8 md:grid-cols-2 md:gap-12 lg:max-w-[min(100%,60vw)] ${glass}`}
               >
                 <div>
                   <h3 className="text-lg font-semibold tracking-tight">Hear it first</h3>

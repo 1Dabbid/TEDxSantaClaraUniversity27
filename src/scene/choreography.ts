@@ -18,22 +18,25 @@ import { SECTION_IDS } from './scrollState';
  * screen the move never quite stops.
  *
  * The move, beat by beat (landscape; portrait is the same move with smaller
- * amplitudes):
- * 1. Hero -> Theme: push in along the camera axis to the engraved band. In
- *    the macro the camera tracks slowly down the barrel and the barrel's
- *    sleeve turns a few degrees on its own axis (`turn`), so the engraved rows
- *    roll past; the object moves, the camera does not fly.
- * 2. Theme -> Speakers: one spiral pull out. The camera retreats along the
- *    mic while it starts to orbit (towards the grille side) and sinks to
- *    about mic height, so the stand, the rug and the beam arrive with
- *    parallax; the light comes up as the stage arrives.
+ * amplitudes and the subject small and high in the frame):
+ * 1. Hero -> Theme: one push in along the camera axis to the engraved band
+ *    (an even zoom profile, at most about 1.45x per filmstrip step). In the
+ *    macro the camera tracks slowly down the barrel and the barrel's sleeve
+ *    turns a few degrees on its own axis (`turn`), so the engraved rows roll
+ *    past; the object moves, the camera does not fly.
+ * 2. Theme -> Speakers: one spiral pull out over the whole of Speakers
+ *    (J 1.6 to 3.2). The camera retreats along the mic while it starts to
+ *    orbit (towards the grille side) and sinks to about mic height, so the
+ *    stand, the rug and the beam arrive with parallax. The light follows the
+ *    reveal (keyed by the distance): the spot already glows in the haze while
+ *    the whole microphone is still on its own, so the stage is never dark.
  * 3. Speakers -> Schedule -> Venue: the same orbit continues in the same
- *    direction, slowly, while the camera rises steadily: low and heroic at
- *    Speakers (the beam towering), a high crane view down on the rug at the
- *    end of Venue. Schedule's light beat is the beam's colour temperature
- *    going from warm to cool as the programme passes (`warm`).
- * 4. Venue -> Tickets: still the same orbit, now pulling back and up over the
- *    seats into the wide house view.
+ *    direction, slowly, while the camera rises steadily from mic height,
+ *    looking slightly up, to a crane view down on the rug at the end of Venue.
+ *    Schedule's light beat is the beam's colour temperature going from warm
+ *    to cool as the programme passes (`warm`).
+ * 4. Venue -> Tickets: still the same orbit, now drawing back and up over the
+ *    seats into the wide house view; the key and rim stay on the microphone.
  * 5. After Tickets: the lights go down; the move eases to a stop in the dark.
  * 6. Idle: with the page at rest the frame still breathes (a few millimetres
  *    of camera float, the dust and the haze in the beam). The static tier
@@ -42,10 +45,12 @@ import { SECTION_IDS } from './scrollState';
  * The camera is held on a sphere round the subject: an aim point (`aim`,
  * held at the screen anchor), a distance (`dist`), an orbit angle (`orbit`,
  * degrees round the vertical, 0 = the hero's heading VIEW_AZ) and an
- * elevation (`elev`, degrees). The camera path is written as a few keys per
- * channel (see `track()` and the *_MOVE tables below) and the shot list is
- * sampled from them at an even spacing, so the speed of the move is decided
- * in one place and stays even across section boundaries.
+ * elevation (`elev`, degrees). The whole move is written as a few keys per
+ * channel (the *_MOVE tables below) and the shot list is sampled from them at
+ * an even spacing, so the speed of the move is decided in one place and stays
+ * even across section boundaries. Where the subject sits across the width over
+ * Speakers, Venue and Tickets is measured from the page layout
+ * (contentLayout.ts), so it keeps clear of the copy at every desktop width.
  *
  * When you edit the move, keep to the rules the debug simulator checks
  * (`__sceneSim.motion()` with ?scene-debug=1; it prints pass / fail):
@@ -53,17 +58,21 @@ import { SECTION_IDS } from './scrollState';
  *   the subject only grows; from Speakers to the end of Tickets the camera
  *   only rises;
  * - per filmstrip step (2.5% of the Theme..Tickets journey, J 0.125) the
- *   view direction turns by at most MOTION_LIMITS.viewDeg and the subject
- *   moves by at most MOTION_LIMITS.screen of the frame width, with no single
- *   step more than about twice the median step of its beat (no stop-start at
- *   section boundaries: the channels are monotone cubics, velocity continuous);
+ *   view direction turns by at most MOTION_LIMITS.viewDeg, the subject moves
+ *   by at most MOTION_LIMITS.screen of the frame and the scale changes by at
+ *   most MOTION_LIMITS.zoom (log of the distance), with no single step more
+ *   than MOTION_LIMITS.spike times the median step of its beat and no sudden
+ *   change of speed between neighbouring steps (MOTION_LIMITS.accel,
+ *   zoomAccel): the channels are monotone cubics, velocity continuous;
  * - no run of more than MOTION_LIMITS.stillRun steps without camera change
  *   while a 3D section is on screen;
- * - the subject stays clear of the copy column (landscape: right of
- *   MOTION_LIMITS.copyX of the width) and inside the frame;
- * - light changes ride on the move (they come up after the framing has
- *   arrived, never in one step), and nothing bright passes behind body copy
- *   (the veils: scrim, scrimEdge, band, shade).
+ * - the subject stays inside the frame and, given the copy boxes of the page
+ *   at each step (the audit script collects them), clear of every line of
+ *   text and every panel (landscape), or behind headings, buttons and panels
+ *   only briefly or under the band veil (portrait);
+ * - light changes ride on the move (never in one step), and nothing bright
+ *   passes behind body copy (the veils: scrim, scrimEdge, band, shade; the
+ *   rendered frames are checked for the contrast behind the copy).
  *
  * Journey coordinate `J`: continuous over the home page; section k (in
  * SECTION_IDS order) spans [k, k+1) and the fraction is how far the viewport
@@ -314,8 +323,6 @@ export const MOTION_LIMITS = {
   frameFootFrom: 3.25,
   /** While a 3D section is on screen, at most this many consecutive steps without camera change. */
   stillRun: 3,
-  /** Landscape, without measured copy boxes: the subject stays right of this fraction of the width (the copy column is left of it). */
-  copyX: 0.55,
 };
 
 /** World position of an aim point. */
@@ -733,7 +740,7 @@ const DESKTOP_MOVE: Move = {
 function stageAx(sx: number, vx: number, tx: number): [number, number][] {
   // The drift from Speakers to Venue at an even rate, eased in and out over a step or so.
   const a = sx - 0.008;
-  const b = vx + 0.012;
+  const b = vx + 0.004;
   return [
     [2.9, sx + 0.004],
     [3.0, sx],
@@ -741,11 +748,11 @@ function stageAx(sx: number, vx: number, tx: number): [number, number][] {
     [3.3, a + (b - a) * 0.12],
     [3.75, a + (b - a) * 0.88],
     [3.9, b],
-    [4.1, vx + 0.002],
+    [4.1, vx + 0.001],
     [4.85, vx],
     [4.95, vx + (tx - vx) * 0.1],
-    [5.4, vx + (tx - vx) * 0.9],
-    [5.5, tx],
+    [5.5, vx + (tx - vx) * 0.9],
+    [5.6, tx],
     [6.0, tx + 0.005],
   ];
 }
@@ -1040,7 +1047,7 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
   // Without a speakers panel (speakers announced: the card strip along the lower edge) the default holds.
   // Over Speakers the subject sits right of the panel, and well right of its Venue place (on wide
   // screens the content column, and with it everything, sits nearer the middle).
-  const sx = opts.speakersX === undefined || !opts.speakersTba ? SPEAKERS_X : Math.min(0.82, Math.max(vx + 0.085, opts.speakersX));
+  const sx = Math.min(0.82, Math.max(vx + 0.085, opts.speakersTba ? (opts.speakersX ?? SPEAKERS_X) : 0));
   const tx = opts.ticketsX === undefined ? TICKETS_X : Math.min(0.62, Math.max(0.5, opts.ticketsX));
   const measured = vx !== VENUE_X || sx !== SPEAKERS_X || tx !== TICKETS_X;
   if (opts.speakersTba && !measured) return DESKTOP_SHOTS;

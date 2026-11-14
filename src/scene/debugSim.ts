@@ -619,12 +619,10 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
         frame.yMin = Math.min(frame.yMin, q.y);
         frame.yMax = Math.max(frame.yMax, q.y);
         const out = q.z <= 0 || q.x < 0.02 || q.x > 0.98 || q.y < 0.02 || q.y > 0.98;
-        // Without measured copy boxes, the copy column's fixed fraction stands in for the layout.
-        const copy = !opts.copy && !portrait && q.x < MOTION_LIMITS.copyX;
-        if (out || copy) frameFails++;
+        if (out) frameFails++;
       }
     }
-    if (frameFails) fails.push(`frame/copy: ${frameFails} samples out of frame or over the copy column (xMin ${frame.xMin.toFixed(3)} at J${frame.xMinAtJ})`);
+    if (frameFails) fails.push(`frame: ${frameFails} samples out of frame (xMin ${frame.xMin.toFixed(3)} at J${frame.xMinAtJ})`);
     // Copy keep-out (real layout): the head, the barrel, the tail, points down the stand and its foot
     // must stay out of every line of text and every panel on screen, with `copyMarginPx` of air,
     // from the landing of the pull out on the stage (J 2.25: the whole subject is in frame) to the end

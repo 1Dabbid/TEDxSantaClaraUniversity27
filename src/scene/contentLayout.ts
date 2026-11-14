@@ -27,7 +27,7 @@ export function measureVenueX(): number | undefined {
   if (colRight < 0) return undefined;
   // The microphone's head and tail reach about 1.2% of the width right of the stand line.
   const hi = left - PANEL_AIR_PX - 0.012 * vw;
-  const lo = colRight + AIR_PX;
+  const lo = colRight + AIR_PX + 6;
   const x = lo <= hi ? lo : (lo + hi) / 2;
   return Math.round((x / vw) * 200) / 200;
 }
