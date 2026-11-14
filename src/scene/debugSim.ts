@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { DESCENT_J, MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
+import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
 import { MIC, MIC_MATRIX_INV, STAND_BASE, STAND_TOP_Y } from './layout';
 import { clearance } from './clearance';
 import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
@@ -609,7 +609,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     };
     for (const [k, v] of Object.entries(mono)) if (v.reversals) fails.push(`monotonic ${k}: ${v.reversals} reversals (first at J${v.firstAtJ})`);
     // The descent down the engraved band through the Theme pin (DESCENT_J): the aim's height along the
-    // barrel axis (mic space) falls at every filmstrip step, never rises on the fine sweep, never
+    // barrel axis (mic space) falls at every filmstrip step, never rises on the fine sweep (on to the end of the hold at the foot, DESCENT_HOLD_TO), never
     // passes more than descentMax of the frame's height in one step, and covers descentMin of the band.
     const along = (f: Frame) => new Vector3(...f.tgt).applyMatrix4(MIC_MATRIX_INV).y;
     const frameH = (f: Frame) => 2 * new Vector3(...f.pos).distanceTo(new Vector3(...f.tgt)) * Math.tan((f.fov * Math.PI) / 360);
@@ -626,7 +626,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     let dBackAt = -1;
     let dLow = Infinity;
     for (const f of F) {
-      if (f.J < DESCENT_J[0] || f.J > DESCENT_J[1]) continue;
+      // Through the hold at the foot as well: no drift back up while the pull out begins.
+      if (f.J < DESCENT_J[0] || f.J > DESCENT_HOLD_TO) continue;
       const a = along(f);
       if (a > dLow + MOTION_LIMITS.descentBackTol && a - dLow > dBack) [dBack, dBackAt] = [a - dLow, f.J];
       dLow = Math.min(dLow, a);
