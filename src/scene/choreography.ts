@@ -21,9 +21,11 @@ import { SECTION_IDS } from './scrollState';
  * amplitudes and the subject small and high in the frame):
  * 1. Hero -> Theme: one push in along the camera axis to the engraved band
  *    (an even zoom profile, at most about 1.45x per filmstrip step). In the
- *    macro the camera tracks slowly down the barrel and the barrel's sleeve
- *    turns a few degrees on its own axis (`turn`), so the engraved rows roll
- *    past; the object moves, the camera does not fly.
+ *    macro the camera travels down the engraved barrel through the whole
+ *    Theme pin (DESCENT), from the title row at the top of the band to the
+ *    closing title at its foot, so the fine print passes up the frame line by
+ *    line like a contract being read, while the sleeve turns a few degrees on
+ *    its own axis (`turn`) and the rows roll sideways past the raking light.
  * 2. Theme -> Speakers: one spiral pull out over the whole of Speakers
  *    (J 1.6 to 3.2). The camera retreats along the mic while it starts to
  *    orbit (towards the grille side) and sinks to about mic height, so the
@@ -66,6 +68,10 @@ import { SECTION_IDS } from './scrollState';
  *   zoomAccel): the channels are monotone cubics, velocity continuous;
  * - no run of more than MOTION_LIMITS.stillRun steps without camera change
  *   while a 3D section is on screen;
+ * - through the Theme pin (DESCENT_J) the macro descends the engraved band:
+ *   down the barrel axis at every step, never turning back, never still, at
+ *   most MOTION_LIMITS.descentMax of the frame's height per step, and over at
+ *   least MOTION_LIMITS.descentMin of the band in all;
  * - the subject stays inside the frame and, given the copy boxes of the page
  *   at each step (the audit script collects them), clear of every line of
  *   text and every panel (landscape), or behind headings, buttons and panels
@@ -323,6 +329,17 @@ export const MOTION_LIMITS = {
   frameFootFrom: 3.25,
   /** While a 3D section is on screen, at most this many consecutive steps without camera change. */
   stillRun: 3,
+  /**
+   * The descent down the engraved band through the Theme pin (DESCENT_J): the aim travels down the
+   * barrel axis at every step (at least `descentStepMin` metres, about a third of a line of the fine
+   * print, so it never reads as a hold), never back up by more than `descentBackTol` metres, by at
+   * most `descentMax` of the frame's height per step (the rows stay readable as they pass), and over
+   * at least `descentMin` of the band's height in all.
+   */
+  descentStepMin: 0.0006,
+  descentBackTol: 0.0001,
+  descentMax: 0.3,
+  descentMin: 0.5,
 };
 
 /** World position of an aim point. */
@@ -465,8 +482,12 @@ const PULL_STAND = { fov: 31, exposure: 1, dof: 0.22, drift: 0.005, parallax: 0.
  */
 export const DARK_FROM = 6.0;
 
-/** In the macro the barrel slides right so its engraved column clears the theme headline (left edge past ~58%). */
-const ANCHOR_MACRO: readonly [number, number] = [0.8, 0.5];
+/**
+ * In the macro the barrel slides right so its engraved column clears the theme headline (left edge past ~58%),
+ * but not so far that the lit half of the engraving runs off the right edge while the rows pass (each row
+ * should read whole, not cut mid-word).
+ */
+const ANCHOR_MACRO: readonly [number, number] = [0.765, 0.5];
 
 /* ------------------------------------------------------------------------- */
 /* The move: keys per channel                                                */
@@ -527,7 +548,8 @@ const PULL_PROFILE_PORTRAIT = [0.25, 0.4, 0.6, 0.8, 0.95, 1, 1, 1, 0.95, 0.8, 0.
 /**
  * The whole camera move, hero to the end of Tickets, one set of keys per channel:
  * - `push`: the push in (start, distances); then the macro holds its distance
- *   while it tracks down the barrel and the sleeve turns, until `pull.from`;
+ *   while it travels down the barrel (`mic`, DESCENT) and the sleeve turns,
+ *   until `pull.from`;
  * - `pull`: the spiral pull out (start, landing distance, speed profile); it
  *   lands at `pull.to` (derived) and `dist` continues from there, slowly, to
  *   the end: from the start of the pull out the distance never stops growing;
@@ -586,6 +608,45 @@ const TURN: Keys = [
   [2.25, -0.07],
 ];
 
+/**
+ * The descent down the engraved band (the aim's mic-space height, m; the band is 0.05..0.10, its
+ * top title row near 0.097 and its closing title near 0.054). From the end of the push in to the
+ * start of the pull out the aim travels down the barrel at an even pace (it gets going while the
+ * push in settles, and no step is more than about 1.4x another), never stopping and never turning
+ * back (DESCENT_J; `__sceneSim.motion()` measures it), so the engraved rows pass up the frame like
+ * a contract read from the top; at the foot of the band it slows to a creep, still downwards (no drift
+ * back up), while the pull out begins (to DESCENT_HOLD_TO, also checked), then slides back to the
+ * barrel's middle (SPINE) as the camera draws away. The creep keeps the view turning at an even rate
+ * into the pull out (a dead stop there reads as a jolt).
+ */
+export const DESCENT_J: readonly [number, number] = [1.05, 1.7];
+/** End of the creep at the foot of the band: from DESCENT_J[0] to here the aim never goes back up the barrel. */
+export const DESCENT_HOLD_TO = 1.95;
+const DESCENT: Keys = [
+  [0.5, 0.095],
+  [0.85, 0.0935],
+  [1.05, 0.0905],
+  [1.3, 0.0795],
+  [1.55, 0.0675],
+  [1.7, 0.0615],
+  [1.95, 0.0602],
+  [2.4, 0.095],
+];
+/**
+ * Phones: the same descent over a little more of the band (31 mm against about 29 on desktop), so the rows
+ * rise faster than the page scrolls and the camera's travel shows, not a texture moving with the copy.
+ */
+const DESCENT_PORTRAIT: Keys = [
+  [0.45, 0.1],
+  [0.85, 0.093],
+  [1.05, 0.0905],
+  [1.3, 0.0788],
+  [1.55, 0.0662],
+  [1.7, 0.0595],
+  [1.95, 0.0583],
+  [2.4, 0.095],
+];
+
 /*
  * Landscape. The hero holds, then one push in along the camera axis (J 0.5 to
  * 1.25) settles on the engraved band; the macro tracks down the barrel while
@@ -616,8 +677,9 @@ const VENUE_X = 0.64;
 const TICKETS_X = 0.56;
 
 const DESKTOP_MOVE: Move = {
-  push: { from: 0.45, d0: 0.4, d1: 0.066 },
-  pull: { from: 1.6, d0: 0.067, d1: 4.5, profile: PULL_PROFILE },
+  // The macro a little open (0.071 m), so the rows of the engraving fit across the frame as they pass.
+  push: { from: 0.45, d0: 0.4, d1: 0.071 },
+  pull: { from: 1.6, d0: 0.072, d1: 4.5, profile: PULL_PROFILE },
   // After the landing: the slow drift back over the stage beats, then the pull back over the seats
   // (capped so the microphone still reads at the wide end).
   dist: [
@@ -628,15 +690,11 @@ const DESKTOP_MOVE: Move = {
     [6.0, 14.4],
   ],
   micUntil: 2.4,
-  // The macro tracks a little way down the barrel; the pull out slides the aim back to the barrel's
-  // middle slowly, while the camera is already far enough away for it to read as part of the retreat.
-  mic: [
-    [0.5, 0.095],
-    [0.95, 0.09],
-    [1.3, 0.087],
-    [1.8, 0.082],
-    [2.4, 0.095],
-  ],
+  // The descent: through the Theme pin the camera travels down the engraved barrel, from the title
+  // row at the top of the band to the closing title at its foot, reading the fine print line by line
+  // while the sleeve turns. The pull out starts from the foot of the band; once the camera is far
+  // enough away for it to read as part of the retreat, the aim slides back to the barrel's middle.
+  mic: DESCENT,
   // The middle of the barrel glides from the anchor up to above a third of the height while the
   // stand and the rug come in below it, and settles back a little as the pull out lands, so the
   // stand shrinks about its middle and neither end of the subject travels far on screen; the aim
@@ -658,8 +716,10 @@ const DESKTOP_MOVE: Move = {
     [5.85, 0.52],
     [6.0, 0.52],
   ],
+  // The orbit and the sink set off a step early, while the descent slows at the foot of the band, so
+  // the turn builds up evenly into the pull out (the macro is a little open there).
   orbit: [
-    [1.6, 0],
+    [1.5, 0],
     [2.0, -0.6],
     [2.3, -2.5],
     [2.7, -7.2],
@@ -669,7 +729,7 @@ const DESKTOP_MOVE: Move = {
     [6.0, -60.5],
   ],
   elev: [
-    [1.6, TRACK_ELEV / DEG],
+    [1.5, TRACK_ELEV / DEG],
     [2.4, -1.2],
     [3.0, 1.5],
     [5.0, 16.5],
@@ -682,9 +742,9 @@ const DESKTOP_MOVE: Move = {
   // the heading and the ticket details (stageAx).
   ax: [
     ...heroAx(HERO_X),
-    [1.3, 0.79],
+    [1.3, 0.758],
     [1.45, ANCHOR_MACRO[0]],
-    [1.75, 0.798],
+    [1.75, 0.763],
     ...stageAx(SPEAKERS_X, VENUE_X, TICKETS_X),
   ],
   ay: [
@@ -718,7 +778,7 @@ const DESKTOP_MOVE: Move = {
       lk(1.6, MACRO, { kx: 2.0, ky: 1.6, kz: 0.3, dof: 0.7, motes: 0.8, scrim: 0.5 }),
     ],
     pull: [
-      lk(Math.log(0.067), MACRO, { kx: 2.0, ky: 1.6, kz: 0.3, dof: 0.7, motes: 0.8, scrim: 0.5 }),
+      lk(Math.log(0.072), MACRO, { kx: 2.0, ky: 1.6, kz: 0.3, dof: 0.7, motes: 0.8, scrim: 0.5 }),
       lk(Math.log(0.12), PULL_BARREL),
       lk(Math.log(0.3), PULL_MIC),
       lk(Math.log(0.7), PULL_WHOLE),
@@ -801,13 +861,7 @@ const PORTRAIT_MOVE: Move = {
     [6.0, 22.3],
   ],
   micUntil: 2.4,
-  mic: [
-    [0.45, 0.1],
-    [0.9, 0.09],
-    [1.25, 0.087],
-    [1.8, 0.082],
-    [2.4, 0.095],
-  ],
+  mic: DESCENT_PORTRAIT,
   barrelY: [
     [2.4, 0.4],
     [2.65, 0.36],
