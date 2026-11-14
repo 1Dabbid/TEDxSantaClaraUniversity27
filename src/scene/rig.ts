@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
 import { RIG, emptyShot, sampleShots, type ResolvedShot } from './choreography';
-import { Damped, DampedVec3, SpringVec3 } from './damp';
+import { Damped, DampedVec3, Spring, SpringVec3 } from './damp';
 import { clearance } from './clearance';
 import type { look as lookState } from './look';
 
@@ -25,6 +25,91 @@ export function nearCorner(near: number, fov: number, shiftX: number, shiftY: nu
   const kx = 1 + 2 * Math.abs(shiftX - 0.5);
   const ky = 1 + 2 * Math.abs(shiftY - 0.5);
   return near * Math.sqrt(1 + ty * ty * (ky * ky + (kx * aspect) ** 2));
+}
+
+const DEG = Math.PI / 180;
+
+/**
+ * The scene reacting to the visitor, layered on top of the authored move (the
+ * shot keys in choreography.ts never change for it):
+ *
+ * - Pointer (or device tilt, or a slow automatic sway on touch screens without
+ *   tilt) orbits the camera a little round the subject, so the subject keeps its
+ *   place on screen and the stage, the seats and the haze slide behind it like a
+ *   real space. The angle grows with the focus distance: a fraction of a degree
+ *   in the macro (which stays controlled), up to about four degrees on the wide
+ *   shots. The view also leans a little up or down with the pointer. On touch screens
+ *   scrolling itself swings the room (the scroll kick), on top of the tilt or sway.
+ * - Weight: when a turn starts or stops the view trails by a small, bounded
+ *   angle and settles with a slight overshoot, like a heavy fluid head (`lag*`);
+ *   a steady pan keeps the authored framing. It only
+ *   turns the view, never moves the camera, so it cannot carry the lens into the
+ *   subject, and it is clamped however fast the page is flung.
+ *
+ * `input.react` (0..1) scales the pointer part; the debug simulator leaves it at
+ * 0 unless asked, so the motion audit measures the authored move (with weight).
+ */
+export const REACT = {
+  /** Orbit (rad) for a full pointer swing at the near and far focus distances (m), log-interpolated. */
+  orbitNear: 0.7 * DEG,
+  orbitFar: 3.8 * DEG,
+  nearDist: 0.08,
+  farDist: 6,
+  /** Vertical share of the orbit. */
+  pitch: 0.55,
+  /**
+   * Lean of the view towards the pointer (rad), sideways and up/down. The lean is what moves the
+   * subject on screen (the orbit keeps it in place), and sideways the copy sits close on both sides
+   * (the Venue panel to the right at 1280x720, headings to the left at 1440x900): with the pointer
+   * held at a side, any sideways lean over about 0.1 degree brings the stand within the copy air.
+   * So the sideways reaction is all orbit, and the lean is vertical only, kept to 0.4 degree (at 0.6
+   * the stand's foot reaches the Tickets copy at 1280x720 with the pointer at the top).
+   */
+  leanX: 0,
+  leanY: 0.4 * DEG,
+  /** Pointer follow time (s): the hand moves, the camera floats after it. */
+  pointerSmooth: 0.6,
+  /**
+   * Portrait framings are tighter round the copy. The lean (which moves the subject on screen) is
+   * cut to `portrait`; the orbit keeps the subject in place and only slides the room behind it, so
+   * it is cut less (`portraitOrbit`).
+   */
+  portrait: 0.65,
+  portraitOrbit: 0.9,
+  /** Automatic sway (pointer units) where there is neither a pointer nor tilt: a full swing, ~14 s. */
+  sway: 1,
+  /**
+   * Touch screens: scrolling swings the room (pointer units at saturation). The scroll speed (px/s)
+   * that gives about three quarters of it, and how fast the kick follows the speed (s).
+   */
+  scrollKick: 0.85,
+  scrollKickSpeed: 1400,
+  scrollKickSmooth: 0.25,
+  /**
+   * Weight: lag (rad) per unit of change in the view's turn rate (rad/s, against its average over
+   * `rateSmooth` s: a steady pan keeps the authored framing), its limit, and the head spring.
+   */
+  lagGain: 0.12,
+  rateSmooth: 0.6,
+  lagMax: 0.9 * DEG,
+  lagFreq: 1.3,
+  lagZeta: 0.55,
+};
+
+/** Orbit amplitude (rad per unit pointer) at a focus distance. */
+export function orbitFor(dist: number): number {
+  const a = Math.log(REACT.nearDist);
+  const b = Math.log(REACT.farDist);
+  const x = Math.min(1, Math.max(0, (Math.log(Math.max(dist, 1e-4)) - a) / (b - a)));
+  const k = x * x * (3 - 2 * x);
+  return REACT.orbitNear + (REACT.orbitFar - REACT.orbitNear) * k;
+}
+
+/** Slow automatic sway in pointer units (two incommensurate periods per axis, ~14 s). */
+export function swayAt(t: number, out: { x: number; y: number }) {
+  out.x = REACT.sway * (0.75 * Math.sin(t * 0.45 + 0.4) + 0.25 * Math.sin(t * 0.73 + 2.1));
+  out.y = REACT.sway * 0.6 * (0.7 * Math.sin(t * 0.34 + 1.3) + 0.3 * Math.sin(t * 0.59));
+  return out;
 }
 
 export function createRig() {
@@ -69,6 +154,15 @@ export function createRig() {
     px: new Damped(0),
     py: new Damped(0),
     J: new Damped(0),
+    /** Weight: lag of the view direction (rad) along camera right / up, and the last view. */
+    lagX: new Spring(),
+    lagY: new Spring(),
+    /** Slow average of the view's turn rate: the weight answers changes of rate, not a steady pan. */
+    rateX: new Damped(0),
+    rateY: new Damped(0),
+    prevView: new Vector3(),
+    hasPrevView: false,
+    sway: { x: 0, y: 0 },
     started: false,
     tmpA: new Vector3(),
     tmpB: new Vector3(),
@@ -105,6 +199,12 @@ export function createRigOut() {
     /** Where the target sits on screen (lens shift), fractions from the left / top. */
     shiftX: 0.5,
     shiftY: 0.5,
+    /** Damped pointer actually applied (react-scaled), for the lights: -1..1. */
+    px: 0,
+    py: 0,
+    /** Weight lag of the view (rad) along camera right / up. */
+    lagX: 0,
+    lagY: 0,
   };
 }
 export type RigOut = ReturnType<typeof createRigOut>;
@@ -123,7 +223,19 @@ export type RigInput = {
   camOverride?: number[] | null;
   /** Viewport width / height (near-plane corner distance). */
   aspect?: number;
+  /** How much the scene reacts to the pointer / tilt (0: not at all, 1: fully). Default 0. */
+  react?: number;
+  /** Blend (0..1) from the pointer to the automatic sway (touch screens without tilt). */
+  sway?: number;
+  /** Portrait framing (less travel). */
+  portrait?: boolean;
+  /** Touch screens: scroll kick (pointer units, -1..1) added to the input; see REACT.scrollKick. */
+  kick?: number;
 };
+
+/** Scroll kick (pointer units) for a scroll speed in px/s: saturating, signed. */
+export const scrollKickFor = (speed: number) =>
+  Number.isFinite(speed) ? REACT.scrollKick * Math.tanh(speed / REACT.scrollKickSpeed) : 0;
 
 /** Near plane for a focus distance: tight in macro, generous on wide shots. */
 export const nearFor = (dist: number) => Math.min(0.2, Math.max(0.002, dist * 0.12));
@@ -171,6 +283,11 @@ export function stepRig(
     rig.view.snap(rig.tmpD.copy(s.dir).negate());
     rig.up.snap(s.up);
     rig.prevPos.copy(s.pos);
+    rig.lagX.snap(0);
+    rig.lagY.snap(0);
+    rig.rateX.snap(0);
+    rig.rateY.snap(0);
+    rig.hasPrevView = false;
     rig.fov.snap(s.fov);
     rig.dof.snap(s.dof);
     rig.cone.snap(s.cone);
@@ -245,21 +362,64 @@ export function stepRig(
   const lateral = vel.dot(out.right) / dist;
   rig.prevPos.copy(pos);
   const roll = rig.roll.step(Math.max(-RIG.rollMax, Math.min(RIG.rollMax, -lateral * RIG.rollGain)), 0.35, dt);
-  const px = rig.px.step(input.pointerX, 1.1, dt);
-  const py = rig.py.step(input.pointerY, 1.1, dt);
+
+  // Weight: the view trails its own turn rate (bounded) through an under-damped head spring.
+  let lagTx = 0;
+  let lagTy = 0;
+  if (rig.hasPrevView && dt > 1e-4) {
+    const d = rig.tmpA.subVectors(view, rig.prevView);
+    const rx = d.dot(out.right) / dt;
+    const ry = d.dot(out.camUp) / dt;
+    if (Number.isFinite(rx) && Number.isFinite(ry)) {
+      const ax = rx - rig.rateX.step(rx, REACT.rateSmooth, dt);
+      const ay = ry - rig.rateY.step(ry, REACT.rateSmooth, dt);
+      lagTx = Math.max(-REACT.lagMax, Math.min(REACT.lagMax, -ax * REACT.lagGain));
+      lagTy = Math.max(-REACT.lagMax, Math.min(REACT.lagMax, -ay * REACT.lagGain));
+    }
+  }
+  rig.prevView.copy(view);
+  rig.hasPrevView = true;
+  const lim = REACT.lagMax * 1.3;
+  let lagX = Math.max(-lim, Math.min(lim, rig.lagX.step(lagTx, REACT.lagFreq, REACT.lagZeta, dt)));
+  let lagY = Math.max(-lim, Math.min(lim, rig.lagY.step(lagTy, REACT.lagFreq, REACT.lagZeta, dt)));
+  if (!Number.isFinite(lagX) || !Number.isFinite(lagY)) {
+    rig.lagX.snap(0);
+    rig.lagY.snap(0);
+    lagX = lagY = 0;
+  }
+
+  // Pointer (or tilt, or the automatic sway), damped: a small orbit round the subject.
+  const react = Math.max(0, Math.min(1, input.react ?? 0));
+  const sw = Math.max(0, Math.min(1, input.sway ?? 0));
+  const sway = swayAt(t, rig.sway);
+  const kick = Number.isFinite(input.kick) ? Math.max(-1, Math.min(1, input.kick ?? 0)) : 0;
+  const pX = input.pointerX * (1 - sw) + sway.x * sw + kick;
+  const pY = input.pointerY * (1 - sw) + sway.y * sw - kick * 0.3;
+  const px = rig.px.step(Number.isFinite(pX) ? Math.max(-1, Math.min(1, pX)) : 0, REACT.pointerSmooth, dt) * react;
+  const py = rig.py.step(Number.isFinite(pY) ? Math.max(-1, Math.min(1, pY)) : 0, REACT.pointerSmooth, dt) * react;
+  const orbit = Math.max(s.parallax, orbitFor(dist) * dist) * (input.portrait ? REACT.portraitOrbit : 1);
   const dx = Math.sin(t * 0.21) * 0.6 + Math.sin(t * 0.13 + 1.7) * 0.4;
   const dy = Math.sin(t * 0.17 + 0.6) * 0.6 + Math.sin(t * 0.07) * 0.4;
   // Breathing along the view axis: 0.4% of the distance close in, capped at 5 mm on the wide stage
   // shots, so the idle float stays a few millimetres however far the camera has pulled back.
   const breathe = s.drift > 0 ? Math.sin(t * 0.31) * Math.min(0.004 * dist, 0.005) : 0;
-  const ox = dx * s.drift + px * s.parallax;
-  const oy = dy * s.drift * 0.6 + py * s.parallax * 0.6;
+  const ox = dx * s.drift + px * orbit;
+  const oy = dy * s.drift * 0.6 + py * orbit * REACT.pitch;
   out.position
     .copy(target)
     .addScaledVector(out.fwd, -(dist + breathe))
     .addScaledVector(out.right, ox)
     .addScaledVector(out.camUp, oy);
-  out.target.copy(target);
+  // The look point: the authored target, leaned a hair towards the pointer and trailing by the lag.
+  const leanK = input.portrait ? REACT.portrait : 1;
+  out.target
+    .copy(target)
+    .addScaledVector(out.right, dist * Math.tan(lagX + px * REACT.leanX * leanK))
+    .addScaledVector(out.camUp, dist * Math.tan(lagY + py * REACT.leanY * leanK));
+  out.px = px;
+  out.py = py;
+  out.lagX = lagX;
+  out.lagY = lagY;
   // Roll the up vector about the view axis.
   const cr = Math.cos(roll);
   const sr = Math.sin(roll);

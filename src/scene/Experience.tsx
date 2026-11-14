@@ -37,7 +37,7 @@ import { createStudioEnvironment } from './environment';
 import type { EngravingFacts } from './engraving';
 import { look } from './look';
 import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
-import { createRig, createRigOut, stepRig } from './rig';
+import { createRig, createRigOut, REACT, scrollKickFor, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
 import { houseLights, houseSeatsLit } from './houseLights';
 import { STRIKE, createStrike, stepStrike } from './lampStrike';
@@ -49,6 +49,7 @@ import Stage, { reflected } from './Stage';
 import Venue from './Venue';
 import { SECTION_IDS, scrollState, type SectionId } from './scrollState';
 import { HOUSE_AZ, HOUSE_SEATS, MIC_AXIS } from './layout';
+import { createTilt, tiltLive, watchTilt } from './tilt';
 
 const Y_AXIS = new Vector3(0, 1, 0);
 /** The house axis (world, horizontal): from the stage out towards the seats (layout.ts, HOUSE_AZ). */
@@ -105,6 +106,7 @@ function createState() {
     keyB: new Vector3(),
     qa: new Quaternion(),
     qb: new Quaternion(),
+    qc: new Quaternion(),
     perfT: 0,
     perfFrames: 0,
     perfBad: 0,
@@ -115,6 +117,9 @@ function createState() {
     seatsLit: new Damped(0),
     /** look.houseView, damped (a camera turning to face the house thins the beam over a moment). */
     houseView: new Damped(0),
+    /** Touch screens: last scroll position (px; NaN until the first frame) and the smoothed kick. */
+    scrollY: NaN,
+    kick: 0,
   };
 }
 type FrameState = ReturnType<typeof createState>;
@@ -343,6 +348,19 @@ export default function Experience({
 
   const stateRef = useRef<FrameState | null>(null);
 
+  // The scene reacts to the visitor: the pointer, or on phones the tilt of the device (never asked
+  // for: where it needs a permission no events arrive), or else a slow automatic sway (rig.ts, REACT).
+  const tilt = useMemo(() => createTilt(), []);
+  const coarse = useMemo(() => {
+    try {
+      return window.matchMedia('(hover: none), (pointer: coarse)').matches;
+    } catch {
+      return false;
+    }
+  }, []);
+  // Only touch screens listen for tilt: with a mouse the pointer leads.
+  useEffect(() => (coarse ? watchTilt(tilt) : undefined), [tilt, coarse]);
+
   // Debug: transition simulator over the same rig and shots (?scene-debug=1).
   const shotsRef = useRef({ shots, away });
   useEffect(() => {
@@ -409,11 +427,35 @@ export default function Experience({
     }
 
     const J = currentJourney();
+    const tl = tiltLive(tilt);
+    // Touch screens: the scroll speed swings the room a little (a hand on the page moves the view
+    // even without tilt). Reads the scroll position only; no allocation.
+    if (coarse) {
+      const y = window.scrollY;
+      const v = Number.isFinite(fs.scrollY) && dt > 1e-4 ? (y - fs.scrollY) / dt : 0;
+      fs.scrollY = y;
+      fs.kick += (scrollKickFor(v) - fs.kick) * (1 - Math.exp(-dt / REACT.scrollKickSmooth));
+      if (!Number.isFinite(fs.kick)) fs.kick = 0;
+    }
     const o = stepRig(
       fs.rig,
       shots,
       away,
-      { J, dt, t, pointerX: scrollState.pointer.x, pointerY: scrollState.pointer.y, snap, camOverride, aspect: state.size.width / Math.max(1, state.size.height) },
+      {
+        J,
+        dt,
+        t,
+        pointerX: tl ? tilt.x : scrollState.pointer.x,
+        pointerY: tl ? tilt.y : scrollState.pointer.y,
+        snap,
+        camOverride,
+        aspect: state.size.width / Math.max(1, state.size.height),
+        react: camOverride ? 0 : 1,
+        // Tilt where it is trusted, handing over to the sway as the phone nears upright.
+        sway: coarse ? (tl ? 1 - tilt.weight : 1) : 0,
+        kick: coarse ? fs.kick : 0,
+        portrait,
+      },
       look,
       fs.out,
     );
@@ -503,17 +545,18 @@ export default function Experience({
     const k = keyLight.current;
     if (k) {
       const kp = KEY_AIM;
-      const a = 0.45 + Math.sin(t * 0.11) * 0.6;
+      // The pointer walks the key a little round the subject: the chrome glints travel with the hand.
+      const a = 0.45 + Math.sin(t * 0.11) * 0.6 + o.px * 0.35;
       fs.keyA
         .copy(kp)
         .addScaledVector(o.fwd, -2.2 * Math.cos(a))
         .addScaledVector(o.right, 2.2 * Math.sin(a))
-        .addScaledVector(o.camUp, 1.25 + Math.sin(t * 0.07) * 0.25);
+        .addScaledVector(o.camUp, 1.25 + Math.sin(t * 0.07) * 0.25 + o.py * 0.3);
       const sweep = Math.sin(t * 0.19) * 0.12;
       fs.keyB
         .copy(camera.position)
-        .addScaledVector(o.right, dist * o.keyDir.x)
-        .addScaledVector(o.camUp, dist * (o.keyDir.y + sweep))
+        .addScaledVector(o.right, dist * (o.keyDir.x + o.px * 0.22))
+        .addScaledVector(o.camUp, dist * (o.keyDir.y + sweep + o.py * 0.16))
         .addScaledVector(o.fwd, dist * o.keyDir.z);
       const kc = o.keyCam;
       k.position.lerpVectors(fs.keyA, fs.keyB, kc);
@@ -524,12 +567,13 @@ export default function Experience({
       shared.uKeyPos.value.copy(k.position);
       shared.uKeyColor.value.copy(KEY_COLOR).multiplyScalar(illum);
     }
-    // Rim light: behind the subject, offset around the view axis.
+    // Rim light: behind the subject, offset around the view axis (and nudged round it by the pointer).
+    const rimAng = o.rimAng + o.px * 0.4;
     shared.uRimDir.value
       .copy(o.fwd)
-      .multiplyScalar(-0.6)
-      .addScaledVector(o.camUp, Math.cos(o.rimAng) * 0.8)
-      .addScaledVector(o.right, Math.sin(o.rimAng) * 0.8)
+      .multiplyScalar(-0.6 + o.py * 0.12)
+      .addScaledVector(o.camUp, Math.cos(rimAng) * 0.8)
+      .addScaledVector(o.right, Math.sin(rimAng) * 0.8)
       .normalize();
     shared.uRimColor.value.copy(RIM_COLOR).multiplyScalar(look.rim * 1.5);
     shared.uSpot.value = look.spot;
@@ -538,9 +582,11 @@ export default function Experience({
     scene.environmentIntensity = o.env;
     // The studio strips turn slowly about the vertical (idle life) and, per shot, about the barrel:
     // the camera never circles the mic, so the streak is walked round the barrel instead.
-    fs.qa.setFromAxisAngle(Y_AXIS, Math.sin(t * 0.045) * 0.3);
+    // The pointer turns them a little too, so the reflections slide over the chrome with the hand.
+    fs.qa.setFromAxisAngle(Y_AXIS, Math.sin(t * 0.045) * 0.3 + o.px * 0.16);
     fs.qb.setFromAxisAngle(MIC_AXIS, o.envRot + envOffset);
-    scene.environmentRotation.setFromQuaternion(fs.qa.multiply(fs.qb));
+    fs.qc.setFromAxisAngle(o.right, -o.py * 0.08);
+    scene.environmentRotation.setFromQuaternion(fs.qc.multiply(fs.qa).multiply(fs.qb));
 
     // Haze card behind the subject, facing the camera.
     const h = hazeRef.current;
@@ -557,14 +603,18 @@ export default function Experience({
     // Motes ride the camera, scaled to the focus distance.
     const m = motesRef.current;
     if (m) {
-      m.visible = look.motes > 0.01;
+      // Where the shot has no beam to carry dust (the hero), a few motes float in the haze instead:
+      // high tier only, so the low tier keeps the draw call off where the shot asks for no motes.
+      const heroMotes = tier === 'high' ? look.haze * 0.55 * Math.max(0, 1 - look.cone * 4) : 0;
+      const motes = Math.max(look.motes, heroMotes);
+      m.visible = motes > 0.01;
       m.position.copy(camera.position);
       m.quaternion.copy(camera.quaternion);
       m.scale.setScalar(dist);
       const u = ((m.children[0] as Mesh).material as ShaderMaterial).uniforms;
       const ty = Math.tan((look.fov * Math.PI) / 360);
       u.uTime.value = t;
-      u.uIntensity.value = look.motes;
+      u.uIntensity.value = motes;
       u.uTanY.value = ty;
       u.uTanX.value = ty * (state.size.width / Math.max(1, state.size.height));
       u.uScale.value = (state.size.height * state.viewport.dpr * 0.5) / ty;
@@ -583,7 +633,22 @@ export default function Experience({
     if (debug) {
       const w = window as unknown as { __scene?: Record<string, unknown> };
       const prev = (w.__scene?.frame as number) ?? 0;
-      w.__scene = { J, frame: prev + 1, exposure: look.exposure, step, tier, post, dt: rawDt, scene, strike: st.env, lampOn: st.on, seatsLit: lit, houseView: look.houseView };
+      w.__scene = {
+        J,
+        frame: prev + 1,
+        exposure: look.exposure,
+        step,
+        tier,
+        post,
+        dt: rawDt,
+        scene,
+        strike: st.env,
+        lampOn: st.on,
+        seatsLit: lit,
+        houseView: look.houseView,
+        react: { px: o.px, py: o.py, lagX: o.lagX, lagY: o.lagY, roll: o.roll, tilt: tl, sway: coarse && !tl, kick: fs.kick },
+        cam: [camera.position.x, camera.position.y, camera.position.z, target.x, target.y, target.z],
+      };
     }
 
     // Adaptive quality: step down when sustained frame time is poor.

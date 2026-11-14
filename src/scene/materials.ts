@@ -1029,10 +1029,15 @@ export function createConeMaterial(cheap = false) {
         float n = 1.0;
         ${
           cheap
-            ? ''
-            : `vec3 np = p * vec3(1.1, 0.55, 1.1) + vec3(uTime * 0.02, -uTime * 0.045, uTime * 0.013); n = 0.55 + 0.9 * vnoise3(np);
-        // Faint rays fanning from the lens (the gobo / lamp structure), drifting very slowly.
-        float ray = vnoise((p.xz / R) * 2.2 + vec2(uTime * 0.012, -uTime * 0.008));
+            ? `// One slow 2D noise term: the haze still drifts at rest on the cheap path.
+        n = 0.78 + 0.44 * vnoise(p.xz * 1.3 + vec2(p.y * 0.5 + uTime * 0.05, -uTime * 0.08));`
+            : `// The haze rolls: two layers drifting at different rates (sinking, and turning across the
+        // shaft), so the light visibly moves while the page is still.
+        vec3 np = p * vec3(1.1, 0.55, 1.1) + vec3(uTime * 0.045, -uTime * 0.085, uTime * 0.03);
+        vec3 np2 = p * vec3(2.3, 1.2, 2.3) + vec3(-uTime * 0.07, -uTime * 0.05, uTime * 0.06);
+        n = 0.5 + 0.7 * vnoise3(np) + 0.35 * vnoise3(np2);
+        // Faint rays fanning from the lens (the gobo / lamp structure), drifting slowly.
+        float ray = vnoise((p.xz / R) * 2.2 + vec2(uTime * 0.025, -uTime * 0.017));
         n *= 0.7 + 0.6 * ray;`
         }
         // Henyey-Greenstein, g = 0.5: haze scatters forward, so looking up the beam is brighter.
@@ -1105,17 +1110,26 @@ export function createDustMaterial() {
       uIntensity: { value: 1 },
       uHeight: { value: SPOT_HEIGHT },
       uTan: { value: BEAM_K },
+      /** How much the dust keeps off the copy column (left of the frame on landscape screens). */
+      uCopy: { value: 1 },
+      /** Overall dimming where the copy is spread over the frame (portrait). */
+      uCopyAll: { value: 0 },
     },
     vertexShader: /* glsl */ `
       attribute vec4 seed;
       uniform float uTime; uniform float uScale; uniform float uHeight; uniform float uTan;
+      uniform float uCopy; uniform float uCopyAll;
       varying float vA;
       void main() {
         vec3 p = position;
+        // Dust in the air of the beam: it sinks slowly and wanders in lazy eddies (a different
+        // period per mote and with height), so the shaft is alive while the page is still.
         float t = uTime * (0.012 + seed.w * 0.02);
         p.y = mod(p.y - t * 2.0, uHeight * 0.95);
-        p.x += sin(uTime * 0.11 + seed.x * 6.28) * 0.12;
-        p.z += cos(uTime * 0.09 + seed.y * 6.28) * 0.12;
+        float ph1 = seed.x * 6.28 + p.y * 1.3;
+        float ph2 = seed.y * 6.28 - p.y * 0.9;
+        p.x += sin(uTime * (0.16 + seed.z * 0.12) + ph1) * 0.16 + sin(uTime * 0.05 + seed.y * 9.0) * 0.1;
+        p.z += cos(uTime * (0.13 + seed.w * 0.1) + ph2) * 0.16 + cos(uTime * 0.04 + seed.x * 7.0) * 0.1;
         float coneR = ${BEAM.r0.toFixed(4)} + (uHeight - p.y) * uTan;
         float qd = length(p.xz) / coneR;
         // Only lit inside the beam (same soft profile as the haze), brighter looking up the beam.
@@ -1130,14 +1144,18 @@ export function createDustMaterial() {
         vec4 mv = modelViewMatrix * vec4(p, 1.0);
         gl_Position = projectionMatrix * mv;
         // Soft specks of a few pixels, not single bright pixels: the same light over a bigger disc.
-        float size = (0.8 + seed.z * 1.2) * 0.013;
+        float size = (0.8 + seed.z * 1.2) * 0.016;
         float px = size * uScale / -mv.z;
         gl_PointSize = clamp(px, 2.5, 24.0);
         float fadeNear = smoothstep(0.3, 1.5, -mv.z);
-        // Only in the upper air of the beam: dust low in the shaft sits in front of the rug on screen
-        // and read as specks on it.
-        float high = smoothstep(1.0, 2.2, p.y);
-        vA = inside * twinkle * fadeNear * high * min(1.0, px / 2.5) / max(1.0, gl_PointSize * gl_PointSize / 9.0);
+        // Not in the lowest air of the beam: dust there sits in front of the rug on screen and read
+        // as specks on it.
+        float high = smoothstep(0.6, 1.5, p.y);
+        // Keep off the copy: dust over a text card reads as specks on the screen, not in the air. The
+        // column matches the scrim's (Post.tsx), reaching a little further right to cover the cards.
+        float sx = gl_Position.x / max(gl_Position.w, 1e-4) * 0.5 + 0.5;
+        float copy = (1.0 - uCopy * 0.85 * (1.0 - smoothstep(0.42, 0.7, sx))) * (1.0 - uCopyAll);
+        vA = copy * inside * twinkle * fadeNear * high * min(1.0, px / 2.5) / max(1.0, gl_PointSize * gl_PointSize / 16.0);
       }`,
     fragmentShader: /* glsl */ `
       uniform float uIntensity;
@@ -1146,7 +1164,7 @@ export function createDustMaterial() {
         vec2 c = gl_PointCoord - 0.5;
         // A soft gaussian speck with a low, capped peak (nothing for bloom to turn into a point).
         float d = exp(-dot(c, c) * 18.0);
-        gl_FragColor = vec4(min(vec3(1.0, 0.96, 0.9) * d * vA * 1.6 * uIntensity, vec3(0.45)), 1.0);
+        gl_FragColor = vec4(min(vec3(1.0, 0.96, 0.9) * d * vA * 2.6 * uIntensity, vec3(0.42)), 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
       }`,
@@ -1173,7 +1191,7 @@ export function createHazeMaterial() {
       void main() {
         vec2 c = vUv - 0.5;
         float r = length(c * vec2(1.0, 1.25)) * 2.0;
-        float n = vnoise(vUv * 3.0 + vec2(uTime * 0.03, -uTime * 0.02)) * 0.6 + vnoise(vUv * 7.0 - uTime * 0.02) * 0.4;
+        float n = vnoise(vUv * 3.0 + vec2(uTime * 0.05, -uTime * 0.035)) * 0.6 + vnoise(vUv * 7.0 - uTime * 0.04) * 0.4;
         float a = exp(-r * r * 3.2) * (0.75 + 0.5 * n) + exp(-r * r * 14.0) * 0.6;
         a *= 1.0 - smoothstep(0.85, 1.0, r);
         gl_FragColor = vec4(uColor * a * uIntensity, 1.0);

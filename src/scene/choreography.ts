@@ -41,8 +41,11 @@ import { SECTION_IDS } from './scrollState';
  *    seats into the wide house view; the key and rim stay on the microphone.
  * 5. After Tickets: the lights go down; the move eases to a stop in the dark.
  * 6. Idle: with the page at rest the frame still breathes (a few millimetres
- *    of camera float, the dust and the haze in the beam). The static tier
- *    (reduced motion) has no canvas at all.
+ *    of camera float, the dust and the haze rolling in the beam). The static
+ *    tier (reduced motion) has no canvas at all.
+ * 7. Reacting: on top of these keys (never changing them), rig.ts (REACT)
+ *    orbits the camera a little with the pointer, the device tilt or a slow
+ *    sway, gives the view a little weight, and the lights follow the pointer.
  *
  * The camera is held on a sphere round the subject: an aim point (`aim`,
  * held at the screen anchor), a distance (`dist`), an orbit angle (`orbit`,
@@ -244,10 +247,11 @@ export const RIG = {
   targetZeta: 1,
   /**
    * Bank angle per unit of lateral angular velocity (rad per rad/s), and its
-   * limit: a crane does not bank, so only a hint of it on a fast fling round the orbit.
+   * limit: the camera leans into its turns like a hand-operated head, bounded
+   * to under two degrees however fast the page is flung.
    */
-  rollGain: 0.02,
-  rollMax: 0.012,
+  rollGain: 0.05,
+  rollMax: 0.03,
   /** Lens-shift (screen anchor) follow time (seconds). */
   anchorFollow: 0.4,
 };

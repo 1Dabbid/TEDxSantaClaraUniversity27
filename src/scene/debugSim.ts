@@ -1,9 +1,9 @@
 import { Vector3 } from 'three';
-import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
+import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, RIG, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
 import { MIC, MIC_MATRIX_INV, STAND_BASE, STAND_TOP_Y } from './layout';
 import { clearance } from './clearance';
 import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
-import { createRig, createRigOut, nearCorner, stepRig, type LookOut } from './rig';
+import { createRig, createRigOut, nearCorner, REACT, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
 
 /**
@@ -75,6 +75,8 @@ type Frame = {
   motes: number;
   /** Upper-middle band veil (0..1). */
   band: number;
+  /** Weight: lag of the view behind its turn (deg, along camera right / up). */
+  lag: [number, number];
 };
 
 const WORLD_UP = new Vector3(0, 1, 0);
@@ -179,6 +181,8 @@ const r3 = (v: Vector3): [number, number, number] => [+v.x.toFixed(8), +v.y.toFi
 
 export function installSim(getShots: () => { shots: ResolvedShot[]; away: ResolvedShot }) {
   const api = {
+    /** The live reaction constants (rig.ts REACT), for tuning from the console; the page uses the same object. */
+    reactTune: REACT as Record<string, number>,
     layout: measure,
     copyBoxes: copyBoxesNow,
     journeyAt: (y: number) => journeyAt(measure(), y),
@@ -186,7 +190,21 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
      * Steps the rig at a fixed dt over `ys` (scroll px per step) or `js`
      * (journey values per step). The first value is snapped to.
      */
-    run(opts: { ys?: number[]; js?: number[]; dt?: number; t0?: number; drift?: boolean; content?: Partial<ShotOptions> }): Frame[] {
+    run(opts: {
+      ys?: number[];
+      js?: number[];
+      dt?: number;
+      t0?: number;
+      drift?: boolean;
+      content?: Partial<ShotOptions>;
+      /** Pointer (NDC, -1..1) held for the whole run, and how much the scene reacts to it (default 0). */
+      pointer?: [number, number];
+      react?: number;
+      portrait?: boolean;
+      /** Touch screens: blend to the automatic sway (0..1) and a scroll kick (pointer units), held. */
+      sway?: number;
+      kick?: number;
+    }): Frame[] {
       const L = measure();
       const live = getShots();
       const away = live.away;
@@ -201,7 +219,26 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       const frames: Frame[] = [];
       let t = opts.t0 ?? 10;
       seq.forEach((J, i) => {
-        stepRig(rig, shots, away, { J, dt, t: opts.drift === false ? 10 : t, pointerX: 0, pointerY: 0, snap: i === 0, aspect }, look, out);
+        stepRig(
+          rig,
+          shots,
+          away,
+          {
+            J,
+            dt,
+            t: opts.drift === false ? 10 : t,
+            pointerX: opts.pointer?.[0] ?? 0,
+            pointerY: opts.pointer?.[1] ?? 0,
+            react: opts.react ?? 0,
+            portrait: opts.portrait,
+            sway: opts.sway,
+            kick: opts.kick,
+            snap: i === 0,
+            aspect,
+          },
+          look,
+          out,
+        );
         t += dt;
         // The same near-plane corner as the rig (lens shift included).
         const corner = nearCorner(out.near, look.fov, out.shiftX, out.shiftY, aspect);
@@ -226,9 +263,88 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
           cone: +look.cone.toFixed(4),
           motes: +look.motes.toFixed(4),
           band: +look.band.toFixed(4),
+          lag: [+((out.lagX * 180) / Math.PI).toFixed(4), +((out.lagY * 180) / Math.PI).toFixed(4)],
         });
       });
       return frames;
+    },
+    /**
+     * How the camera answers the pointer at a journey position: holds the page at J, settles the
+     * rig, then holds the pointer at each corner (left, right, top, bottom) for `hold` seconds and
+     * reports the camera's orbit round the target and the turn of the view (deg) against the
+     * pointer at rest, plus the near-plane clearance. `react` 0 must give zeros.
+     */
+    react(opts: { J: number; react?: number; hold?: number; portrait?: boolean }) {
+      const hold = opts.hold ?? 3;
+      const n = Math.round(hold * 60);
+      const settle = Array(240).fill(opts.J);
+      const base = api.run({ js: settle, drift: false, react: opts.react ?? 1, portrait: opts.portrait }).at(-1)!;
+      const deg = (a: Vector3, b: Vector3) => (Math.acos(Math.min(1, Math.max(-1, a.dot(b)))) * 180) / Math.PI;
+      const tgt0 = new Vector3(...base.tgt);
+      const pos0 = new Vector3(...base.pos);
+      const off0 = pos0.clone().sub(tgt0).normalize();
+      const fwd0 = tgt0.clone().sub(pos0).normalize();
+      const corners: Record<string, [number, number]> = { left: [-1, 0], right: [1, 0], top: [0, 1], bottom: [0, -1] };
+      const res: Record<string, { orbitDeg: number; viewDeg: number; clr: number; finite: boolean }> = {};
+      for (const [k, p] of Object.entries(corners)) {
+        const F = api.run({ js: [...settle, ...Array(n).fill(opts.J)], drift: false, react: opts.react ?? 1, pointer: p, portrait: opts.portrait });
+        const f = F.at(-1)!;
+        const pos = new Vector3(...f.pos);
+        const tgt = new Vector3(...f.tgt);
+        const finite = F.every((x) => x.pos.every(Number.isFinite) && x.tgt.every(Number.isFinite));
+        res[k] = {
+          orbitDeg: +deg(pos.clone().sub(tgt0).normalize(), off0).toFixed(3),
+          viewDeg: +deg(tgt.clone().sub(pos).normalize(), fwd0).toFixed(3),
+          clr: Math.min(...F.slice(settle.length).map((x) => x.clr)),
+          finite,
+        };
+      }
+      return { J: opts.J, dist: +pos0.distanceTo(tgt0).toFixed(4), corners: res };
+    },
+    /**
+     * Touch screens without tilt: holds the page at J for `seconds` with the automatic sway (and an
+     * optional held scroll kick) and reports the side-to-side swing of the camera round the target
+     * (deg, peak to peak along the shot's horizontal), the least clearance and finiteness.
+     */
+    phone(opts: { J: number; seconds?: number; portrait?: boolean; kick?: number }) {
+      const n = Math.round((opts.seconds ?? 30) * 60);
+      const settle = Array(240).fill(opts.J);
+      const base = api.run({ js: settle, drift: false }).at(-1)!;
+      const tgt0 = new Vector3(...base.tgt);
+      const pos0 = new Vector3(...base.pos);
+      const off0 = pos0.clone().sub(tgt0).normalize();
+      const right = new Vector3().crossVectors(off0.clone().negate(), new Vector3(...base.up)).normalize();
+      const F = api.run({ js: [...settle, ...Array(n).fill(opts.J)], react: 1, sway: 1, kick: opts.kick, portrait: opts.portrait }).slice(settle.length);
+      const tmp = new Vector3();
+      const ang = F.map((f) => {
+        tmp.set(...f.pos).sub(tgt0).normalize();
+        return (Math.asin(Math.max(-1, Math.min(1, tmp.dot(right)))) * 180) / Math.PI;
+      });
+      return {
+        J: opts.J,
+        swingDeg: +(Math.max(...ang) - Math.min(...ang)).toFixed(3),
+        meanDeg: +(ang.reduce((a, b) => a + b, 0) / ang.length).toFixed(3),
+        minClr: Math.min(...F.map((f) => f.clr)),
+        finite: F.every((f) => [...f.pos, ...f.tgt, ...f.up].every(Number.isFinite)),
+      };
+    },
+    /**
+     * A fling: the journey jumps from `from` to `to` in one frame and back, at 60 fps. Reports the
+     * largest weight lag and the largest bank into the move (deg; the rig's own roll, not the
+     * authored horizon roll of the shot), the bank limit (deg), whether every value stayed finite,
+     * and the least clearance.
+     */
+    fling(opts: { from: number; to: number; frames?: number }) {
+      const n = opts.frames ?? 120;
+      const js = [...Array(30).fill(opts.from), ...Array(n).fill(opts.to), ...Array(n).fill(opts.from)];
+      const F = api.run({ js, drift: false });
+      return {
+        maxLagDeg: Math.max(...F.map((f) => Math.hypot(f.lag[0], f.lag[1]))),
+        maxBankDeg: Math.max(...F.map((f) => (Math.abs(f.roll) * 180) / Math.PI)),
+        bankLimitDeg: (RIG.rollMax * 180) / Math.PI,
+        minClr: Math.min(...F.map((f) => f.clr)),
+        finite: F.every((f) => [...f.pos, ...f.tgt, ...f.up, f.roll, ...f.lag].every(Number.isFinite)),
+      };
     },
   };
   const metrics = (opts: { from?: number; to?: number; outFrom?: number; step?: number; content?: Partial<ShotOptions> } = {}) => {
@@ -412,12 +528,23 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
    * `copy`: the copy on screen at each filmstrip step (key J.toFixed(3), from `copyBoxes()` with the
    * page scrolled there; the audit script collects them), so the keep-out test uses the real layout
    * at this viewport instead of fixed fractions. `copyMarginPx` is the air kept round every box.
+   * `pointer` holds the pointer there for the whole sweep with the scene reacting, to check that the
+   * reaction keeps the subject clear of the copy too.
    */
-  const motion = (opts: { content?: Partial<ShotOptions>; step?: number; copy?: Record<string, CopyBox[]>; copyMarginPx?: number } = {}) => {
+  const motion = (
+    opts: { content?: Partial<ShotOptions>; step?: number; copy?: Record<string, CopyBox[]>; copyMarginPx?: number; pointer?: [number, number] } = {},
+  ) => {
     const step = opts.step ?? 0.125;
     const js: number[] = [];
     for (let J = 0; J <= 6.0 + 1e-9; J += 0.001) js.push(+J.toFixed(3));
-    const F = api.run({ js, drift: false, content: opts.content });
+    const F = api.run({
+      js,
+      drift: false,
+      content: opts.content,
+      pointer: opts.pointer,
+      react: opts.pointer ? 1 : 0,
+      portrait: window.innerWidth / Math.max(1, window.innerHeight) < 0.9,
+    });
     const byJ = new Map(F.map((f) => [f.J.toFixed(3), f]));
     const at = (J: number) => byJ.get(J.toFixed(3)) as Frame;
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);

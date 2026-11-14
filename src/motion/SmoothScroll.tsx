@@ -66,8 +66,25 @@ export default function SmoothScroll({ children }: { children?: ReactNode }) {
       scrollState.pointer.x = (e.clientX / window.innerWidth) * 2 - 1;
       scrollState.pointer.y = -((e.clientY / window.innerHeight) * 2 - 1);
     };
+    // The pointer leaving the window (onto the browser chrome or another screen) or the window
+    // losing focus re-centres it; the scene eases back (rig.ts smooths the pointer).
+    const centre = () => {
+      scrollState.pointer.x = 0;
+      scrollState.pointer.y = 0;
+    };
+    const onOut = (e: MouseEvent) => {
+      if (!e.relatedTarget) centre();
+    };
     window.addEventListener('pointermove', onMove, { passive: true });
-    return () => window.removeEventListener('pointermove', onMove);
+    document.addEventListener('mouseout', onOut, { passive: true });
+    document.documentElement.addEventListener('pointerleave', centre, { passive: true });
+    window.addEventListener('blur', centre);
+    return () => {
+      window.removeEventListener('pointermove', onMove);
+      document.removeEventListener('mouseout', onOut);
+      document.documentElement.removeEventListener('pointerleave', centre);
+      window.removeEventListener('blur', centre);
+    };
   }, []);
 
   // Measurement: on mount, route change, resize and document size changes.
