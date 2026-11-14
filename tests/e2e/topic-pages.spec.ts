@@ -103,6 +103,45 @@ test.describe('navigation rule', () => {
     await page.waitForURL((u) => u.pathname === '/');
     await expect(page.locator('#main')).toBeFocused({ timeout: 5_000 });
   });
+
+  test('deep in the home page, a header link then Back returns to the same spot', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.goto('/');
+    await settle(page, 600);
+    const scrollY = () => page.evaluate(() => Math.round(window.scrollY));
+    // Scroll far down, then a little back up, as a visitor does to bring back the header
+    // (it hides while scrolling down).
+    for (let i = 0; i < 25; i++) {
+      await page.mouse.wheel(0, 200);
+      await page.waitForTimeout(40);
+    }
+    await page.waitForTimeout(1500);
+    await page.mouse.wheel(0, -150);
+    await page.waitForTimeout(1500);
+    const before = await scrollY();
+    expect(before).toBeGreaterThan(2000);
+    // A real pointer click at the link's place: locator.click() would first scroll the page
+    // to bring the (sticky) header into view, which a visitor's click never does.
+    const box = await page.getByRole('navigation', { name: 'Primary' }).getByRole('link', { name: 'Venue' }).boundingBox();
+    expect(box, 'header is visible').not.toBeNull();
+    await page.mouse.click(box!.x + box!.width / 2, box!.y + box!.height / 2);
+    await page.waitForURL((u) => u.pathname === '/venue');
+    await expect(page.locator('#main')).toBeFocused({ timeout: 5_000 });
+    await page.goBack();
+    await page.waitForURL((u) => u.pathname === '/');
+    await expect.poll(scrollY, { timeout: 5_000 }).toBeGreaterThan(before - 40);
+    expect(await scrollY()).toBeLessThan(before + 40);
+  });
+
+  test('the 404 page links straight to the topic pages and the home Tickets section', async ({ page }) => {
+    const res = await page.goto('/this-page-does-not-exist');
+    expect(res?.status()).toBe(404);
+    const hrefs = await page
+      .locator('main ul a')
+      .evaluateAll((as) => as.map((a) => a.getAttribute('href')));
+    const faq = topicRoutes().includes('/faq') ? ['/faq'] : [];
+    expect(hrefs).toEqual(['/speakers', '/#tickets', '/venue', '/partners', ...faq]);
+  });
 });
 
 test.describe('topic page structure', () => {
