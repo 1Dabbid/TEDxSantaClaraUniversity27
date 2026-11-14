@@ -1,5 +1,6 @@
 'use client';
 
+import { houseLights } from '@/scene/houseLights';
 import { useSectionMotion, type MotionKit } from '../useSectionMotion';
 import { belowFold, COMPACT, FULL, maskText, moment, scrubbable } from './kit';
 
@@ -21,6 +22,9 @@ const STEP = 0.05; // timeline seconds between two ticks
  *   The numerals are aria-hidden; clause 5.1 and the heading carry the capacity.
  *   This is the section's one moment (no stamp on the status register: the
  *   status is read, not performed).
+ * - The 3D house lights up with the counter: every update writes the number
+ *   shown to `houseLights` (src/scene/houseLights.ts), and the scene lights
+ *   seat n when the counter reaches n. Scrubbing back un-lights them.
  *
  * Touch / small screens: the same timeline, played once in 1.6s when the ruler
  * enters. Nothing is hidden unless it is still below the fold at setup.
@@ -32,6 +36,8 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
   const cells = ruler ? (Array.from(ruler.children) as HTMLElement[]) : [];
   // One cell per seat; the server writes the count on the ruler.
   const seats = Number(ruler?.dataset.seats) || cells.length;
+  // The house lights the room's first `seats` seats (houseLights.ts), counter running or not.
+  if (seats > 0) houseLights.capacity = seats;
 
   const mm = gsap.matchMedia();
   mm.add({ full: FULL, compact: COMPACT }, moment((ctx: gsap.Context, undo) => {
@@ -67,7 +73,12 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
         paused: true,
         defaults: { ease: 'power3.out' },
         // The count lands on the capacity just before the last tick finishes printing.
-        onUpdate: () => setCount(1 + (seats - 1) * Math.min(1, tl.progress() / 0.94)),
+        onUpdate: () => {
+          const p = Math.min(1, tl.progress() / 0.94);
+          setCount(1 + (seats - 1) * p);
+          // The house: nothing lit before the count starts, seat 1 warming up over the first step.
+          houseLights.count = p > 0 ? (seats - 1) * p + Math.min(1, p * (seats - 1)) : 0;
+        },
       });
       if (dash) tl.fromTo(dash, { scaleX: 0, transformOrigin: '0% 50%' }, { scaleX: 1, duration: 1.4, ease: 'power3.inOut' }, 0);
       cells.forEach((cell, i) => {
@@ -79,6 +90,10 @@ function setup({ gsap, ScrollTrigger, root }: MotionKit) {
       });
       tl.progress(0);
       setCount(1);
+      houseLights.count = 0;
+      undo.push(() => {
+        houseLights.count = null;
+      });
 
       if (full) {
         ScrollTrigger.create({ trigger: ruler, start: 'top 92%', end: 'top 40%', scrub: 0.9, animation: tl });

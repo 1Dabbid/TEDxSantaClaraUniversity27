@@ -204,7 +204,7 @@ Only the Director of Compliance (or the licence holder) should change these. The
 
 ### Change the number of seats
 
-**The event > Event basics > Seat capacity (a whole number from 1 to 100)** (100 by default; it cannot be left empty). TEDx rules cap a standard licence at **100 attendees**, so the admin will not accept more than 100; lower it only if the room is smaller. This one number drives every seat count on the site: the hero, Venue, the Tickets ruler and counter (one tick per seat), the Partners page, the share image and search descriptions. In FAQ answers, write `{capacity}` where the number belongs (e.g. "Attendance is limited to {capacity} people") and the site fills it in. (The 3D room behind the page always shows 100 seats; that is decoration and does not change.)
+**The event > Event basics > Seat capacity (a whole number from 1 to 100)** (100 by default; it cannot be left empty). TEDx rules cap a standard licence at **100 attendees**, so the admin will not accept more than 100; lower it only if the room is smaller. This one number drives every seat count on the site: the hero, Venue, the Tickets ruler and counter (one tick per seat), the Partners page, the share image and search descriptions. In FAQ answers, write `{capacity}` where the number belongs (e.g. "Attendance is limited to {capacity} people") and the site fills it in. (The 3D room behind the page always shows 100 seats; that is decoration and does not change. At Tickets its seats light up one by one with the counter, row by row from the front, as many as the Seat capacity.)
 
 ### Other places
 

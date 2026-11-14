@@ -127,6 +127,21 @@ export const SEATING = {
   aisle: 1.15,
 };
 
+/** Seats in front of each row (the lighting order's row starts). */
+export const ROW_STARTS: readonly number[] = SEATING.rows.map((_, r) => SEATING.rows.slice(0, r).reduce((a, b) => a + b, 0));
+/** Total seats in the house. */
+export const HOUSE_SEATS = SEATING.rows.reduce((a, b) => a + b, 0);
+/**
+ * A seat's place in the lighting order (0-based): row by row from the front,
+ * and along each row from house -X to +X (left to right seen from the back of
+ * the house, where the Tickets camera stands). `side` is -1 / +1 (which half
+ * of the row), `k` the seat's index in its half counted from the aisle.
+ */
+export function seatOrder(row: number, side: number, k: number): number {
+  const half = SEATING.rows[row] / 2;
+  return ROW_STARTS[row] + (side < 0 ? half - 1 - k : half + k);
+}
+
 /** Front edge of the raised stage (z), the audience floor below it, and each seating row's tread height (raked). */
 export const STAGE_EDGE_Z = 5.0;
 export const AUDIENCE_FLOOR_Y = -0.55;

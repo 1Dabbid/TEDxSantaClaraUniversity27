@@ -38,15 +38,22 @@ import { look } from './look';
 import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
+import { houseLights, houseSeatsLit } from './houseLights';
+import { STRIKE, createStrike, stepStrike } from './lampStrike';
+import { Damped } from './damp';
 import Microphone from './Microphone';
 import Post from './Post';
 import Seats from './Seats';
 import Stage, { reflected } from './Stage';
 import Venue from './Venue';
 import { SECTION_IDS, scrollState, type SectionId } from './scrollState';
-import { HOUSE_AZ, MIC_AXIS } from './layout';
+import { HOUSE_AZ, HOUSE_SEATS, MIC_AXIS } from './layout';
 
 const Y_AXIS = new Vector3(0, 1, 0);
+const smoothstep = (a: number, b: number, x: number) => {
+  const k = Math.min(1, Math.max(0, (x - a) / (b - a)));
+  return k * k * (3 - 2 * k);
+};
 
 type Tier = 'high' | 'low';
 
@@ -97,6 +104,9 @@ function createState() {
     perfBad: 0,
     darkFrames: 0,
     lastMeasure: 0,
+    strike: createStrike(),
+    /** House seats lit (damped: each seat warms up like a filament). */
+    seatsLit: new Damped(0),
   };
 }
 type FrameState = ReturnType<typeof createState>;
@@ -126,7 +136,8 @@ function motesGeometry() {
 
 /**
  * The whole scene: microphone on its stand, the red rug under an overhead
- * spot, 100 seats, one camera driven by scroll. Rendering is owned by <Post>.
+ * spot, 100 seats (lit one by one with the Tickets counter), one camera
+ * driven by scroll. Rendering is owned by <Post>.
  */
 export default function Experience({
   quality,
@@ -411,6 +422,29 @@ export default function Experience({
         }
       }
     }
+    // The overhead spot strikes when the stage arrives in the pull out (lampStrike.ts): dimmer before,
+    // one soft overshoot of the spot, its shaft, the haze it catches and the bloom, then a settle on
+    // the clock. Rides on the authored look, never written back into the rig.
+    // Debug: window.__strikeAge = seconds holds the strike at that age (filmstrips of the strike).
+    const hold = debug ? (window as unknown as { __strikeAge?: number }).__strikeAge : undefined;
+    const st = stepStrike(fs.strike, o.Js, t, dt, typeof hold === 'number' ? hold : undefined);
+    const pre = 1 - (1 - st.on) * smoothstep(1.7, 1.95, o.Js);
+    if (pre < 1 || st.env > 0) {
+      look.spot *= pre * (1 + STRIKE.spot * st.env);
+      look.cone *= pre * (1 + STRIKE.cone * st.env);
+      look.bloom *= 1 + STRIKE.bloom * st.env;
+      look.haze += STRIKE.haze * st.env;
+    }
+    // The house lights follow the Tickets seat counter (houseLights.ts). Without a running counter the
+    // house fills on its own over the end of Tickets. Never before Tickets (a phone's counter plays
+    // once and stays full), and held up while the stage light goes down after it, then out with it.
+    const cap = houseLights.capacity;
+    const count = houseLights.count ?? smoothstep(5.55, 5.9, o.Js) * cap;
+    const litTarget = houseSeatsLit(count, cap, HOUSE_SEATS) * smoothstep(4.7, 5.0, o.Js);
+    const lit = fs.seatsLit.step(litTarget, 0.12, dt);
+    shared.uSeatLit.value = lit < 0.01 ? 0 : lit;
+    shared.uHouseFill.value = lit / HOUSE_SEATS;
+    shared.uSeatGain.value = 1 / Math.max(look.exposure, 0.55);
     const s = o.s;
     const target = o.target;
     const dist = o.dist;
@@ -525,7 +559,7 @@ export default function Experience({
     if (debug) {
       const w = window as unknown as { __scene?: Record<string, unknown> };
       const prev = (w.__scene?.frame as number) ?? 0;
-      w.__scene = { J, frame: prev + 1, exposure: look.exposure, step, tier, post, dt: rawDt, scene };
+      w.__scene = { J, frame: prev + 1, exposure: look.exposure, step, tier, post, dt: rawDt, scene, strike: st.env, lampOn: st.on, seatsLit: lit };
     }
 
     // Adaptive quality: step down when sustained frame time is poor.
