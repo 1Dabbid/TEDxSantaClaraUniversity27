@@ -109,11 +109,13 @@ const adminCsp = csp({
   'frame-ancestors': ["'none'"],
 });
 
+// Accelerometer and gyroscope for this origin only: on phones the 3D scene follows the tilt of the
+// device (src/scene/tilt.ts, relative orientation; never prompted for). Everything else stays off.
 const permissionsPolicy = [
-  'accelerometer=()',
+  'accelerometer=(self)',
   'camera=()',
   'geolocation=()',
-  'gyroscope=()',
+  'gyroscope=(self)',
   'magnetometer=()',
   'microphone=()',
   'usb=()',

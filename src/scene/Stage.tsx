@@ -76,7 +76,7 @@ export default function Stage({ quality }: { quality: 'high' | 'low' }) {
     const cone = new CylinderGeometry(BEAM.r0 * BEAM.pad, BEAM.rBottom * BEAM.pad, SPOT_HEIGHT, high ? 48 : 32, 1, true);
     cone.translate(0, SPOT_HEIGHT / 2, 0);
 
-    const count = high ? 420 : 160;
+    const count = high ? 640 : 280;
     const pos = new Float32Array(count * 3);
     const seed = new Float32Array(count * 4);
     let s = 1337;

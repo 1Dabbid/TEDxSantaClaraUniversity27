@@ -74,6 +74,8 @@ type Frame = {
   motes: number;
   /** Upper-middle band veil (0..1). */
   band: number;
+  /** Weight: lag of the view behind its turn (deg, along camera right / up). */
+  lag: [number, number];
 };
 
 const WORLD_UP = new Vector3(0, 1, 0);
@@ -185,7 +187,18 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
      * Steps the rig at a fixed dt over `ys` (scroll px per step) or `js`
      * (journey values per step). The first value is snapped to.
      */
-    run(opts: { ys?: number[]; js?: number[]; dt?: number; t0?: number; drift?: boolean; content?: Partial<ShotOptions> }): Frame[] {
+    run(opts: {
+      ys?: number[];
+      js?: number[];
+      dt?: number;
+      t0?: number;
+      drift?: boolean;
+      content?: Partial<ShotOptions>;
+      /** Pointer (NDC, -1..1) held for the whole run, and how much the scene reacts to it (default 0). */
+      pointer?: [number, number];
+      react?: number;
+      portrait?: boolean;
+    }): Frame[] {
       const L = measure();
       const live = getShots();
       const away = live.away;
@@ -200,7 +213,24 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       const frames: Frame[] = [];
       let t = opts.t0 ?? 10;
       seq.forEach((J, i) => {
-        stepRig(rig, shots, away, { J, dt, t: opts.drift === false ? 10 : t, pointerX: 0, pointerY: 0, snap: i === 0, aspect }, look, out);
+        stepRig(
+          rig,
+          shots,
+          away,
+          {
+            J,
+            dt,
+            t: opts.drift === false ? 10 : t,
+            pointerX: opts.pointer?.[0] ?? 0,
+            pointerY: opts.pointer?.[1] ?? 0,
+            react: opts.react ?? 0,
+            portrait: opts.portrait,
+            snap: i === 0,
+            aspect,
+          },
+          look,
+          out,
+        );
         t += dt;
         // The same near-plane corner as the rig (lens shift included).
         const corner = nearCorner(out.near, look.fov, out.shiftX, out.shiftY, aspect);
@@ -225,9 +255,58 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
           cone: +look.cone.toFixed(4),
           motes: +look.motes.toFixed(4),
           band: +look.band.toFixed(4),
+          lag: [+((out.lagX * 180) / Math.PI).toFixed(4), +((out.lagY * 180) / Math.PI).toFixed(4)],
         });
       });
       return frames;
+    },
+    /**
+     * How the camera answers the pointer at a journey position: holds the page at J, settles the
+     * rig, then holds the pointer at each corner (left, right, top, bottom) for `hold` seconds and
+     * reports the camera's orbit round the target and the turn of the view (deg) against the
+     * pointer at rest, plus the near-plane clearance. `react` 0 must give zeros.
+     */
+    react(opts: { J: number; react?: number; hold?: number; portrait?: boolean }) {
+      const hold = opts.hold ?? 3;
+      const n = Math.round(hold * 60);
+      const settle = Array(240).fill(opts.J);
+      const base = api.run({ js: settle, drift: false, react: opts.react ?? 1, portrait: opts.portrait }).at(-1)!;
+      const deg = (a: Vector3, b: Vector3) => (Math.acos(Math.min(1, Math.max(-1, a.dot(b)))) * 180) / Math.PI;
+      const tgt0 = new Vector3(...base.tgt);
+      const pos0 = new Vector3(...base.pos);
+      const off0 = pos0.clone().sub(tgt0).normalize();
+      const fwd0 = tgt0.clone().sub(pos0).normalize();
+      const corners: Record<string, [number, number]> = { left: [-1, 0], right: [1, 0], top: [0, 1], bottom: [0, -1] };
+      const res: Record<string, { orbitDeg: number; viewDeg: number; clr: number; finite: boolean }> = {};
+      for (const [k, p] of Object.entries(corners)) {
+        const F = api.run({ js: [...settle, ...Array(n).fill(opts.J)], drift: false, react: opts.react ?? 1, pointer: p, portrait: opts.portrait });
+        const f = F.at(-1)!;
+        const pos = new Vector3(...f.pos);
+        const tgt = new Vector3(...f.tgt);
+        const finite = F.every((x) => x.pos.every(Number.isFinite) && x.tgt.every(Number.isFinite));
+        res[k] = {
+          orbitDeg: +deg(pos.clone().sub(tgt0).normalize(), off0).toFixed(3),
+          viewDeg: +deg(tgt.clone().sub(pos).normalize(), fwd0).toFixed(3),
+          clr: Math.min(...F.slice(settle.length).map((x) => x.clr)),
+          finite,
+        };
+      }
+      return { J: opts.J, dist: +pos0.distanceTo(tgt0).toFixed(4), corners: res };
+    },
+    /**
+     * A fling: the journey jumps from `from` to `to` in one frame and back, at 60 fps. Reports the
+     * largest weight lag and roll (deg), whether every value stayed finite, and the least clearance.
+     */
+    fling(opts: { from: number; to: number; frames?: number }) {
+      const n = opts.frames ?? 120;
+      const js = [...Array(30).fill(opts.from), ...Array(n).fill(opts.to), ...Array(n).fill(opts.from)];
+      const F = api.run({ js, drift: false });
+      return {
+        maxLagDeg: Math.max(...F.map((f) => Math.hypot(f.lag[0], f.lag[1]))),
+        maxRollDeg: Math.max(...F.map((f) => Math.abs(f.rollDeg))),
+        minClr: Math.min(...F.map((f) => f.clr)),
+        finite: F.every((f) => [...f.pos, ...f.tgt, ...f.up, f.roll, ...f.lag].every(Number.isFinite)),
+      };
     },
   };
   const metrics = (opts: { from?: number; to?: number; outFrom?: number; step?: number; content?: Partial<ShotOptions> } = {}) => {
