@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { siteDescription, venueDescriptionTail } from '../../src/lib/site';
-import { SITE_URL, contentValue } from './helpers';
+import { shareImageVersion, siteDescription, venueDescriptionTail } from '../../src/lib/site';
+import { SITE_URL, contentValue, topicRoutes } from './helpers';
 
 /** The whole text of a content file (for values the flat-key helper cannot read, such as list items). */
 const contentFile = (file: string) => readFileSync(join(process.cwd(), 'content', file), 'utf8');
@@ -45,6 +45,34 @@ test.describe('share images', () => {
       expect(meta(html, 'property', 'og:image:alt'), `${path} og:image:alt`).toContain('TEDxSantaClaraUniversity');
     }
   });
+
+  test('the share image version changes exactly when something drawn on the card changes', () => {
+    const card = { themeName: 'Fine Print', dateMedium: 'April 23, 2027', venueName: 'Hall', venueCampus: 'Campus' };
+    const v = shareImageVersion(card);
+    expect(v).toMatch(/^[0-9a-f]{8}$/);
+    expect(shareImageVersion({ ...card })).toBe(v);
+    expect(shareImageVersion({ ...card, themeName: 'Small Print' })).not.toBe(v);
+    expect(shareImageVersion({ ...card, dateMedium: 'April 24, 2027' })).not.toBe(v);
+    expect(shareImageVersion({ ...card, venueCampus: 'Other Campus' })).not.toBe(v);
+    // The card shows the campus when there is one, so the hall's name only counts without it.
+    expect(shareImageVersion({ ...card, venueName: 'Other Hall' })).toBe(v);
+    expect(shareImageVersion({ ...card, venueCampus: '', venueName: 'Other Hall' })).not.toBe(shareImageVersion({ ...card, venueCampus: '' }));
+  });
+
+  test('every topic page names the share image with a version, like the home page', async ({ request }) => {
+    const home = await (await request.get('/')).text();
+    expect(meta(home, 'property', 'og:image')).toMatch(/\/opengraph-image\?[0-9a-f]+$/);
+    const versions = new Set<string>();
+    for (const path of topicRoutes()) {
+      const html = await (await request.get(path)).text();
+      const og = meta(html, 'property', 'og:image').replace(/&amp;/g, '&');
+      expect(og, `${path} og:image`).toMatch(new RegExp(`^${SITE_URL}/opengraph-image\\?v=[0-9a-f]{8}$`));
+      expect(meta(html, 'name', 'twitter:image').replace(/&amp;/g, '&'), `${path} twitter:image`).toBe(og);
+      versions.add(og);
+    }
+    // One card, one address: every topic page shares the same versioned image.
+    expect(versions.size).toBe(1);
+  });
 });
 
 test.describe('descriptions follow the content', () => {
@@ -62,6 +90,19 @@ test.describe('descriptions follow the content', () => {
     expect(
       venueDescriptionTail({ venueNotes: empty.map((n) => note(n.title, 'Filled in.')), mapUrl: 'https://maps.example.com/x' }),
     ).toBe('Address, map link, directions, parking and accessibility.');
+  });
+
+  test('the venue description keeps a title the owner typed as typed', () => {
+    // Only the three standard titles are lower-cased; names and acronyms are not mangled.
+    expect(
+      venueDescriptionTail({
+        venueNotes: [note('Directions', 'From the main gate.'), note('Parking'), note('Accessibility'), note('Caltrain & VTA', 'Santa Clara station.'), note('ADA drop-off')],
+        mapUrl: 'https://maps.example.com/x',
+      }),
+    ).toBe('Address, map link, directions and Caltrain & VTA; parking, accessibility and ADA drop-off details to follow.');
+    expect(venueDescriptionTail({ venueNotes: [note(' PARKING ', 'Lot B.'), note('accessibility')], mapUrl: '' })).toBe(
+      'Address and parking; accessibility details to follow.',
+    );
   });
 
   test('/venue: the served description promises nothing the notes do not hold', async ({ request }) => {

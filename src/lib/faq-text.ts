@@ -17,6 +17,8 @@ import { normalizeLink } from './content-checks';
 type StatusSettings = Pick<
   Settings,
   | 'ticketState'
+  | 'ticketUrl'
+  | 'ticketEmbedUrl'
   | 'ticketSaleExpected'
   | 'ticketPriceNote'
   | 'speakerApplicationsState'
@@ -33,13 +35,18 @@ type StatusSettings = Pick<
 const sentence = (t: string) => t.trim().replace(/[.\s]+$/, '');
 
 /**
- * {ticketStatus}: the answer to "Are tickets on sale?", from Ticket status and
- * Expected on-sale month. The same facts as the Tickets section, as sentences.
+ * {ticketStatus}: the answer to "Are tickets on sale?", from Ticket status, the
+ * ticket link and Expected on-sale month. The same facts as the Tickets section,
+ * as sentences. "On sale" with neither a ticket link nor an embedded checkout
+ * gives visitors nothing to buy from (the Tickets section says "Ticket link
+ * going live shortly."), so the answer says that too instead of "on sale now".
  */
-export function ticketStatusText(s: Pick<Settings, 'ticketState' | 'ticketSaleExpected'>): string {
+export function ticketStatusText(s: Pick<Settings, 'ticketState' | 'ticketUrl' | 'ticketEmbedUrl' | 'ticketSaleExpected'>): string {
   switch (s.ticketState) {
     case 'on-sale':
-      return 'Yes, tickets are on sale now. Use the Tickets button at the top of any page.';
+      return s.ticketUrl || s.ticketEmbedUrl
+        ? 'Yes, tickets are on sale now. Use the Tickets button at the top of any page.'
+        : 'Almost. Tickets are about to go on sale: the ticket link is going live shortly. Join the mailing list to hear the moment it does.';
     case 'sold-out':
       return 'Tickets are sold out. Join the mailing list in case seats are released.';
     case 'closed':
@@ -55,16 +62,24 @@ export function ticketStatusText(s: Pick<Settings, 'ticketState' | 'ticketSaleEx
  * {applicationsStatus}: the answer to "How can I apply to speak?", from Speaker
  * applications, the application link and the deadline. "Open" without a link
  * counts as not open yet, exactly as in the Speakers section (no button to press).
+ *
+ * The promise to "hear first when applications open" belongs to the not-open
+ * state only, so it lives here and not in the hand-typed answer, where it would
+ * still be said once applications are open or closed. It is left out while there
+ * is no interest form to register with.
  */
 export function applicationsStatusText(
-  s: Pick<Settings, 'speakerApplicationsState' | 'speakerApplicationsUrl' | 'speakerApplicationsDeadline'>,
+  s: Pick<Settings, 'speakerApplicationsState' | 'speakerApplicationsUrl' | 'speakerApplicationsDeadline' | 'interestUrl'>,
 ): string {
   if (s.speakerApplicationsState === 'closed') return 'Speaker applications for this event are closed.';
   if (s.speakerApplicationsState === 'open' && s.speakerApplicationsUrl) {
     const deadline = sentence(s.speakerApplicationsDeadline);
     return `Speaker applications are open. ${deadline ? `The deadline is ${deadline}. ` : ''}Apply here: ${s.speakerApplicationsUrl}.`;
   }
-  return 'Formal speaker applications are not open yet.';
+  const hearFirst = s.interestUrl
+    ? ' Those who register their interest get an early look at pitching a talk and hear first when applications open.'
+    : '';
+  return `Formal speaker applications are not open yet.${hearFirst}`;
 }
 
 /** Shown where an answer uses a time that is still blank in Event basics. */
@@ -88,6 +103,22 @@ export function faqSettingValues(s: StatusSettings) {
     endTime: s.endTime || TIME_TO_BE_ANNOUNCED,
     timesNote: s.timesNote.trim(),
   };
+}
+
+/**
+ * {contactEmail} and {interestUrl} are '' while their field is blank. Before the
+ * placeholders are filled, this takes the words that lead up to a blank one out
+ * with it, so no sentence is left dangling:
+ * "contact the team at {contactEmail} and we will" becomes "contact the team and we will",
+ * "use the interest form: {interestUrl}." becomes "use the interest form."
+ * `blank` lists the placeholder names whose field is empty.
+ */
+export function dropBlankPlaceholders(text: string, blank: readonly string[]): string {
+  let out = text;
+  for (const name of blank) {
+    out = out.replace(new RegExp(String.raw`(?:[ \t]+(?:at|to|via|on|by)|[ \t]*:)?[ \t]*\{${name}\}`, 'g'), '');
+  }
+  return out;
 }
 
 /** After placeholders are filled: no double spaces or dangling spaces where a blank one was. */

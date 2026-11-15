@@ -123,6 +123,25 @@ export function venueLine(s: Place): string {
 const listOf = (items: string[]) =>
   items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : (items[0] ?? '');
 
+/** The "Getting there" notes the page starts with; common words, so they are lower-cased inside a sentence. */
+const STANDARD_VENUE_NOTES = ['directions', 'parking', 'accessibility'];
+
+/**
+ * A short version tag for the share image (/opengraph-image), made from
+ * everything drawn on the card: the theme, the date and the place. It changes
+ * exactly when the card changes, so a platform that keeps a picture by its
+ * address fetches the new one. Eight hex digits (FNV-1a), e.g. "9a3f01c2".
+ */
+export function shareImageVersion(s: Pick<Settings, 'themeName' | 'dateMedium' | 'venueName' | 'venueCampus'>): string {
+  const facts = [SITE_NAME, s.themeName, s.dateMedium, s.venueCampus || s.venueName].join('\n');
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < facts.length; i++) {
+    hash ^= facts.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
 /**
  * The closing words of the /venue search and share description, built from what
  * the page really has: the address always, the map link when there is one, and a
@@ -130,12 +149,18 @@ const listOf = (items: string[]) =>
  * Notes still empty are promised as "to follow". With today's empty notes:
  * "Address and map link; directions, parking and accessibility details to follow."
  * With all three filled in: "Address, map link, directions, parking and accessibility."
+ * Only the three standard titles are lower-cased to sit inside the sentence; a
+ * title the owner typed ("Caltrain & VTA", "ADA drop-off") stays exactly as typed.
  */
 export function venueDescriptionTail(s: Pick<Settings, 'venueNotes' | 'mapUrl'>): string {
   // No notes at all: the page shows its three standard ones, empty.
   const notes = s.venueNotes.length ? s.venueNotes : ['Directions', 'Parking', 'Accessibility'].map((title) => ({ title, body: '' }));
   const named = notes.filter((n) => n.title.trim());
-  const lower = (t: string) => t.trim().toLocaleLowerCase('en-US');
+  const lower = (t: string) => {
+    const title = t.trim();
+    const plain = title.toLocaleLowerCase('en-US');
+    return STANDARD_VENUE_NOTES.includes(plain) ? plain : title;
+  };
   const ready = named.filter((n) => n.body.trim()).map((n) => lower(n.title));
   const toFollow = named.filter((n) => !n.body.trim()).map((n) => lower(n.title));
   const has = listOf(['Address', ...(s.mapUrl ? ['map link'] : []), ...ready]);

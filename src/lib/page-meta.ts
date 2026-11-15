@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getSettings } from './content';
-import { isIndexable, ogAlt, SITE_NAME } from './site';
+import { isIndexable, ogAlt, shareImageVersion, SITE_NAME } from './site';
 
 /**
  * The 404 page's metadata (src/app/not-found.tsx). Also returned by a route
@@ -30,7 +30,10 @@ const SHARE_IMAGE_SIZE = { width: 1200, height: 630 };
  * Share image: a page that sets its own `openGraph` / `twitter` block replaces
  * the root layout's whole block, including the image the root
  * opengraph-image.tsx adds by file convention. So the image is named here, by
- * its route (/opengraph-image, the same card as the home page).
+ * its route (/opengraph-image, the same card as the home page), with a version
+ * query made from what is drawn on the card (shareImageVersion): when the theme,
+ * date or place changes, the address changes too and share platforms that keep
+ * a picture by its address fetch the new card.
  */
 export async function topicPageMetadata({
   title,
@@ -44,7 +47,8 @@ export async function topicPageMetadata({
   index?: boolean;
 }): Promise<Metadata> {
   const shareTitle = `${SITE_NAME} · ${title}`;
-  const image = { url: '/opengraph-image', ...SHARE_IMAGE_SIZE, type: 'image/png', alt: ogAlt(await getSettings()) };
+  const s = await getSettings();
+  const image = { url: `/opengraph-image?v=${shareImageVersion(s)}`, ...SHARE_IMAGE_SIZE, type: 'image/png', alt: ogAlt(s) };
   return {
     title,
     description,

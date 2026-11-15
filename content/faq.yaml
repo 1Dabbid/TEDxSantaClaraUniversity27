@@ -19,7 +19,7 @@ items:
       The talks are recorded and submitted for publication on the TEDx Talks YouTube channel.
   - question: How can I apply to speak?
     answer: |-
-      {applicationsStatus} To register your interest in speaking, get an early look at pitching a talk and hear first about applications, use the club’s interest form: {interestUrl}
+      {applicationsStatus} To register your interest in speaking with the club, use its interest form: {interestUrl}.
   - question: How can I get involved?
     answer: |-
       Fill in the club’s interest form: {interestUrl}. It is one form for three things: helping to organize {eventName}, joining the club’s contact list, and registering your interest in speaking.
