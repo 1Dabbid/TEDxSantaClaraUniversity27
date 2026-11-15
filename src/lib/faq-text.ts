@@ -112,8 +112,8 @@ const SENTENCE_PLACEHOLDERS = String.raw`\{(?:ticketStatus|applicationsStatus|ti
 const SENTENCE_START = new RegExp(String.raw`[.!?]["”’)]*[ \t]+|${SENTENCE_PLACEHOLDERS}|\n+`, 'g');
 const SENTENCE_END = /[.!?]["”’)]*(?=\s|$)[ \t]*|\n/g;
 
-/** Before a period: "e.g", "i.e", or a title or name prefix ("Dr", "St"). The sentence goes on after it. */
-const ABBREVIATION = /(?:\b(?:e\.g|i\.e)|\b(?:Dr|Mr|Mrs|Ms|Prof|St|Mt|vs))$/;
+/** Before a period: "e.g", "i.e", or a title or name prefix ("Dr", "Prof"). "St" and "Mt" are left out: they end a sentence ("Franklin St.") more often than they start a name. The sentence goes on after it. */
+const ABBREVIATION = /(?:\b(?:e\.g|i\.e)|\b(?:Dr|Mr|Mrs|Ms|Prof|vs))$/;
 
 /**
  * Whether the period at `stop` (followed by `after`) only ends an

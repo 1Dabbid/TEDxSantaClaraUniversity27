@@ -207,6 +207,7 @@ test.describe('FAQ placeholders that follow the settings', () => {
     // A period that only ends an abbreviation does not end the sentence: no fragment such as "If you want to help (e.g. Thanks."
     expect(drop('If you want to help (e.g. as a volunteer), use the form: {interestUrl}. Thanks.')).toBe('Thanks.');
     expect(drop('See Dr. Smith or use {interestUrl}. Thanks.')).toBe('Thanks.');
+    expect(drop('Parking is on Franklin St. Use the form: {interestUrl}.')).toBe('Parking is on Franklin St.');
     expect(drop('Doors open early. Use {interestUrl} (e.g. to volunteer or i.e. to help). Thanks.')).toBe('Doors open early. Thanks.');
     expect(drop('Come at 5 p.m. sharp or sign up: {interestUrl}. Thanks.')).toBe('Thanks.');
     expect(drop('Talks end at 9 p.m. Sign up at {interestUrl} for news. Thanks.')).toBe('Talks end at 9 p.m. Thanks.');
