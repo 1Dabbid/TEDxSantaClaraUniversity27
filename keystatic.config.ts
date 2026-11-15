@@ -406,7 +406,7 @@ export default config({
             description: fields.text({ label: 'Description (optional)', multiline: true }),
             kind: fields.select({
               label: 'Kind',
-              description: 'The small label shown next to the item on the site. Use Reception for doors with drinks or food, and Program for anything else (welcome, closing).',
+              description: 'The small label shown next to the item on the site. Use Reception for doors with drinks or food, and No label for anything else (welcome, closing): those items show no label.',
               options: [
                 { label: SCHEDULE_KIND_LABEL.talk, value: 'talk' },
                 { label: SCHEDULE_KIND_LABEL.break, value: 'break' },

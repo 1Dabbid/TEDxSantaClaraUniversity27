@@ -44,7 +44,7 @@ export function PartnerBand({ settings }: { settings: Settings }) {
             {/* Navigation, not an action: the quiet link (Button.tsx, "Which style where"). */}
             <MoreLink href="/partners" label="Partnership details" className="" />
             {mail ? (
-              <a href={mail} className="link-draw inline-block py-1.5 text-mute hover:text-white [overflow-wrap:anywhere]">
+              <a href={mail} className="link-draw inline-block py-2.5 text-mute pointer-fine:py-1.5 hover:text-white [overflow-wrap:anywhere]">
                 or write to {settings.partnershipsEmail}
               </a>
             ) : null}

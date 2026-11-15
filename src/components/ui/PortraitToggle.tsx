@@ -13,7 +13,7 @@ import { useState, type ReactNode } from 'react';
  *
  * Only the image is the button. The name, role and LinkedIn link sit outside
  * it, so a tap on the photo never gets in the way of reaching the link. The
- * accessible name stays the same ("<name> in colour"); aria-pressed carries the
+ * accessible name stays the same ("<name> in color"); aria-pressed carries the
  * state, and the crop marks show it without relying on colour.
  * Before hydration (or without JavaScript) hover and focus still work.
  */
@@ -23,7 +23,7 @@ export function PortraitToggle({ name, className = '', children }: { name: strin
     <button
       type="button"
       aria-pressed={on}
-      aria-label={`${name} in colour`}
+      aria-label={`${name} in color`}
       data-portrait-toggle
       data-cursor="link"
       onClick={() => setOn((v) => !v)}

@@ -52,6 +52,8 @@ export function Theme({ settings }: { settings: Settings }) {
 
   return (
     <SectionShell id="theme" scrim="none" className="theme-runway">
+      {/* Pinned stage only: carries the hero's text scrim across the section boundary (globals.css). */}
+      <div aria-hidden="true" className="theme-head pointer-events-none absolute inset-x-0 top-0 -z-10" />
       <div data-theme-stage data-def-index={defIndex} className="theme-stage relative">
         {/* Targeted scrims: one behind the text column (left), one under the
             contract (bottom left). The right ~45% stays open for the engraving. */}
@@ -137,7 +139,7 @@ export function Theme({ settings }: { settings: Settings }) {
               </li>
             </ol>
             {copy.themeFootnote ? (
-              <p data-theme-foot className="fine-print mt-2 text-[0.5625rem] tracking-[0.18em]">
+              <p data-theme-foot className="fine-print mt-2 text-[0.5625rem] tracking-[0.18em] pointer-coarse:text-[0.6875rem]">
                 <span className="text-[#ff4d63]">*</span>
                 {` ${copy.themeFootnote}`}
               </p>

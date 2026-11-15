@@ -94,7 +94,7 @@ function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; ne
           ) : null}
         </div>
         <div className="flex items-center border-b border-white/15 py-6 sm:border-x sm:border-b-0 sm:px-8">
-          <Link href="/speakers" className="fine-print link-draw inline-block py-1.5 text-white">
+          <Link href="/speakers" className="fine-print link-draw inline-block py-3.5 text-white pointer-fine:py-1.5">
             All speakers
           </Link>
         </div>
@@ -120,15 +120,15 @@ function SpeakerNav({ prev, next }: { prev: { s: Speaker; i: number } | null; ne
 function Breadcrumb({ index }: { index: number }) {
   return (
     <nav aria-label="Breadcrumb" className="fine-print text-mute">
-      <ol className="-my-1.5 flex flex-wrap items-center gap-x-2">
+      <ol className="flex flex-wrap items-center gap-x-2">
         <li>
-          <Link href="/" className="inline-block py-1.5 hover:text-white">
+          <Link href="/" className="tap inline-flex min-h-11 items-center hover:text-white">
             Home
           </Link>
         </li>
         <li aria-hidden="true">/</li>
         <li>
-          <Link href="/speakers" className="inline-block py-1.5 hover:text-white">
+          <Link href="/speakers" className="tap inline-flex min-h-11 items-center hover:text-white">
             Speakers
           </Link>
         </li>
@@ -152,7 +152,9 @@ function Announced({ speaker, index, settings }: { speaker: Speaker; index: numb
       <div className="shell pt-12 sm:pt-16">
         <Breadcrumb index={index} />
         <p data-reveal="fade" className="fine-print mt-16 sm:mt-24 text-mute">
-          Speaker {num(index)} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
+          {/* "Nº" is spelled out letter by letter by screen readers: they get the plain number. */}
+          <span aria-hidden="true">Speaker {num(index)}</span>
+          <span className="sr-only">Speaker {index + 1}</span> · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
         </p>
         <h1
           id="speaker-title"
@@ -265,7 +267,9 @@ function Unannounced({ index, settings }: { index: number; settings: Settings })
       </div>
       <div className="shell pb-28 pt-16 sm:pb-36 sm:pt-24">
         <p className="fine-print text-mute">
-          Speaker {num(index)} · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
+          {/* "Nº" is spelled out letter by letter by screen readers: they get the plain number. */}
+          <span aria-hidden="true">Speaker {num(index)}</span>
+          <span className="sr-only">Speaker {index + 1}</span> · <time dateTime={settings.dateISO}>{settings.dateLong}</time>
         </p>
         <h1
           id="speaker-title"

@@ -76,7 +76,12 @@ export function ScheduleTimeline({
               <p className="text-xl font-semibold tracking-tight sm:text-2xl">{item.title}</p>
               {item.description ? <p className="mt-1 max-w-xl text-mute">{item.description}</p> : null}
             </div>
-            <span className="fine-print col-start-2 mt-2 sm:col-start-auto sm:mt-0">{KIND_LABEL[item.kind]}</span>
+            {/* "Other" (welcome, closing) has no category to name: no tag, the cell stays for the grid. */}
+            {item.kind === 'other' ? (
+              <span aria-hidden="true" className="hidden sm:block" />
+            ) : (
+              <span className="fine-print col-start-2 mt-2 sm:col-start-auto sm:mt-0">{KIND_LABEL[item.kind]}</span>
+            )}
             <span aria-hidden="true" className="absolute inset-x-0 bottom-0 ml-10 h-px bg-white/10" />
           </li>
         ))}

@@ -234,7 +234,7 @@ export default async function TeamPage() {
           </p>
           {team.some((m) => m.photo) ? (
             <p data-team-footnote className="fine-print text-subtle">
-              <span aria-hidden="true">†&nbsp;</span>Portraits appear in monochrome. Colour on hover, focus or tap.
+              <span aria-hidden="true">†&nbsp;</span>Portraits appear in monochrome. Color on hover, focus or tap.
             </p>
           ) : null}
         </div>

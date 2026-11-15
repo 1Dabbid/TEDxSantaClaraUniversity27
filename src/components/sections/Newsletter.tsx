@@ -95,7 +95,7 @@ export function Newsletter({ settings }: { settings: Settings }) {
                     · until then, write to{' '}
                     <a
                       href={`mailto:${settings.contactEmail}?subject=Mailing%20list`}
-                      className="link-draw inline-block py-1.5 tracking-normal text-white normal-case"
+                      className="link-draw inline-block py-3.5 pointer-fine:py-1.5 tracking-normal text-white normal-case"
                     >
                       {settings.contactEmail}
                     </a>
@@ -111,10 +111,10 @@ export function Newsletter({ settings }: { settings: Settings }) {
             The list is only used for <EventName /> event news. You can
             unsubscribe at any time.
           </p>
-          <ul className="fine-print -my-1.5 flex flex-wrap gap-x-6 sm:justify-end text-mute">
+          <ul className="fine-print -my-3.5 flex flex-wrap gap-x-6 pointer-fine:-my-1.5 sm:justify-end text-mute">
             {ig ? (
               <li>
-                <a href={ig} target="_blank" rel="noopener noreferrer" className="link-draw inline-block py-1.5 text-white">
+                <a href={ig} target="_blank" rel="noopener noreferrer" className="link-draw inline-block py-3.5 pointer-fine:py-1.5 text-white">
                   Instagram {handle ? <span className="tracking-normal normal-case">{handle}</span> : null}
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
@@ -122,14 +122,14 @@ export function Newsletter({ settings }: { settings: Settings }) {
             ) : null}
             {appsOpen ? (
               <li>
-                <a href={settings.speakerApplicationsUrl} target="_blank" rel="noopener noreferrer" className="link-draw inline-block py-1.5 text-white">
+                <a href={settings.speakerApplicationsUrl} target="_blank" rel="noopener noreferrer" className="link-draw inline-block py-3.5 pointer-fine:py-1.5 text-white">
                   Apply to speak
                   <span className="sr-only"> (opens in a new tab)</span>
                 </a>
               </li>
             ) : null}
             <li>
-              <Link href="/partners" className="link-draw inline-block py-1.5 text-white">
+              <Link href="/partners" className="link-draw inline-block py-3.5 pointer-fine:py-1.5 text-white">
                 Organizations: partner with us
               </Link>
             </li>

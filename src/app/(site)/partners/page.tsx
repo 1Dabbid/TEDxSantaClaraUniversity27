@@ -517,24 +517,24 @@ export default async function PartnersPage() {
         </h2>
         <ol
           data-reveal="stagger"
-          className={`mt-14 grid border-t border-white/15 ${four ? 'sm:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}
+          className={`mt-14 grid grid-cols-[auto_minmax(0,1fr)] border-t border-white/15 ${four ? 'sm:grid-cols-2 lg:grid-cols-4' : 'md:grid-cols-3'}`}
         >
           {REASONS.map((r, i) => (
             <li
               key={r.title}
-              className={`grid grid-cols-[5.25rem_minmax(0,1fr)] content-start gap-x-4 border-b border-white/15 py-8 ${
+              className={`col-span-2 grid grid-cols-[auto_minmax(0,1fr)] content-start gap-x-4 border-b border-white/15 py-8 supports-[grid-template-columns:subgrid]:grid-cols-subgrid ${
                 four
-                  ? `sm:flex sm:flex-col sm:py-10 lg:border-b-0 ${i % 2 === 1 ? 'sm:border-l sm:pl-8' : 'sm:pr-8'} ${
+                  ? `sm:col-span-1 sm:flex sm:flex-col sm:py-10 lg:border-b-0 ${i % 2 === 1 ? 'sm:border-l sm:pl-8' : 'sm:pr-8'} ${
                       i > 0 ? 'lg:border-l lg:pl-8' : ''
                     } ${i < REASONS.length - 1 ? 'lg:pr-8' : 'lg:pr-0'}`
-                  : `md:flex md:flex-col md:border-b-0 md:py-10 ${i > 0 ? 'md:border-l md:pl-8' : ''} ${
+                  : `md:col-span-1 md:flex md:flex-col md:border-b-0 md:py-10 ${i > 0 ? 'md:border-l md:pl-8' : ''} ${
                       i < REASONS.length - 1 ? 'md:pr-8' : 'md:pr-0'
                     }`
               }`}
             >
               <span
                 aria-hidden="true"
-                className="row-span-2 flex h-[1em] items-end text-[2.75rem] leading-none font-semibold tracking-[-0.05em] tabular-nums sm:text-[clamp(3.5rem,6vw,5.5rem)]"
+                className="row-span-2 flex h-[1em] min-w-[5.25rem] items-end text-[2.25rem] leading-none font-semibold tracking-[-0.05em] tabular-nums sm:text-[clamp(3.5rem,6vw,5.5rem)]"
               >
                 {r.figure}
               </span>

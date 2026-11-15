@@ -69,12 +69,12 @@ test.describe('portrait fallbacks', () => {
     expect(out).not.toContain('<img');
   });
 
-  test('a photo: a toggle button named "<name> in colour" with a decorative image; inside a link, a plain frame', () => {
+  test('a photo: a toggle button named "<name> in color" with a decorative image; inside a link, a plain frame', () => {
     const member = { ...base, photo: '/images/team/director-of-creative/photo.jpg' };
     const out = html(member);
     expect(out).toContain('<button');
     expect(out).toContain('aria-pressed="false"');
-    expect(out).toContain('aria-label="Ella Torseth in colour"');
+    expect(out).toContain('aria-label="Ella Torseth in color"');
     expect(out).toContain('alt=""');
     expect(out).toContain('portrait-marks');
     const plain = html(member, false);

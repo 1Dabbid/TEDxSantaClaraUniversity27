@@ -6,6 +6,7 @@ import { CLUB_URL, TED_URL, TEDX_PROGRAM_URL } from '@/lib/site';
 import { FooterMotion } from '@/motion/sections/FooterMotion';
 import { Logo } from './Logo';
 import { EventName, Tedx } from './ui/KeepCase';
+import { FooterNavLink } from './ui/FooterNavLink';
 import { MotionToggle } from './ui/MotionToggle';
 import { navItems, navVisibility } from './nav';
 
@@ -17,8 +18,9 @@ const SOCIAL_LABELS: Record<keyof Settings['socials'], string> = {
 };
 
 const ext = { target: '_blank', rel: 'noopener noreferrer' } as const;
-// inline-block + py-1 gives every footer link a target at least 24px tall (WCAG 2.5.8).
-const linkCls = 'link-draw inline-block py-1 text-mute hover:text-white focus-visible:text-white';
+// Touch: py-3 makes every footer link 44px tall, so stacked links sit 44px apart and a thumb
+// never lands on the neighbor. Mouse: py-1 keeps the compact list (28px, above the 24px of WCAG 2.5.8).
+const linkCls = 'link-draw inline-block py-3 text-mute hover:text-white focus-visible:text-white pointer-fine:py-1';
 const NewTab = () => <span className="sr-only"> (opens in a new tab)</span>;
 
 /** "2027-04-23" -> ["04", "23", "27"] */
@@ -133,15 +135,13 @@ export async function Footer({ settings }: { settings: Settings }) {
           </div>
 
           <nav aria-labelledby="footer-site" className="lg:col-span-2 lg:col-start-7">
-            <h2 id="footer-site" className="fine-print text-white">
+            <h2 id="footer-site" className="fine-print scroll-mt-[calc(var(--header-h)+1.5rem)] text-white">
               Site
             </h2>
             <ul className="mt-3 text-sm">
               {nav.map((i) => (
                 <li key={i.href}>
-                  <Link href={i.href} className={linkCls}>
-                    {i.label}
-                  </Link>
+                  <FooterNavLink item={i} className={linkCls} />
                 </li>
               ))}
               <li>
