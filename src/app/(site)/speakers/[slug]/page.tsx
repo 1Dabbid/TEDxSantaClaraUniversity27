@@ -43,9 +43,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!data) return {};
   const { speaker, index } = data;
   // Plain digits in the title: screen readers spell out "Nº" letter by letter.
+  // The same words as the placeholder page's heading and its share image ("Speaker 01").
   const title = speaker.announced
     ? [speaker.name, speaker.talkTitle].filter(Boolean).join(': ')
-    : `Speaker ${String(index + 1).padStart(2, '0')}: to be announced`;
+    : `Speaker ${String(index + 1).padStart(2, '0')}: To be announced`;
   // The event clause is always kept whole; the bio is shortened to fit about 155 characters.
   const speaking = ` Speaking at ${SITE_NAME}: ${settings.themeName}, ${settings.dateLong}.`;
   const description = speaker.announced
@@ -271,7 +272,7 @@ function Unannounced({ index, settings }: { index: number; settings: Settings })
           data-reveal="lines"
           className="mt-6 text-[clamp(3.25rem,9.6vw,8.75rem)] leading-[0.86] font-semibold tracking-[-0.06em] text-balance"
         >
-          <span className="sr-only">Speaker {index + 1}: </span>
+          <span className="sr-only">Speaker {String(index + 1).padStart(2, '0')}: </span>
           To be announced.
         </h1>
         <p data-reveal="fade" className="mt-8 max-w-lg text-lg text-mute sm:text-xl">

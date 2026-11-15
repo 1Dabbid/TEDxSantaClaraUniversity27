@@ -42,10 +42,10 @@ The home page shows what is true today and grows by itself as you publish. You n
 | Part of the home page | While nothing is published | Once you publish |
 | --- | --- | --- |
 | **Speakers** | One heading, "Speakers to be announced", and one panel: **Join the mailing list** and how to apply to speak. No placeholder cards. | Ticking **Announced** on a speaker shows their card (linked to their page) and the heading becomes "Meet the speakers". Slots still unannounced appear as a single "More speakers to be announced" card. |
-| **Schedule** | A short note: date, "Running order to follow". Not in the menu. | Ticking **Show the running order** shows the full timeline and adds **Schedule** to the menu. |
+| **Schedule** | A short note: date, "Running order to follow". **Schedule** is in the menu from the start (its page states the date). | Ticking **Show the running order** shows the full timeline, on the home page and on /schedule. |
 | **Speaker applications** | Shown in the Speakers section: "Applications are not open yet". | **Open** + a link: an **Apply to speak** button under the Speakers heading and in the closing links at the bottom of the home page (with the deadline, if filled in). **Closed**: "Applications for this event are closed." |
 | **Tickets** | "Not on sale yet.", when sales are expected (**Expected on-sale month**, e.g. "Tickets are expected to go on sale in February 2027."), and the mailing list button. | **On sale** + a link: **Get tickets** everywhere. |
-| **Team** | Hidden (not on the page, not in the menu). | Appears as soon as one person has **Show name publicly** ticked and a name: a compact strip of the named people (portrait or initials, name, role), grouped by level. |
+| **Team** | The home page section is hidden. The **/team** page and the **Team** menu link exist as soon as there is at least one role in **People > Team** (the page lists the roles, without names). | The home page section appears as soon as one person has **Show name publicly** ticked and a name: a compact strip of the named people (portrait or initials, name, role), grouped by level. |
 | **Partners** | A short text invitation on the home page (never names or logos) linking to `/partners`. On `/partners`, **Current partners** is hidden. | **Published** partners appear on `/partners` only. |
 | **Hero buttons** | **Tickets** and **Get updates** (mailing list). | Once a speaker is announced: **Tickets** and **Speakers**. |
 
@@ -85,11 +85,11 @@ To remove a slot entirely, untick **Published**.
 1. **The event > Schedule**.
 2. Under **Running order**, click **Add** for each moment. A box opens with **Time** (e.g. 5:30 PM, shown as typed), **Title**, **Description (optional)** and **Kind** (Talk, Break, Doors, Reception or Program; the site shows the same word next to the item: use Reception for doors with drinks or food, Program for anything else, such as the close). Click **Add** (or **Done** when editing an existing item) to close the box.
 3. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter.
-4. Tick **Show the running order** and **Save**. While it is unticked, the site shows a short "running order to follow" note and the menu has no Schedule link.
+4. Tick **Show the running order** and **Save**. While it is unticked, the site shows a short "running order to follow" note. The **Schedule** link is in the menu either way, because /schedule always states the date.
 
 Doors, talks and end time for the whole evening are in **The event > Event basics**: **Doors open at**, **Talks start at**, **Event ends at** (written like 5:30 PM). Search engines are given the evening's start (**Talks start at**, or **Doors open at** while that is blank), the doors time and the end time in California time; while no time is set they only see the date.
 
-**Note about the times (optional)**, also in **Event basics**: one sentence shown wherever the times appear (the Schedule section and /schedule, the Venue section and /venue). In 2027 it says "Times are approximate and may shift slightly. The full running order follows once speakers are confirmed." Shorten it once the running order is final, and empty it once the times are firm. The FAQ answer "When and where" types the times out: update it when they change.
+**Note about the times (optional)**, also in **Event basics**: one sentence shown wherever the times appear (the Schedule section and /schedule, the Venue section and /venue). In 2027 it says "Times are approximate and may shift slightly. The full running order follows once speakers are confirmed." Shorten it once the running order is final, and empty it once the times are firm. The FAQ answer "When and where" follows these fields by itself: it is written with `{doorsTime}`, `{talksTime}`, `{endTime}` and `{timesNote}` (see "Edit the FAQ").
 
 ### Put tickets on sale
 
@@ -98,10 +98,10 @@ Doors, talks and end time for the whole evening are in **The event > Event basic
 3. Optional: **Ticket checkout embed link (optional)**, only if the ticketing service gives you an "embed" link. Leave blank if unsure. (Editing locally with `npm run dev`? The box stays blank until you restart `npm run dev`.) If the embedded checkout stays blank on the live site, tell the web team: some services need one more allowed address (`CSP_FRAME_SRC` on Vercel). The embedded checkout is never allowed to take over the whole page: if the service wants to switch to its own full page (for a payment step, say), that step opens in a new tab instead, and buyers come back to this tab afterwards.
 4. **Price note**: one short sentence, e.g. "Tickets will cost no more than $100." Our cap is **$100**; confirm the limit for our licence tier with the licence holder. Do not call it a TED rule on the site.
 5. **Ticket price in US dollars (optional)**: just the number, e.g. `25` (`0` if free). The admin will not accept more than 100. Search engines show it in event listings; visitors read the Price note.
-6. **Tickets on sale from (optional)**: the first day of sales (pick the date). Until there is an exact date, use **Expected on-sale month (optional)** instead (e.g. "February 2027"): while the status is Coming soon the site says "Tickets are expected to go on sale in February 2027." in the hero, the Tickets section and at the end of /speakers, /schedule and /venue. Empty it once tickets are on sale.
+6. **Tickets on sale from (optional)**: the first day of sales (pick the date). Until there is an exact date, use **Expected on-sale month (optional)** instead (e.g. "February 2027"): while the status is Coming soon the site says "Tickets are expected to go on sale in February 2027." in the hero, the Tickets section, at the end of /speakers, /schedule and /venue, and in the FAQ answer **Are tickets on sale?**. Empty it once tickets are on sale.
 7. Set **Ticket status** to **On sale** and **Save**. Every Tickets button on the site updates. ("On sale" only shows the buy button when a ticket link is filled in.)
-8. **The event > FAQ**: update the answer to **Are tickets on sale?** (it still says "Not yet" until you change it), e.g. "Yes. Get them from the Tickets button; they cost $25." and **Save**.
-9. Later: switch to **Sold out** or **Closed (sales have ended)**, and update that FAQ answer again.
+8. Nothing to do in the FAQ: the answer to **Are tickets on sale?** is written as `{ticketStatus} {ticketPriceNote}`, so it now reads "Yes, tickets are on sale now. Use the Tickets button at the top of any page." followed by your Price note. Update the **Price note** itself if it should now state the real price (e.g. "Tickets cost $25.").
+9. Later: switch to **Sold out** or **Closed (sales have ended)**. The FAQ answer follows ("Tickets are sold out. Join the mailing list in case seats are released." / "Ticket sales are closed.").
 
 Search engines only receive ticket details (price, sale start, link) while the status is **On sale** or **Sold out**; while it is "Coming soon" or "Closed" they get none, so never fill in a price you have not confirmed.
 
@@ -111,7 +111,7 @@ Search engines only receive ticket details (price, sale start, link) while the s
 2. **Speaker application link**: the form.
 3. **Application deadline (optional)**: written as you want it shown, e.g. January 15, 2027.
 4. Set **Speaker applications** to **Open** and **Save**. The "Apply to speak" button (under the Speakers heading, and in the closing links at the bottom of the home page) only appears when the status is Open and the link is filled in.
-5. **The event > FAQ**: update the answer to **How can I apply to speak?** (it says applications are coming soon until you change it) and **Save**. Do the same again when applications close.
+5. Nothing to do in the FAQ: the answer to **How can I apply to speak?** starts with `{applicationsStatus}`, so it now reads "Speaker applications are open. The deadline is January 15, 2027. Apply here:" with the link, and "Speaker applications for this event are closed." once you set **Closed**. (Like the button, it only says "open" when the link is filled in.)
 6. All speaker-application wording can be switched off in **Contact & site > Show / hide sections > Show speaker applications (in the Speakers section)**.
 
 ### The interest form (speak, contact list, get involved)
@@ -120,13 +120,13 @@ Until formal applications open, the club's interest form is the way in: one form
 
 1. **The event > Tickets & speaker applications > Interest form link (speak or get involved)**: the form's full address (2027: `https://bernard29020.softr.app`). **Save**.
 2. While applications are **Coming soon**, the Speakers section on the home page and **/speakers** show "Want to speak? Register your interest" with this link, and **/team** ends with **Get involved**. All of them open the form in a new tab. Once applications are **Open** (with an application link), the Apply to speak button replaces it in Speakers; **/team** keeps **Get involved**. Empty the field to remove all of them.
-3. The FAQ answers **How can I apply to speak?** and **How can I get involved?** use the `{interestUrl}` placeholder, so they follow this field (a full `https://` address in any FAQ answer becomes a link that opens in a new tab). If you empty the field, reword those two answers too; `npm run check:content` warns while they still use the placeholder.
+3. The FAQ answers **How can I apply to speak?** and **How can I get involved?** use the `{interestUrl}` placeholder, so they follow this field (a full `https://` address in any FAQ answer becomes a link that opens in a new tab). If you empty the field, reword those two answers too: while they still use the placeholder, the build log on Vercel lists a "Content warning" for each (the web team sees the same with `npm run check:content`).
 
 ### Add a sponsor (partner)
 
 Tiers and benefits first, then the partner:
 
-1. **Partners > Partner tiers**: each tier has **Tier name**, a **Slug** (made from the name, e.g. `cornerstone-partner`: leave it as generated), **Description**, **Contribution (optional)** (e.g. $1,500; hidden while blank), **Number of slots (optional)** (shown as "Available: 4"; blank means no limit and shows "Available: Open" once a Contribution is filled in) and **Order**. The list of tiers in the admin is sorted by slug; on the site they follow **Order**. The 2027 tiers are Cornerstone Partner ($5,000, 1), Headline Partner ($1,500, 4), Bold Print Partner ($500, 6) and Fine Print Supporter ($150, open).
+1. **Partners > Partner tiers**: each tier has **Tier name**, a **Slug** (made from the name, e.g. `cornerstone-partner`: leave it as generated), **Description**, **Contribution (optional)** (e.g. $1,500; hidden while blank), **Number of slots (optional)** (shown as "Available 4"; blank means no limit and shows "Available Open" once a Contribution is filled in) and **Order**. The list of tiers in the admin is sorted by slug; on the site they follow **Order**. The 2027 tiers are Cornerstone Partner ($5,000, 1), Headline Partner ($1,500, 4), Bold Print Partner ($500, 6) and Fine Print Supporter ($150, open).
 2. **Partners > Partner benefits > Benefits comparison**: one row of the comparison table per benefit. Click **Add** (or open a row), then:
    - **Benefit**: one line, e.g. "Reserved seats".
    - **Heading**: which of the three headings it sits under: **On the website and in video**, **At the event** (the site writes "At the April 23 event", with the date from Event basics) or **During the year**. Within a heading, rows keep the order of the list.
@@ -142,14 +142,14 @@ Tiers and benefits first, then the partner:
 1. **People > Team**: one entry per board role (**Role**, e.g. "President"; leave the **File name (slug)** under it as generated). **Order** sets the order on the site (1 first) within each level.
 2. Fill in **Name (optional)**, then the optional details: **Major (optional)** (e.g. "Mechanical Engineering"; minors can be left out), **Class year (optional)** (four digits, e.g. 2029, shown as "Class of 2029") and **LinkedIn profile (optional)** (the full address starting with `https://`, e.g. `https://www.linkedin.com/in/their-name`). Never add a personal email address or phone number anywhere on the site.
 3. **Photo (optional)**: upload a 4:5 portrait headshot, about 960 × 1200 px (see image sizes below). Until there is one, the site shows the person's initials in the same frame, so the board still lines up.
-4. **Level**: leave it on **Automatic (from the role)**. The site then groups the board like the club's org chart: a role that is just **President** (or **Co-President**) comes first, on its own and larger; roles starting **VP** or **Vice President** ("VP of Finance", "Vice President of Production") form the **Executive board**; every other role (the directors) is **Operations**. Words elsewhere in the role do not count: "Past President" or "Executive Assistant" is Operations unless you pick a level. Pick **President**, **Executive board** or **Operations** only when a role's name says otherwise (say, a "Treasurer" who sits on the executive board). If the Level is ever typed by hand in the file and is not one of these, the site does not break: the role decides, and `npm run check:content` warns about it.
+4. **Level**: leave it on **Automatic (from the role)**. The site then groups the board like the club's org chart: a role that is just **President** (or **Co-President**) comes first, on its own and larger; roles starting **VP** or **Vice President** ("VP of Finance", "Vice President of Production") form the **Executive board**; every other role (the directors) is **Operations**. Words elsewhere in the role do not count: "Past President" or "Executive Assistant" is Operations unless you pick a level. Pick **President**, **Executive board** or **Operations** only when a role's name says otherwise (say, a "Treasurer" who sits on the executive board). If the Level is ever typed by hand in the file and is not one of these, the site does not break: the role decides, and the build log on Vercel lists a "Content warning" about it.
 5. Tick **Show name publicly** (ask the person first) and **Save**.
 
 Changing who is on the board next year is only these fields: rename the **Role**, change the **Name** and details, replace the **Photo**. Nothing in the code needs to change.
 
 Portraits are shown in black and white, with a slight contrast curve and a thin frame so photos taken against different backgrounds still look like one set. They turn to full colour when a visitor points at one with a mouse or moves to it with the keyboard. On **/team** a tap (or a click, or Enter) keeps a portrait in colour, marked by small crop marks at its corners, until it is tapped again. The name, role and LinkedIn link are always printed beside the photo, never only inside it.
 
-The home page shows a compact strip of portraits (photo or initials, name, role), grouped by level under the labels President, Executive board and Operations (at every screen size, and read out to screen readers); each person links to their card on **/team**, and a link, "The team", to **/team**, which adds the major, class year and a LinkedIn link (it opens in a new tab and is announced to screen readers as "<name> on LinkedIn (opens in a new tab)"). The Team section stays hidden until at least one person has a public name; then it lists the named people only, and **Team** appears in the menu. The whole section can also be switched off in **Contact & site > Show / hide sections > Show the Team section on the home page (it appears once at least one name is public)**.
+The home page shows a compact strip of portraits (photo or initials, name, role), grouped by level under the labels President, Executive board and Operations (at every screen size, and read out to screen readers); each person links to their card on **/team**, and a link, "The team", to **/team**, which adds the major, class year and a LinkedIn link (it opens in a new tab and is announced to screen readers as "<name> on LinkedIn (opens in a new tab)"). The home page's Team section stays hidden until at least one person has a public name; then it lists the named people only. The **Team** menu link and the **/team** page do not wait for a name: they exist as soon as there is one role. Everything (the section, the /team page and its menu links) can be switched off in **Contact & site > Show / hide sections > Show the Team (home page section, /team page and menu links)**.
 
 **Adding photos without the admin.** A photo can also be put straight into the repository, at `public/images/team/<file name>/photo.jpg` (or `photo.png`, `photo.webp`), where `<file name>` is the entry's **File name (slug)**: `president`, `vp-of-production`, `vp-of-finance`, `director-of-compliance`, `director-of-marketing`, `director-of-creative`, `director-of-speakers`, `director-of-partnerships`, `director-of-community`. The file name must be lowercase `photo` and the folder must match the slug exactly. The site picks it up on the next build when the **Photo** field is empty; it is the same place the admin's upload writes to. Crop it to 4:5 (960 × 1200 px), with the head about the same size and height as in the other photos.
 
@@ -160,18 +160,36 @@ The home page shows a compact strip of portraits (photo or initials, name, role)
 ### Edit the FAQ
 
 1. **The event > FAQ > Questions**: click a question to open it in a box with **Question** and **Answer** (plain text, line breaks are kept), or **Add** for a new one. Close the box with **Done** (or **Add**), then **Save**.
-2. Instead of typing details that change, write a placeholder and the site fills it in from **Event basics** and **Venue & directions**: `{date}` (e.g. Friday, April 23, 2027), `{venue}` (the building), `{campus}` (e.g. Santa Clara University), `{capacity}` (the seat count), `{eventName}` (TEDxSantaClaraUniversity) and `{interestUrl}` (the Interest form link under **Tickets & applications**). The "When and where" answer already uses them, so it follows the Event date and venue automatically.
-3. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Numbering is automatic.
-4. To delete a question, click the bin icon next to it. There is no confirmation, but nothing is gone until you **Save**: reload the page to get it back.
-5. The home page shows the first five questions, then a link to **/faq** with all of them. Put the most asked ones first.
-6. Hide the section with **Show / hide sections > Show the FAQ section on the home page**.
+2. Instead of typing details that change, write a placeholder and the site fills it in, on the page and in what search engines read. An answer written this way can never contradict the rest of the site:
+
+   | Write | The site shows | It follows |
+   | --- | --- | --- |
+   | `{eventName}` | TEDxSantaClaraUniversity | fixed by the licence |
+   | `{date}` | Friday, April 23, 2027 | **Event basics > Event date** |
+   | `{doorsTime}`, `{talksTime}`, `{endTime}` | 5:00 PM, 6:00 PM, 9:00 PM ("a time to be announced" while the field is blank) | **Event basics > Doors open at / Talks start at / Event ends at** |
+   | `{timesNote}` | Times are approximate and may shift slightly. … (nothing while blank) | **Event basics > Note about the times** |
+   | `{capacity}` | 100 | **Event basics > Seat capacity** |
+   | `{venue}`, `{campus}` | Locatelli Student Activity Center, Santa Clara University | **Venue & directions** |
+   | `{ticketStatus}` | Coming soon: "Not yet. Tickets are expected to go on sale in February 2027. Join the mailing list to hear the moment they go on sale." On sale: "Yes, tickets are on sale now. Use the Tickets button at the top of any page." Sold out: "Tickets are sold out. Join the mailing list in case seats are released." Closed: "Ticket sales are closed." | **Tickets & speaker applications > Ticket status** and **Expected on-sale month** |
+   | `{ticketSaleMonth}` | February 2027 (nothing while blank) | **Expected on-sale month** |
+   | `{ticketPriceNote}` | Tickets will cost no more than $100. | **Price note** |
+   | `{applicationsStatus}` | Coming soon: "Formal speaker applications are not open yet." Open (with a link): "Speaker applications are open. The deadline is January 15, 2027. Apply here:" and the link. Closed: "Speaker applications for this event are closed." | **Speaker applications**, **Speaker application link**, **Application deadline** |
+   | `{interestUrl}` | the interest form, as a link | **Interest form link** |
+   | `{contactEmail}` | tedx@scu.edu, as an email link | **Contact, newsletter & socials > Contact email** |
+
+   The 2027 answers "When and where", "Are tickets on sale?", "How can I apply to speak?", "How can I get involved?" and "Is the event accessible?" are written with these. If you type one of these facts by hand instead (say, the on-sale month), or misspell a placeholder, the build log on Vercel lists a "Content warning" naming the question.
+3. Links in an answer: a full `https://` address becomes a link that opens in a new tab, and an email address becomes an email link, by themselves. To make some words the link, write `[Partners page](/partners)` for a page of this site, or `[the form](https://example.com/form)` for another site. Nothing else is interpreted (answers are plain text, not HTML).
+4. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Numbering is automatic.
+5. To delete a question, click the bin icon next to it. There is no confirmation, but nothing is gone until you **Save**: reload the page to get it back.
+6. The home page shows the first five questions, then a link to **/faq** with all of them. Put the most asked ones first.
+7. Hide the section, the /faq page and its menu links with **Show / hide sections > Show the FAQ (home page section, /faq page and menu links)**.
 
 ### Change contact links
 
 **Contact & site > Contact, newsletter & socials**:
 
 - **Newsletter sign-up link (SendFox)**: while blank, the site shows "list opening soon".
-- **Contact email**: shown in the footer and FAQ.
+- **Contact email**: shown in the footer, on /faq ("Still have a question?") and in FAQ answers that write `{contactEmail}`.
 - **Partnerships email**: used by every "Become a partner" button (falls back to tedxscu.com while blank).
 - **Social links**: **Instagram**, **LinkedIn**, **YouTube**, **TikTok** (full links starting with `https://`, e.g. `https://www.instagram.com/scutedx` or the club page `https://www.linkedin.com/company/scutedx`, not `@scutedx`; blank ones are hidden). Filled-in links appear in the footer and are given to search engines as the club's profiles. **YouTube**: club channel only. Full TEDx talks may only be published through TED's uploader, never on this channel.
 - **Livestream link (optional)**: see "Add the livestream link" below.
@@ -209,7 +227,13 @@ Only the Director of Compliance (or the licence holder) should change these. The
 ### Other places
 
 - **The event > Event basics**: **Theme name**, **Theme tagline** (also used in search results and link previews), **Theme story**, **Event date** (pick it in the calendar), times (**Doors open at**, **Talks start at**, **Event ends at**), **Seat capacity**, **Accent colour**. The description of the share image (read aloud by screen readers when the link is shared) is written automatically from the theme name, date and venue. There is no field for the event name: TEDxSantaClaraUniversity is fixed by the licence and set in the site's code.
-- **The event > Venue & directions**: building, **Campus** (shown under the building name in the hero and wherever the venue is written out), address, **Map link** (full address starting with `https://`), coordinates, and **Getting there (directions, parking, accessibility)** notes.
+- **The event > Venue & directions**: building, **Campus** (shown under the building name in the hero and wherever the venue is written out), address, **Map link** (full address starting with `https://`), coordinates, and **Getting there (directions, parking, accessibility)** notes. The search description of /venue only mentions directions, parking or accessibility once that note's details are filled in; until then it says they are to follow.
+
+### After changing the theme name, date, venue name or seat count: the still pictures
+
+The 3D microphone on the home page has the **Theme name**, **Event date**, **Venue (building) name** and **Seat capacity** engraved on it. The live 3D version follows those fields by itself. But visitors who do not get the 3D scene (animations switched off on their device, an older phone, a data-saving connection) see still pictures of it instead, and a picture cannot update itself: it keeps showing the old text.
+
+So after changing any of those four fields, ask the web team to regenerate the still frames (`npm run stills`, see `docs/NEXT-YEAR.md`, step 5). It needs a computer with the project set up and takes about 15 to 25 minutes. Nothing else on the site depends on it; all the written text updates as soon as you save.
 
 ## 5. Image sizes
 

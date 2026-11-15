@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react';
+import Link from 'next/link';
 import type { FaqItem } from '@/lib/content';
+import { faqSegments } from '@/lib/faq-text';
 
 /**
  * The FAQ clauses: native <details>/<summary>, so they work without JavaScript,
@@ -16,34 +18,41 @@ const answer = (text: string) => (
   <p className="min-w-0 max-w-2xl leading-relaxed whitespace-pre-line text-mute [overflow-wrap:anywhere] sm:text-lg">{linkify(text)}</p>
 );
 
-/** A full https:// address in an answer, minus trailing punctuation that ends the sentence. */
-const URL_IN_TEXT = /(https:\/\/[^\s<>"]+[^\s<>".,;:!?)\]])/;
+const LINK_CLASS = 'text-white underline decoration-white/40 underline-offset-[0.2em] hover:decoration-white focus-visible:decoration-white';
 
 /**
- * Answers are plain text; a full https:// address typed in one becomes a link
- * (new tab, announced), shown without the https:// prefix. Nothing else is
- * interpreted, and only https links are ever made.
+ * Answers are plain text, never HTML. Three things in one become links
+ * (lib/faq-text.ts faqSegments decides, and is the only place that does): a full
+ * https:// address (new tab, announced, shown without the https:// prefix), an
+ * email address (mailto:), and [words](/page) or [words](https://…), where the
+ * words are the link. A page of this site opens in the same tab.
  */
 export function linkify(text: string): ReactNode {
-  const parts = text.split(URL_IN_TEXT);
-  if (parts.length === 1) return text;
-  return parts.map((part, i) =>
-    i % 2 === 1 ? (
-      <a
-        key={i}
-        href={part}
-        target="_blank"
-        rel="noopener noreferrer"
-        data-faq-link
-        className="text-white underline decoration-white/40 underline-offset-[0.2em] hover:decoration-white focus-visible:decoration-white"
-      >
-        {part.replace(/^https:\/\//, '').replace(/\/$/, '')}
+  const segments = faqSegments(text);
+  if (segments.every((seg) => seg.kind === 'text')) return text;
+  return segments.map((seg, i) => {
+    if (seg.kind === 'text') return seg.text;
+    if (seg.kind === 'page') {
+      return (
+        <Link key={i} href={seg.href} data-faq-page-link className={LINK_CLASS}>
+          {seg.label}
+        </Link>
+      );
+    }
+    if (seg.kind === 'email') {
+      return (
+        <a key={i} href={seg.href} data-faq-email className={LINK_CLASS}>
+          {seg.label}
+        </a>
+      );
+    }
+    return (
+      <a key={i} href={seg.href} target="_blank" rel="noopener noreferrer" data-faq-link className={LINK_CLASS}>
+        {seg.label}
         <span className="sr-only"> (opens in a new tab)</span>
       </a>
-    ) : (
-      part
-    ),
-  );
+    );
+  });
 }
 
 export function FaqList({ items, ids, className = '' }: { items: FaqItem[]; ids?: string[]; className?: string }) {

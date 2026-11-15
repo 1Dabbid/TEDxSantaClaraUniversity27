@@ -1,0 +1,129 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { expect, test } from '@playwright/test';
+import { siteDescription, venueDescriptionTail } from '../../src/lib/site';
+import { SITE_URL, contentValue } from './helpers';
+
+/** The whole text of a content file (for values the flat-key helper cannot read, such as list items). */
+const contentFile = (file: string) => readFileSync(join(process.cwd(), 'content', file), 'utf8');
+
+const meta = (html: string, attr: 'property' | 'name', key: string) =>
+  html.match(new RegExp(`<meta ${attr}="${key}" content="([^"]*)"`))?.[1] ?? '';
+
+/**
+ * Link previews. A page that sets its own Open Graph block loses the image the
+ * root layout would add, so every page that can be shared is checked for one:
+ * every address in the sitemap, plus /speakers (shared before it is indexed).
+ */
+test.describe('share images', () => {
+  test('every sitemap page and /speakers has an og:image and a twitter:image that load', async ({ request }) => {
+    const xml = await (await request.get('/sitemap.xml')).text();
+    const paths = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => new URL(m[1]).pathname);
+    expect(paths.length).toBeGreaterThan(3);
+    const checked = new Map<string, boolean>();
+    for (const path of new Set([...paths, '/speakers'])) {
+      const res = await request.get(path);
+      expect(res.status(), path).toBe(200);
+      const html = await res.text();
+      expect(meta(html, 'name', 'twitter:card'), `${path} twitter:card`).toBe('summary_large_image');
+      for (const [attr, key] of [
+        ['property', 'og:image'],
+        ['name', 'twitter:image'],
+      ] as const) {
+        const url = meta(html, attr, key).replace(/&amp;/g, '&');
+        expect(url, `${path} ${key}`).toMatch(new RegExp(`^${SITE_URL}/`));
+        const image = new URL(url);
+        const target = `${image.pathname}${image.search}`;
+        if (!checked.has(target)) {
+          const img = await request.get(target);
+          checked.set(target, img.status() === 200 && (img.headers()['content-type'] ?? '').includes('image/png'));
+        }
+        expect(checked.get(target), `${path} ${key} loads as a PNG (${target})`).toBe(true);
+      }
+      expect(meta(html, 'property', 'og:image:width'), `${path} og:image:width`).toBe('1200');
+      expect(meta(html, 'property', 'og:image:height'), `${path} og:image:height`).toBe('630');
+      expect(meta(html, 'property', 'og:image:alt'), `${path} og:image:alt`).toContain('TEDxSantaClaraUniversity');
+    }
+  });
+});
+
+test.describe('descriptions follow the content', () => {
+  const note = (title: string, body = '') => ({ title, body });
+
+  test('the venue description only mentions what the page has', () => {
+    const empty = [note('Directions'), note('Parking'), note('Accessibility')];
+    expect(venueDescriptionTail({ venueNotes: empty, mapUrl: 'https://maps.example.com/x' })).toBe(
+      'Address and map link; directions, parking and accessibility details to follow.',
+    );
+    expect(venueDescriptionTail({ venueNotes: [], mapUrl: '' })).toBe('Address; directions, parking and accessibility details to follow.');
+    expect(
+      venueDescriptionTail({ venueNotes: [note('Directions'), note('Parking', 'Lot B, free after 4 PM.'), note('Accessibility')], mapUrl: 'https://maps.example.com/x' }),
+    ).toBe('Address, map link and parking; directions and accessibility details to follow.');
+    expect(
+      venueDescriptionTail({ venueNotes: empty.map((n) => note(n.title, 'Filled in.')), mapUrl: 'https://maps.example.com/x' }),
+    ).toBe('Address, map link, directions, parking and accessibility.');
+  });
+
+  test('/venue: the served description promises nothing the notes do not hold', async ({ request }) => {
+    const html = await (await request.get('/venue')).text();
+    const description = meta(html, 'name', 'description');
+    expect(description).toBeTruthy();
+    expect(meta(html, 'property', 'og:description')).toBe(description);
+    // Today's content: are the three "Getting there" notes still empty?
+    const bodies = [...contentFile('venue.yaml').matchAll(/^\s+body:\s*(.*)$/gm)].map((m) => m[1].replace(/^['"]|['"]$/g, '').trim());
+    if (bodies.length && bodies.every((b) => b === '')) {
+      expect(description).toMatch(/details to follow\.$/);
+      expect(description).not.toMatch(/map, directions, parking and accessibility\.$/);
+    }
+  });
+
+  test('a blank tagline leaves no double space in the site description', () => {
+    const s = { eventName: 'TEDxSantaClaraUniversity', themeName: 'Fine Print', dateLong: 'Friday, April 23, 2027', venueName: 'Hall', venueCampus: 'Campus' };
+    expect(siteDescription({ ...s, themeTagline: '' })).toBe('TEDxSantaClaraUniversity: Fine Print. Friday, April 23, 2027, Hall, Campus.');
+    expect(siteDescription({ ...s, themeTagline: ' Details decide. ' })).toBe(
+      'TEDxSantaClaraUniversity: Fine Print. Details decide. Friday, April 23, 2027, Hall, Campus.',
+    );
+  });
+
+  test('no page description has a double space, and the manifest has a description', async ({ request }) => {
+    for (const path of ['/', '/venue', '/partners', '/schedule']) {
+      const html = await (await request.get(path)).text();
+      expect(meta(html, 'name', 'description'), path).not.toMatch(/ {2}/);
+    }
+    const manifest = await (await request.get('/manifest.webmanifest')).json();
+    expect(String(manifest.description).trim()).not.toBe('');
+    const tagline = contentValue('settings.yaml', 'themeTagline');
+    if (tagline) expect(manifest.description).toBe(tagline);
+  });
+});
+
+test.describe('titles', () => {
+  test('the switched-off admin keeps the 404 title after the page has loaded', async ({ page }) => {
+    const res = await page.goto('/keystatic');
+    expect(res?.status()).toBe(404);
+    await expect(page.locator('h1')).toContainText('does not exist');
+    await page.waitForLoadState('networkidle');
+    expect(await page.title()).toBe('TEDxSantaClaraUniversity · Page not found (404)');
+    expect(await page.title()).not.toContain('Content admin');
+  });
+
+  test('a placeholder speaker page says the same in its title and its heading', async ({ page }) => {
+    const res = await page.goto('/speakers/speaker-01');
+    test.skip(res?.status() !== 200, 'no placeholder speaker page today');
+    const h1 = ((await page.locator('h1').textContent()) ?? '').replace(/\s+/g, ' ').trim();
+    test.skip(!/to be announced/i.test(h1), 'speaker-01 is announced');
+    expect(h1).toBe('Speaker 01: To be announced.');
+    expect(await page.title()).toBe('TEDxSantaClaraUniversity · Speaker 01: To be announced');
+  });
+});
+
+test.describe('static files', () => {
+  test('the still frames are cached like the other public images', async ({ request }) => {
+    const policy = 'public, max-age=86400, stale-while-revalidate=604800';
+    for (const path of ['/stills/hero-landscape.avif', '/stills/hero-landscape.webp', '/brand/logo-on-black.png']) {
+      const res = await request.get(path);
+      expect(res.status(), path).toBe(200);
+      expect(res.headers()['cache-control'], path).toBe(policy);
+    }
+  });
+});

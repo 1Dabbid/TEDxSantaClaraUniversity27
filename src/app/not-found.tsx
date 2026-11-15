@@ -3,18 +3,10 @@ import Link from 'next/link';
 import { getFaq, getSettings } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
 import { SiteShell } from '@/components/SiteShell';
-import { SITE_NAME } from '@/lib/site';
+import { NOT_FOUND_METADATA } from '@/lib/page-meta';
 
-export const metadata: Metadata = {
-  // Plain wording, on the page and in the tab.
-  title: 'Page not found (404)',
-  description: 'This page does not exist.',
-  robots: { index: false, follow: true },
-  // No canonical (the layout's would point at the home page) and a plain share title.
-  alternates: { canonical: null },
-  openGraph: { title: `${SITE_NAME} · Page not found (404)`, description: 'This page does not exist.', url: null },
-  twitter: { title: `${SITE_NAME} · Page not found (404)`, description: 'This page does not exist.' },
-};
+// Shared with the switched-off admin (/keystatic), which shows this same page.
+export const metadata: Metadata = NOT_FOUND_METADATA;
 
 /**
  * Every 404 (unknown URLs, unknown speaker slugs, the switched-off admin) is

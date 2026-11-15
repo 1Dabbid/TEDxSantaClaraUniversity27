@@ -1,12 +1,17 @@
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import { adminEnabled } from '@/lib/admin';
+import { NOT_FOUND_METADATA } from '@/lib/page-meta';
 import KeystaticApp from './keystatic';
 
-export const metadata: Metadata = {
-  title: 'Content admin',
-  robots: { index: false, follow: false },
-};
+/**
+ * "Content admin" only while the admin exists. Switched off, /keystatic is the
+ * site's 404 page and carries that page's own title and metadata ("Page not
+ * found (404)"), before and after the page has loaded.
+ */
+export function generateMetadata(): Metadata {
+  return adminEnabled ? { title: 'Content admin', robots: { index: false, follow: false } } : NOT_FOUND_METADATA;
+}
 
 // Decided per request from the deployment's variables, never prerendered.
 export const dynamic = 'force-dynamic';

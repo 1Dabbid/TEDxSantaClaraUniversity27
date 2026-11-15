@@ -153,13 +153,32 @@ export function requiredText(value: string | null | undefined, fallback: string,
 /** The placeholders FAQ answers (and questions) and placeholder theme copy may use. Documented in the admin. */
 export const FAQ_PLACEHOLDERS = ['capacity', 'date', 'venue', 'campus', 'eventName'] as const;
 export type FaqPlaceholder = (typeof FAQ_PLACEHOLDERS)[number];
-/** Placeholders only FAQ answers may use: {interestUrl} (Tickets & applications › Interest form link). */
-export const FAQ_ONLY_PLACEHOLDERS = ['interestUrl'] as const;
+/**
+ * Placeholders only FAQ items may use. They follow Tickets & speaker applications,
+ * Event basics and Contact, so an answer never contradicts the rest of the site
+ * (values: src/lib/faq-text.ts faqSettingValues):
+ * {ticketStatus} (the answer to "are tickets on sale?"), {ticketSaleMonth},
+ * {ticketPriceNote}, {applicationsStatus} (the answer to "how do I apply to
+ * speak?"), {doorsTime}, {talksTime}, {endTime}, {timesNote}, {interestUrl} and
+ * {contactEmail}.
+ */
+export const FAQ_ONLY_PLACEHOLDERS = [
+  'ticketStatus',
+  'ticketSaleMonth',
+  'ticketPriceNote',
+  'applicationsStatus',
+  'doorsTime',
+  'talksTime',
+  'endTime',
+  'timesNote',
+  'interestUrl',
+  'contactEmail',
+] as const;
 export type FaqOnlyPlaceholder = (typeof FAQ_ONLY_PLACEHOLDERS)[number];
 
 /**
  * Replaces each {name} that `values` has a value for ({capacity}, {date}, {venue},
- * {campus}, {eventName}, and in FAQ answers {interestUrl}). Unknown {words} are
+ * {campus}, {eventName}, and in FAQ items the FAQ_ONLY_PLACEHOLDERS). Unknown {words} are
  * left as typed and returned in `unknown`, so a typo can be warned about.
  */
 export function fillPlaceholders(

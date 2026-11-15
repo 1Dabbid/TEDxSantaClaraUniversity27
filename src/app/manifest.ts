@@ -1,6 +1,6 @@
 import type { MetadataRoute } from 'next';
 import { getSettings } from '@/lib/content';
-import { SITE_NAME } from '@/lib/site';
+import { SITE_NAME, siteDescription } from '@/lib/site';
 
 /** Web app manifest (home-screen name and icons). Icons: scripts/generate-icons.mjs. */
 export default async function manifest(): Promise<MetadataRoute.Manifest> {
@@ -8,7 +8,8 @@ export default async function manifest(): Promise<MetadataRoute.Manifest> {
   return {
     name: `${SITE_NAME}: ${s.themeName}`,
     short_name: s.themeName,
-    description: s.themeTagline,
+    // The tagline is optional: without one, the site-wide description stands in.
+    description: s.themeTagline.trim() || siteDescription(s),
     start_url: '/',
     display: 'browser',
     background_color: '#000000',

@@ -5,7 +5,7 @@ import { jsonLdString, pageJsonLd, venuePlaceJsonLd } from '@/lib/jsonld';
 import { formatCoordinate } from '@/lib/links';
 import { slugIds } from '@/lib/faq-ids';
 import { topicPageMetadata } from '@/lib/page-meta';
-import { SITE_NAME, seatsLabel, venueLine } from '@/lib/site';
+import { SITE_NAME, seatsLabel, venueDescriptionTail, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { keepTedxCase } from '@/components/ui/KeepCase';
 import { Arrow, ClauseNo, CropMarks, JsonLd, Tba } from '@/components/print/Print';
@@ -17,7 +17,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
   return topicPageMetadata({
     title: 'Venue',
-    description: `How to get to ${SITE_NAME}: ${venueLine(s)}, ${[s.venuePostalAddress.street, s.venuePostalAddress.city].filter(Boolean).join(', ')}. ${s.dateLong}. Address, map, directions, parking and accessibility.`,
+    description: `How to get to ${SITE_NAME}: ${venueLine(s)}, ${[s.venuePostalAddress.street, s.venuePostalAddress.city].filter(Boolean).join(', ')}. ${s.dateLong}. ${venueDescriptionTail(s)}`,
     path: '/venue',
   });
 }

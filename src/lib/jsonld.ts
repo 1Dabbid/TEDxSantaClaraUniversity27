@@ -1,6 +1,7 @@
 import type { FaqItem, Settings, Speaker } from './content';
 import { paragraphs } from './content';
 import { eventDateTimes, zonedDateTime } from './dates';
+import { faqPlainText } from './faq-text';
 import { CLUB_URL, SITE_NAME, SITE_URL, venueLine } from './site';
 
 /** Stable node ids, so pages point at one Event and one Organization instead of repeating them. */
@@ -137,7 +138,8 @@ export function faqJsonLd(items: FaqItem[]) {
     mainEntity: items.map((i) => ({
       '@type': 'Question',
       name: i.question,
-      acceptedAnswer: { '@type': 'Answer', text: i.answer },
+      // Plain text: a labelled link in an answer is written out as words and address.
+      acceptedAnswer: { '@type': 'Answer', text: faqPlainText(i.answer, SITE_URL) },
     })),
   };
 }

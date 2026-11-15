@@ -4,6 +4,8 @@ import { createReader } from '@keystatic/core/reader';
 import keystaticConfig from '../../keystatic.config';
 import {
   contentWarning,
+  FAQ_ONLY_PLACEHOLDERS,
+  FAQ_PLACEHOLDERS,
   fillPlaceholders,
   isRealDate,
   isValidSlug,
@@ -14,6 +16,7 @@ import {
   TIME_PATTERN,
 } from './content-checks';
 import { checkImage, findTeamPhoto } from './content-images';
+import { faqSettingValues, staleFaqHints, tidySpaces, TIME_TO_BE_ANNOUNCED } from './faq-text';
 import { resolveLevel, type TeamLevel } from './team';
 import { formatCalendarDate } from './dates';
 import {
@@ -55,7 +58,7 @@ const LOADER_CHECKED = new Set([
   'mapUrl', 'ticketUrl', 'ticketEmbedUrl', 'speakerApplicationsUrl', 'interestUrl', 'newsletterUrl', 'livestreamUrl',
   'instagram', 'linkedin', 'youtube', 'tiktok', 'link', 'url',
   'doorsTime', 'talksTime', 'endTime', 'dateISO', 'aboutTedx', 'aboutTed', 'contactEmail', 'partnershipsEmail', 'classYear',
-  'level',
+  'level', 'capacity',
 ]);
 
 /**
@@ -435,6 +438,18 @@ function capacityOf(v: number | null | undefined): number {
   return typeof v === 'number' && Number.isInteger(v) && v >= 1 ? Math.min(v, TEDX_MAX_CAPACITY) : TEDX_MAX_CAPACITY;
 }
 
+/** Says what capacityOf did with a seat count the admin would not accept (it never keeps the value as typed). */
+function warnAboutCapacity(v: number | null | undefined): void {
+  const field = 'Seat capacity';
+  const fix = 'Enter a whole number from 1 to ' + TEDX_MAX_CAPACITY + ' in Event basics.';
+  if (typeof v === 'number' && Number.isInteger(v) && v > TEDX_MAX_CAPACITY) {
+    contentWarning('content/settings.yaml', field, `${v} is over the TEDx limit of ${TEDX_MAX_CAPACITY} attendees, so the site shows ${TEDX_MAX_CAPACITY}. ${fix}`);
+  } else if (!(typeof v === 'number' && Number.isInteger(v) && v >= 1)) {
+    const what = v === null || v === undefined ? 'It is empty' : `"${v}" is not a whole number of at least 1`;
+    contentWarning('content/settings.yaml', field, `${what}, so the site shows ${TEDX_MAX_CAPACITY}. ${fix}`);
+  }
+}
+
 function priceOf(v: number | null | undefined): number | null {
   return typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.min(v, 100) : null;
 }
@@ -481,6 +496,7 @@ export const getSettings = cache(async (): Promise<Settings> => {
       `"${rawDate}" is not a real calendar date, so the site shows ${DEFAULT_DATE} instead. Pick the date again in Event basics.`,
     );
   }
+  warnAboutCapacity(s.capacity);
   const T = 'content/tickets.yaml';
   const C = 'content/contact.yaml';
 
@@ -597,9 +613,14 @@ export const getSchedule = cache(async (): Promise<Schedule> => {
 });
 
 /**
- * FAQ questions and answers may write {capacity}, {date}, {venue}, {campus},
- * {eventName} and {interestUrl}; they are filled in from Event basics, Venue and
- * Tickets & applications, so answers never go stale when those change. An unknown {placeholder} is left as typed, with a warning.
+ * FAQ questions and answers may write placeholders: {capacity}, {date}, {venue},
+ * {campus}, {eventName} (FAQ_PLACEHOLDERS) and the ones that follow Tickets &
+ * speaker applications, the times and Contact (FAQ_ONLY_PLACEHOLDERS:
+ * {ticketStatus}, {applicationsStatus}, {doorsTime}, {interestUrl}…). They are
+ * filled in here, so an answer never goes stale when a setting changes, on the
+ * page and in the FAQPage structured data alike. An unknown {placeholder} is left
+ * as typed, with a warning; so is a fact typed by hand that a placeholder would
+ * keep up to date (staleFaqHints).
  */
 export const getFaq = cache(async (): Promise<FaqItem[]> => {
   const [f, s] = await Promise.all([readSingleton('faq'), getSettings()]);
@@ -609,25 +630,32 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
     venue: s.venueName,
     campus: s.venueCampus || s.venueName,
     eventName: s.eventName,
-    interestUrl: s.interestUrl,
+    ...faqSettingValues(s),
   };
+  const known = [...FAQ_PLACEHOLDERS, ...FAQ_ONLY_PLACEHOLDERS].map((n) => `{${n}}`).join(', ');
+  /** A placeholder whose field is blank leaves a gap (or a stand-in) in the sentence: say so. */
+  const blanks: [name: string, blank: boolean, where: string, effect: string][] = [
+    ['interestUrl', !s.interestUrl, 'Tickets & applications › Interest form link', 'the answer has a gap where the link was'],
+    ['contactEmail', !s.contactEmail, 'Contact, newsletter & socials › Contact email', 'the answer has a gap where the address was'],
+    ['doorsTime', !s.doorsTime, 'Event basics › Doors open at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
+    ['talksTime', !s.talksTime, 'Event basics › Talks start at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
+    ['endTime', !s.endTime, 'Event basics › Event ends at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
+  ];
   const fill = (text: string, n: number) => {
-    if (!s.interestUrl && text.includes('{interestUrl}')) {
-      contentWarning(
-        'content/faq.yaml',
-        `Questions › item ${n}`,
-        '{interestUrl} is used but Tickets & applications › Interest form link is empty, so the answer has a gap where the link was. Reword the answer or add the link.',
-      );
+    const where = `Questions › item ${n}`;
+    for (const [name, blank, field, effect] of blanks) {
+      if (blank && text.includes(`{${name}}`)) {
+        contentWarning('content/faq.yaml', where, `{${name}} is used but ${field} is empty, so ${effect}. Reword the answer or fill in the field.`);
+      }
+    }
+    for (const hint of staleFaqHints(text, s)) {
+      contentWarning('content/faq.yaml', where, `${hint}.`);
     }
     const r = fillPlaceholders(text, values);
     for (const u of r.unknown) {
-      contentWarning(
-        'content/faq.yaml',
-        `Questions › item ${n}`,
-        `${u} is not a known placeholder (use {capacity}, {date}, {venue}, {campus}, {eventName} or {interestUrl}); it is shown as typed.`,
-      );
+      contentWarning('content/faq.yaml', where, `${u} is not a known placeholder (use ${known}); it is shown as typed.`);
     }
-    return r.text;
+    return tidySpaces(r.text);
   };
   return (f?.items ?? [])
     .filter((i) => str(i.question) && str(i.answer))

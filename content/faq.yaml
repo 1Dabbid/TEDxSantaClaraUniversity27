@@ -7,10 +7,10 @@ items:
       A board of Santa Clara University students. {eventName} ran in earlier years; the last event was in 2020, after which the club went dormant. The current board has brought it back, so this is the first {eventName} since 2020.
   - question: When and where is {eventName}?
     answer: |-
-      {date}, at the {venue} on the {campus} campus. Doors open at about 5:00 PM with a reception outside the venue (drinks, food and lounge seating), talks begin at about 6:00 PM, and the evening ends around 9:00 PM. Times are approximate and may shift slightly. The full running order follows once speakers are confirmed.
+      {date}, at the {venue} on the {campus} campus. Doors open at about {doorsTime} with a reception outside the venue (drinks, food and lounge seating), talks begin at about {talksTime}, and the evening ends around {endTime}. {timesNote}
   - question: Are tickets on sale?
     answer: |-
-      Not yet. Tickets are expected to go on sale in February 2027. Tickets will cost no more than $100. Join the mailing list to hear the moment they go on sale.
+      {ticketStatus} {ticketPriceNote}
   - question: How many people can attend?
     answer: |-
       Attendance is limited to {capacity} people.
@@ -19,13 +19,13 @@ items:
       The talks are recorded and submitted for publication on the TEDx Talks YouTube channel.
   - question: How can I apply to speak?
     answer: |-
-      Formal speaker applications are not open yet. To hear first when they open, and to get an early look at pitching a talk, register your interest on the club’s interest form: {interestUrl}
+      {applicationsStatus} To register your interest in speaking, get an early look at pitching a talk and hear first about applications, use the club’s interest form: {interestUrl}
   - question: How can I get involved?
     answer: |-
       Fill in the club’s interest form: {interestUrl}. It is one form for three things: helping to organize {eventName}, joining the club’s contact list, and registering your interest in speaking.
   - question: How can my organization become a partner?
     answer: |-
-      We are inviting a small number of partners to support the event. The Partners page explains what partnership means under TEDx rules and how to get in touch.
+      We are inviting a small number of partners to support the event. The [Partners page](/partners) explains what partnership means under TEDx rules and how to get in touch.
   - question: Is the event accessible?
     answer: |-
-      We want everyone to be able to take part. If you have accessibility needs or questions, contact the team and we will do our best to accommodate you. Full venue accessibility details will be published before the event.
+      We want everyone to be able to take part. If you have accessibility needs or questions, contact the team at {contactEmail} and we will do our best to accommodate you. Full venue accessibility details will be published before the event.
