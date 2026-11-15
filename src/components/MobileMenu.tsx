@@ -90,12 +90,23 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
 
   return (
     <div className="lg:hidden">
+      {/* Without JavaScript the button below cannot open anything, so it is hidden and this
+          link takes its place: it jumps to the same list of pages in the footer (globals.css,
+          "scripting: none"). With JavaScript it is never shown. */}
+      <a
+        href="#footer-site"
+        data-menu-nojs
+        className="menu-nojs h-11 items-center rounded-full border border-white/20 px-4 text-sm text-white"
+      >
+        Menu
+      </a>
       <button
         ref={toggleRef}
         type="button"
         aria-expanded={open}
         aria-controls={panelId}
         onClick={() => setOpen((o) => !o)}
+        data-menu-toggle
         className="tap relative flex size-11 items-center justify-center rounded-full border border-white/20 text-white transition-colors duration-300 hover:border-white pointer-fine:size-10"
       >
         <span className="sr-only">{open ? 'Close menu' : 'Open menu'}</span>
@@ -135,9 +146,6 @@ export function MobileMenu({ items, dateLong, dateISO }: { items: readonly Item[
                   onClick={() => close(false)}
                   className="menu-link flex min-h-14 items-baseline gap-4 py-5 text-3xl font-semibold tracking-tight"
                 >
-                  <span aria-hidden="true" className="fine-print w-10">
-                    §&nbsp;{String(i + 1).padStart(2, '0')}
-                  </span>
                   {item.label}
                   {navCurrent(item, pathname) ? (
                     <span aria-hidden="true" className="ml-auto size-1.5 self-center rounded-full bg-accent" />

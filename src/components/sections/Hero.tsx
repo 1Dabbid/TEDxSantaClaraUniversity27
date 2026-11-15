@@ -50,13 +50,13 @@ export function Hero({ settings, speakersAnnounced }: { settings: Settings; spea
   const center = (words.length - 1) / 2;
 
   return (
-    <SectionShell id="hero" scrim="none" className="flex min-h-[calc(100svh-var(--header-h))] flex-col">
+    <SectionShell id="hero" scrim="none" className="flex min-h-[calc(100svh-var(--header-h))] flex-col overflow-x-clip">
       {/* Local scrim behind the text column only; the mic (right third on
           desktop, lower right on phones) is left clean. */}
       <div aria-hidden="true" className="hero-scrim pointer-events-none absolute inset-0 -z-10" />
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2 bg-gradient-to-t from-black via-black/70 to-transparent"
+        className="hero-floor pointer-events-none absolute inset-x-0 bottom-0 -z-10 h-1/2"
       />
       <div data-hero className="shell flex flex-1 flex-col justify-end pb-10 pt-10 sm:pb-16 sm:pt-16">
         {/* The h1 holds the visible event-name line and the theme; the scroll-out

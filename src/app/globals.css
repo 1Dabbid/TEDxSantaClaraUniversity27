@@ -319,6 +319,33 @@ html:not(.motion) .reading-progress {
     rgb(0 0 0 / 0) 72%
   );
 }
+/* The floor under the hero's last rows. Full width where the theme below starts
+   on its own full-width wash (phones, short viewports, no motion). Where the
+   theme is pinned, its right half is open to the scene, so a full-width floor
+   would end in a ruler-straight edge across the microphone: there it follows
+   the text column (same falloff as .hero-scrim) and leaves the mic alone. */
+.hero-floor {
+  background: linear-gradient(to top, #000, rgb(0 0 0 / 0.7) 50%, rgb(0 0 0 / 0));
+}
+@media (min-width: 768px) and (min-height: 44rem) {
+  html.motion .hero-floor {
+    mask-image: linear-gradient(to right, #000, #000 40%, rgb(0 0 0 / 0.4) 58%, transparent 72%);
+  }
+  /* The scroll cue then sits on the open scene: its own small scrim. */
+  html.motion .scroll-cue {
+    position: relative;
+    isolation: isolate;
+  }
+  html.motion .scroll-cue::before {
+    content: '';
+    position: absolute;
+    /* Wider than the page gutter on the right: the hero clips it (overflow-x-clip in Hero.tsx). */
+    inset: -2rem -4.5rem -2rem -5rem;
+    z-index: -1;
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.86) 70%, rgb(0 0 0 / 0));
+    pointer-events: none;
+  }
+}
 /* Portrait tablets: same composition as phones (narrow left column, the mic
    open in the lower right), at tablet type sizes. */
 @media (min-width: 640px) and (max-width: 1023.98px) and (max-aspect-ratio: 9/10) {
@@ -492,6 +519,10 @@ html:not(.motion) .reading-progress {
 .theme-fig {
   display: none;
 }
+/* Only with the pinned stage (below). */
+.theme-head {
+  display: none;
+}
 /* Readability behind the theme text. Not pinned (phones, short viewports) the
    text runs the full width, so a moderate wash with a darker head and foot. */
 .theme-scrim {
@@ -530,6 +561,33 @@ html:not(.motion) .reading-progress {
   @media (pointer: coarse) {
     html.motion .theme-runway {
       height: 175vh;
+    }
+  }
+  /* The same at the top: the hero ends darker on its text side (.hero-scrim
+     under .hero-floor) than the theme starts. This head carries the difference
+     across the boundary and fades it out, so no line is drawn where the hero
+     ends. Keep in step with .hero-scrim and the .hero-floor mask. */
+  html.motion .theme-head {
+    display: block;
+    height: 40vh;
+    background: linear-gradient(
+      to right,
+      #000,
+      #000 40%,
+      rgb(0 0 0 / 0.84) 50%,
+      rgb(0 0 0 / 0.63) 58%,
+      rgb(0 0 0 / 0.34) 66%,
+      rgb(0 0 0 / 0) 72%
+    );
+    mask-image: linear-gradient(to bottom, #000, transparent);
+  }
+  /* Portrait tablets: the hero's text scrim is the wider one (see .hero-scrim). */
+  @media (max-width: 1023.98px) and (max-aspect-ratio: 9/10) {
+    html.motion .hero-floor {
+      mask-image: linear-gradient(to right, #000, #000 58%, rgb(0 0 0 / 0.4) 80%, transparent 92%);
+    }
+    html.motion .theme-head {
+      background: linear-gradient(to right, #000, #000 58%, rgb(0 0 0 / 0.58) 80%, rgb(0 0 0 / 0) 92%);
     }
   }
   /* When the stage scrolls out, its scrims (clipped by the stage) would end in
@@ -581,6 +639,18 @@ html:not(.motion) .reading-progress {
     color: var(--color-mute);
     text-decoration: underline 1px transparent;
     text-underline-offset: 0.25em;
+  }
+  /* Touch tablets have no loupe cursor to read 9px type with: the clauses stay
+     at the size phones get (13px), in the lighter grey, set ragged right. */
+  @media (pointer: coarse) {
+    html.motion .theme-fine {
+      font-size: 0.8125rem;
+      line-height: 1.5;
+      letter-spacing: 0;
+      color: var(--color-mute);
+      text-align: left;
+      hyphens: manual;
+    }
   }
   /* Pinned: no blanket. Dark behind the text column (left), darker under the
      contract (bottom left) and the clause counter (top right); the right ~45%,
@@ -764,16 +834,20 @@ html:not(.motion) .speakers-scrim {
     padding-top: calc(var(--header-h) + 2.5rem);
   }
   /* On shorter screens the rug rises toward the caption: a local scrim behind it. */
+  /* The box is as wide as the caption (not the full row), so the scrim stays a
+     soft pool behind the text, left of the microphone, and never a band across the frame. */
   html.motion .speakers-meta {
     position: relative;
     isolation: isolate;
+    width: fit-content;
+    max-width: 100%;
   }
   html.motion .speakers-meta::before {
     content: '';
     position: absolute;
-    inset: -2rem -4rem -2rem -3rem;
+    inset: -4rem -3rem -4rem -4rem;
     z-index: -1;
-    background: radial-gradient(closest-side, rgb(0 0 0 / 0.8), rgb(0 0 0 / 0.66) 65%, rgb(0 0 0 / 0));
+    background: radial-gradient(closest-side, rgb(0 0 0 / 0.7), rgb(0 0 0 / 0.56) 55%, rgb(0 0 0 / 0));
     pointer-events: none;
   }
   html.motion .speakers-strip {
@@ -946,6 +1020,19 @@ html.motion .timeline-line:not([data-armed]) {
 }
 
 /* --- Mobile menu --------------------------------------------------------- */
+/* Without JavaScript the toggle cannot open the panel: it is replaced by a plain
+   link to the footer's list of pages (MobileMenu.tsx). */
+.menu-nojs {
+  display: none;
+}
+@media (scripting: none) {
+  .menu-nojs {
+    display: inline-flex;
+  }
+  [data-menu-toggle] {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
   html.motion [data-menu-panel]:not([hidden]) {
     animation: menu-in 0.7s var(--ease-cinema) both;

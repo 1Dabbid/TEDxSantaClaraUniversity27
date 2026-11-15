@@ -138,7 +138,7 @@ test.describe('team', () => {
     await page.goto('/team');
     const card = page.locator('section[aria-labelledby="board-operations"] [data-team-member]').filter({ has: page.locator('[data-portrait-toggle]') }).first();
     const name = (await card.locator('h3').textContent())!.trim();
-    const button = card.getByRole('button', { name: `${name} in colour` });
+    const button = card.getByRole('button', { name: `${name} in color` });
     const link = card.getByRole('link', { name: `${name} on LinkedIn (opens in a new tab)` });
     const filter = () => card.locator('img').evaluate((el) => getComputedStyle(el).filter);
     const marks = () => card.locator('.portrait-marks').evaluate((el) => getComputedStyle(el).opacity);
@@ -168,7 +168,7 @@ test.describe('team', () => {
     expect(b.x).toBeGreaterThan(a.x + a.width - 1);
     const card = cards.filter({ has: page.locator('[data-portrait-toggle]') }).first();
     const name = (await card.locator('h3').textContent())!.trim();
-    const button = card.getByRole('button', { name: `${name} in colour` });
+    const button = card.getByRole('button', { name: `${name} in color` });
     const filter = () => button.locator('img').evaluate((el) => getComputedStyle(el).filter);
     await expect(button).toHaveAttribute('aria-pressed', 'false');
     await button.tap();
@@ -300,7 +300,8 @@ test.describe('times and schedule', () => {
   const ROWS = [
     ['5:00 PM', 'Doors open and reception', 'Reception'],
     ['6:00 PM', 'Talks begin', 'Talk'],
-    ['9:00 PM', 'Close', 'Program'],
+    // The catch-all kind (welcome, closing) shows no tag: "Close" tagged "Program" said nothing.
+    ['9:00 PM', 'Close', ''],
   ];
 
   for (const route of ['/schedule', '/']) {
@@ -311,7 +312,8 @@ test.describe('times and schedule', () => {
       for (const [i, [time, title, kind]] of ROWS.entries()) {
         await expect(rows.nth(i)).toContainText(time);
         await expect(rows.nth(i)).toContainText(title);
-        await expect(rows.nth(i)).toContainText(kind);
+        if (kind) await expect(rows.nth(i).locator('.fine-print')).toHaveText(kind);
+        else await expect(rows.nth(i).locator('.fine-print')).toHaveCount(0);
       }
       await expect(rows.first().locator('time')).toHaveAttribute('datetime', '2027-04-23T17:00');
       await expect(page.locator('[data-times-note]').first()).toHaveText(NOTE);

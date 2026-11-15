@@ -41,8 +41,11 @@ export const TED_URL = 'https://www.ted.com';
  */
 export const TEDX_MAX_CAPACITY = 100;
 
-/** Schedule item kinds: the admin's options and the labels on the site are the same words. */
-export const SCHEDULE_KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', reception: 'Reception', other: 'Program' } as const;
+/**
+ * Schedule item kinds: the admin's options and the labels on the site are the same words.
+ * "other" (welcome, closing) carries no label on the site: a tag on "Close" would say nothing.
+ */
+export const SCHEDULE_KIND_LABEL = { talk: 'Talk', break: 'Break', doors: 'Doors', reception: 'Reception', other: 'No label' } as const;
 
 /**
  * Headings of the partner benefits table (/partners), in this order. The admin's
