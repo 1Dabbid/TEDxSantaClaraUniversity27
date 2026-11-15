@@ -16,3 +16,19 @@ export const REDUCE_MOTION_CLASS = 'reduce-motion';
  * The still frames stay hidden while it is set.
  */
 export const SCENE_LIKELY_CLASS = 'scene-likely';
+
+/**
+ * localStorage key: '1' once the GPU probe found no WebGL at all on this browser
+ * (src/lib/quality.ts). The boot script then leaves `html.motion` off from the
+ * first paint on later visits; the probe clears it if WebGL comes back.
+ */
+export const NO_WEBGL_KEY = 'fp:no-webgl';
+
+/**
+ * The live scene stayed slow at its lowest quality step (src/scene/Experience.tsx
+ * dispatches this event on window): SceneGate takes the canvas down and the still
+ * frames take over. sessionStorage remembers it ('1') for the rest of the visit,
+ * so a reload does not try the scene again.
+ */
+export const SCENE_SLOW_EVENT = 'scene:slow';
+export const SCENE_SLOW_KEY = 'fp:scene-slow';

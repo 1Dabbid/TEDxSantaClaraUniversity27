@@ -3,6 +3,7 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { getQuality, useQuality } from '@/lib/quality';
+import { holdPlace } from './anchor';
 import type { Engine } from './engine';
 import { MOTION_OFF } from './useSectionMotion';
 
@@ -10,8 +11,8 @@ import { MOTION_OFF } from './useSectionMotion';
  * Mounts the global motion system from the root layout.
  *
  * - Keeps `html.motion` in sync with the quality tier (the inline boot script in
- *   the layout sets it before first paint; this removes it if quality resolves
- *   to `static`).
+ *   the layout decides it before first paint; this follows later changes, and
+ *   keeps the reader's place when the layout switches: src/motion/anchor.ts).
  * - Lazily loads the engine (gsap, reveals, cursor, magnetic, header, page
  *   transitions) and re-scans on every route change.
  * - Renders the curtain and cursor layers (aria-hidden, inert, pointer-events none).
@@ -38,8 +39,10 @@ function motionOff(err: unknown) {
   console.error('[motion] engine unavailable, showing the static page:', err);
   engineFailed = true;
   const html = document.documentElement;
+  const settle = html.classList.contains('motion') ? holdPlace() : null;
   html.classList.remove('motion');
   html.removeAttribute('data-reveals');
+  settle?.();
   window.dispatchEvent(new Event(MOTION_OFF));
 }
 
@@ -72,7 +75,14 @@ export default function MotionRoot({ caption = 'continuing' }: { caption?: strin
   // Never trust the hydration-time 'static' snapshot here: read the live tier.
   useIsoLayoutEffect(() => {
     const on = getQuality() !== 'static' && !admin && !engineFailed;
-    document.documentElement.classList.toggle('motion', on);
+    const html = document.documentElement;
+    if (html.classList.contains('motion') === on) return;
+    // The boot script's decision changed after the first paint (a first visit without
+    // WebGL, the Reduce motion switch, a connection change): the motion layout is taller,
+    // so keep the reader on their deep link or in their section across the switch.
+    const settle = holdPlace();
+    html.classList.toggle('motion', on);
+    settle();
   }, [quality, admin]);
 
   useEffect(() => {

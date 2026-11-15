@@ -1,3 +1,4 @@
+import { findHashTarget } from '../anchor';
 import { gsap } from '../gsap';
 import { lenisRef } from '../lenisRef';
 
@@ -41,18 +42,6 @@ function focusTarget(el: HTMLElement) {
     el.setAttribute('tabindex', '-1');
   }
   el.focus({ preventScroll: true });
-}
-
-function findHashTarget(hash: string): HTMLElement | null {
-  const raw = hash.replace(/^#/, '');
-  let id = raw;
-  try {
-    id = decodeURIComponent(raw);
-  } catch {
-    // Malformed escape (e.g. #%E0%A4%A): look the hash up as written instead of throwing.
-  }
-  if (!id) return null;
-  return document.getElementById(id);
 }
 
 export function scrollToHash(hash: string, immediate = false): boolean {

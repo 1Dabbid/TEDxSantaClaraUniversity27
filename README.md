@@ -113,7 +113,8 @@ Separately, `sceneEnabled()` / `useSceneEnabled()` is **false when WebGL only ru
 | --- | --- |
 | `?quality=high`, `?quality=low`, `?quality=static` | force the tier; `high`/`low` also force the scene on, even on software WebGL |
 | `?perf` | exposes `window.__fpPerf` (`gsap`, `ScrollTrigger`, `lenis`, `refreshes` count) for performance and leak audits |
-| `?perf=off` | turns off the scene's automatic quality step-down (also exposes `__fpPerf`) |
+| `?perf=off` | turns off the scene's automatic quality step-down and its hand-over to the still frames (also exposes `__fpPerf`) |
+| `?perf=slow` | makes the scene read every frame as slow: it steps down within seconds and hands over to the still frames (tests) |
 | `?post=0` | scene without post-processing |
 | `?scene-debug=1` | writes per-frame camera/quality state to `window.__scene`; enables the `envrot` and `keymul` lighting parameters |
 

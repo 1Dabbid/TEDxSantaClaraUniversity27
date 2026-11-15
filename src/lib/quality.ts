@@ -1,7 +1,7 @@
 'use client';
 
 import { useSyncExternalStore } from 'react';
-import { REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY, SCENE_LIKELY_CLASS } from './motion-pref';
+import { NO_WEBGL_KEY, REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY, SCENE_LIKELY_CLASS } from './motion-pref';
 
 /**
  * Rendering quality tier.
@@ -24,7 +24,8 @@ import { REDUCE_MOTION_CLASS, REDUCE_MOTION_KEY, SCENE_LIKELY_CLASS } from './mo
  *
  * The WebGL probe itself is deferred to the first idle callback after
  * hydration (see scheduleProbe): until then the tier assumes a working GPU and
- * `sceneEnabled()` is false; the probe can then lower the tier.
+ * `sceneEnabled()` is false; the probe can then lower the tier. A browser found
+ * without WebGL is remembered (localStorage), so its later visits start `static`.
  *
  * QA override: `?quality=high|low|static` on the first URL of a visit forces
  * the tier (and forces the scene on for high/low, even on software WebGL).
@@ -59,6 +60,31 @@ let cached: Quality | null = null;
 let cachedScene = false;
 let gpu: GpuInfo | null = null;
 const ASSUMED_GPU: GpuInfo = { webgl: true, software: false, weak: false, renderer: '' };
+const NO_GPU: GpuInfo = { webgl: false, software: false, weak: false, renderer: '' };
+
+// The probe of an earlier visit found no WebGL: until this visit's probe has run, assume the
+// same (the boot script in SiteShell reads the same note and leaves `html.motion` off).
+let noWebglNote: boolean | undefined;
+function readNoWebglNote(): boolean {
+  if (noWebglNote !== undefined) return noWebglNote;
+  noWebglNote = false;
+  try {
+    noWebglNote = window.localStorage.getItem(NO_WEBGL_KEY) === '1';
+  } catch {
+    /* storage blocked: the probe decides, a little later */
+  }
+  return noWebglNote;
+}
+function writeNoWebglNote(none: boolean) {
+  if (none === readNoWebglNote()) return;
+  noWebglNote = none;
+  try {
+    if (none) window.localStorage.setItem(NO_WEBGL_KEY, '1');
+    else window.localStorage.removeItem(NO_WEBGL_KEY);
+  } catch {
+    /* storage blocked */
+  }
+}
 let override: Quality | null | undefined;
 const listeners = new Set<() => void>();
 
@@ -136,6 +162,7 @@ function probeGpu(): GpuInfo {
   } catch {
     /* treat as no WebGL */
   }
+  writeNoWebglNote(!gpu.webgl);
   return gpu;
 }
 
@@ -153,7 +180,8 @@ function compute(): Quality {
   if (conn?.saveData) return 'static';
   if (conn?.effectiveType === 'slow-2g' || conn?.effectiveType === '2g') return 'static';
   // Until the idle-time probe has run, assume a working hardware GPU (see scheduleProbe).
-  const g = gpu ?? ASSUMED_GPU;
+  // (Or, if an earlier visit found no WebGL at all, assume that still holds.)
+  const g = gpu ?? (readNoWebglNote() ? NO_GPU : ASSUMED_GPU);
   if (!g.webgl) return 'static';
 
   // Touch-first device (phone, tablet): no fine pointer anywhere.
