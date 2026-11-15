@@ -263,7 +263,7 @@ test.describe('partners', () => {
     await expect(ledger).toContainText('Open');
   });
 
-  test('the benefits table carries per-tier details, three headings and two to-be-confirmed notes', async ({ page }) => {
+  test('the benefits table carries per-tier details, three headings and three to-be-confirmed notes', async ({ page }) => {
     await page.goto('/partners');
     const table = page.locator('[data-benefits-table]');
     await expect(table).toBeVisible();
@@ -271,9 +271,26 @@ test.describe('partners', () => {
     const row = (name: string) => table.locator('tr', { has: page.locator('th[scope="row"]', { hasText: name }) });
     await expect(row('Listed on the Partners page').locator('td')).toHaveText(['Largest logo', 'Large logo', 'Logo', 'Name']);
     await expect(row('Reserved seats').locator('td')).toHaveText(['4', '2', '1', /Not included/]);
-    await expect(table.getByText('To be confirmed')).toHaveCount(2);
+    await expect(table.getByText('To be confirmed')).toHaveCount(3);
     await expect(row('Logo on the sponsor slide of the April 23 talk videos')).toContainText('To be confirmed');
     await expect(row('Logo on event merchandise')).toContainText('To be confirmed');
+    // How a year-round club activity may be named still needs TED's yes (docs/EDITING.md).
+    await expect(row('Supporting partner of the 2026–27 speaker workshop series')).toContainText('To be confirmed');
+  });
+
+  test('no partner is said to present anything, and the talk-video logo is nowhere promised outright', async ({ page }) => {
+    await page.goto('/partners');
+    const text = ((await page.locator('main').innerText()) ?? '').replace(/\s+/g, ' ');
+    // TEDx rules allow no co-branding: partners support, they never "present".
+    // ("Partners cannot speak or present from the stage" is the rule itself and stays.)
+    expect(text).not.toMatch(/\bpresents\b|\bpresenting (partner|sponsor)\b|\bpresented by\b/i);
+    // While the table marks the talk-video logo "to be confirmed", every other mention carries the same caveat.
+    const tbc = await page.locator('[data-benefits-table] tr', { hasText: 'talk videos' }).getByText('To be confirmed').count();
+    if (tbc > 0) {
+      for (const sentence of text.split(/(?<=[.!?])\s+/).filter((s) => /talk videos/i.test(s) && !/Logo on the sponsor slide of the/.test(s))) {
+        expect(sentence, 'a sentence that mentions the talk videos').toMatch(/confirmed/i);
+      }
+    }
   });
 
   test('phones get the stacked list instead of the table', async ({ page }) => {

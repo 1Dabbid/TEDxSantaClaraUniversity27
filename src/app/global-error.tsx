@@ -53,6 +53,10 @@ export default function GlobalError({ retry }: { error: unknown; retry: () => vo
             Back to the event
           </a>
         </div>
+        {/* The licence line every page carries in its footer; this page has no footer. */}
+        <p style={{ margin: '24px 0 0', maxWidth: '32rem', fontSize: 13, lineHeight: 1.5, color: '#a0a0a0' }}>
+          This independent TEDx event is operated under license from TED.
+        </p>
       </body>
     </html>
   );

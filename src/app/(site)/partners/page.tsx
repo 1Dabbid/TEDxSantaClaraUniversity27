@@ -4,7 +4,8 @@ import Image from 'next/image';
 import type { PartnerBenefit, Settings, Sponsor, Tier } from '@/lib/content';
 import { getPartnerBenefits, getPartnerNotes, getSettings, getSponsors, getTiers } from '@/lib/content';
 import { partnerCta } from '@/lib/links';
-import { BENEFIT_GROUP_LABEL, type BenefitGroup, SITE_NAME, venueLine } from '@/lib/site';
+import { topicPageMetadata } from '@/lib/page-meta';
+import { BENEFIT_GROUP_LABEL, type BenefitGroup, venueLine } from '@/lib/site';
 import { Button } from '@/components/ui/Button';
 import { SectionLabel } from '@/components/ui/SectionLabel';
 import { EventName, keepTedxCase, Tedx } from '@/components/ui/KeepCase';
@@ -16,22 +17,8 @@ import { PartnersMotion } from '@/motion/sections/PartnersMotion';
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
-  const description = s.copy.partnersDescription;
-  // Share image: the root opengraph-image.tsx (file convention, hashed URL), never set here.
-  return {
-    title: 'Partners',
-    description,
-    alternates: { canonical: '/partners' },
-    openGraph: {
-      type: 'website',
-      siteName: SITE_NAME,
-      title: `${SITE_NAME} · Partners`,
-      description,
-      url: '/partners',
-      locale: 'en_US',
-    },
-    twitter: { card: 'summary_large_image', title: `${SITE_NAME} · Partners`, description },
-  };
+  // Title, canonical and the share image (the root card) come from the shared helper.
+  return topicPageMetadata({ title: 'Partners', description: s.copy.partnersDescription, path: '/partners' });
 }
 
 /** Play mark and loop mark for the reasons: drawn, so they match the arrow set. */

@@ -79,12 +79,12 @@ items:
       - tier: cornerstone-partner
         detail: ''
     toBeConfirmed: true
-  - benefit: Presenting partner of the 2026–27 speaker workshop series
+  - benefit: Supporting partner of the 2026–27 speaker workshop series
     group: year
     included:
       - tier: cornerstone-partner
         detail: ''
-    toBeConfirmed: false
+    toBeConfirmed: true
   - benefit: Named sponsor of one general-meeting event
     group: year
     included:
@@ -125,5 +125,5 @@ notes:
   - Amounts are per academic year.
   - Every tier can be adjusted.
   - Custom and in-kind partnerships are welcome, for example catering, printing, AV equipment, photography or videography, and gifts for speakers and volunteers.
-  - Commit by March 1, 2027 to appear on the talk videos, signage and printed materials.
+  - Commit by March 1, 2027 to appear on signage and printed materials, and on the sponsor slide of the talk videos if that is confirmed.
   - Partners receive an impact report by May 8, 2027.

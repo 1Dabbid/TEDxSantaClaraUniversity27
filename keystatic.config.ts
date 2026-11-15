@@ -234,7 +234,7 @@ export default config({
           }),
           {
             label: 'Getting there (directions, parking, accessibility)',
-            description: 'Each item is shown as a numbered clause in the Venue section. Leave the details empty to show “To be announced”.',
+            description: 'Each item is shown as a numbered clause in the Venue section and on /venue. Leave the details empty to show “To be announced”. The search description of /venue only mentions an item once its details are filled in.',
             itemLabel: (props) => props.fields.title.value || 'Note',
           },
         ),
@@ -248,7 +248,7 @@ export default config({
         ticketState: fields.select({
           label: 'Ticket status',
           description:
-            'Controls the Tickets section and every Tickets button. “On sale” only shows the buy button when a ticket link is filled in below.',
+            'Controls the Tickets section, every Tickets button and the FAQ answer about tickets (through its {ticketStatus} placeholder). “On sale” only shows the buy button when a ticket link is filled in below.',
           options: [
             { label: 'Coming soon (not on sale yet)', value: 'coming-soon' },
             { label: 'On sale', value: 'on-sale' },
@@ -264,7 +264,7 @@ export default config({
         ),
         ticketPriceNote: fields.text({
           label: 'Price note',
-          description: 'One short sentence about price. Our cap is $100; confirm the limit for our licence tier with the licence holder.',
+          description: 'One short sentence about price, shown in the Tickets section and in FAQ answers that write {ticketPriceNote}. Our cap is $100; confirm the limit for our licence tier with the licence holder.',
           defaultValue: 'Tickets will cost no more than $100.',
         }),
         ticketPrice: fields.number({
@@ -276,7 +276,7 @@ export default config({
         ticketSaleExpected: fields.text({
           label: 'Expected on-sale month (optional)',
           description:
-            'While tickets are Coming soon and there is no exact date yet, e.g. February 2027. The site then says “Tickets are expected to go on sale in February 2027.” Leave blank to say nothing. Search engines never see it.',
+            'While tickets are Coming soon and there is no exact date yet, e.g. February 2027. The site then says “Tickets are expected to go on sale in February 2027.” (hero, Tickets section, the closing lines of the topic pages and the FAQ answer about tickets). Leave blank to say nothing. Search engines never see it.',
           validation: { length: { max: 40 } },
         }),
         ticketSaleStart: fields.date({
@@ -285,6 +285,8 @@ export default config({
         }),
         speakerApplicationsState: fields.select({
           label: 'Speaker applications',
+          description:
+            'Controls the applications block in the Speakers section and the FAQ answer about applying to speak (through its {applicationsStatus} placeholder). “Open” only takes effect when the application link is filled in below.',
           options: [
             { label: 'Coming soon', value: 'coming-soon' },
             { label: 'Open', value: 'open' },
@@ -302,7 +304,7 @@ export default config({
         }),
         interestUrl: urlField(
           'Interest form link (speak or get involved)',
-          'The club’s interest form: register interest in speaking, join the contact list, help organize. While speaker applications are not open, the Speakers section and /speakers show “Want to speak? Register your interest” with this link, and /team shows “Get involved”. It opens in a new tab. If you change it, also update the FAQ answers that mention it.',
+          'The club’s interest form: register interest in speaking, join the contact list, help organize. While speaker applications are not open, the Speakers section and /speakers show “Want to speak? Register your interest” with this link, and /team shows “Get involved”. It opens in a new tab. FAQ answers that write {interestUrl} follow it.',
         ),
       },
     }),
@@ -315,7 +317,7 @@ export default config({
           'Newsletter sign-up link (SendFox)',
           'The SendFox form link. While blank, the site shows “list opening soon” instead of a button.',
         ),
-        contactEmail: emailField('Contact email', 'General questions. Shown in the footer and FAQ when filled in.'),
+        contactEmail: emailField('Contact email', 'General questions. Shown in the footer and on /faq when filled in; FAQ answers that write {contactEmail} follow it.'),
         partnershipsEmail: emailField(
           'Partnerships email',
           'Used by every “Become a partner” button. While blank, those buttons link to tedxscu.com.',
@@ -344,11 +346,14 @@ export default config({
       path: 'content/sections',
       schema: {
         showTeam: fields.checkbox({
-          label: 'Show the Team section on the home page (it appears once at least one name is public)',
+          label: 'Show the Team (home page section, /team page and menu links)',
+          description:
+            'Unticked: the Team section, the /team page and every menu link to it are removed. Ticked: /team and its menu links exist as soon as there is at least one role; the home page section appears once at least one name is public.',
           defaultValue: true,
         }),
         showFaq: fields.checkbox({
-          label: 'Show the FAQ section on the home page',
+          label: 'Show the FAQ (home page section, /faq page and menu links)',
+          description: 'Unticked: the FAQ section, the /faq page and every menu link to it are removed.',
           defaultValue: true,
         }),
         showSpeakerApplications: fields.checkbox({
@@ -427,7 +432,13 @@ export default config({
             answer: fields.text({
               label: 'Answer',
               description:
-                'Plain text. Line breaks are kept. Instead of typing details that may change, write a placeholder and the site fills it in: {date} (the event date, e.g. Friday, April 23, 2027), {venue} (the building), {campus} (e.g. Santa Clara University), {capacity} (the seat count), {eventName} (TEDxSantaClaraUniversity) and {interestUrl} (the Interest form link under Tickets & applications; it becomes a link). They also work in the question.',
+                'Plain text. Line breaks are kept. Instead of typing details that may change, write a placeholder and the site fills it in, so the answer can never contradict the rest of the site. ' +
+                'Event: {date} (e.g. Friday, April 23, 2027), {venue} (the building), {campus} (e.g. Santa Clara University), {capacity} (the seat count), {eventName} (TEDxSantaClaraUniversity), {doorsTime}, {talksTime} and {endTime} (the times in Event basics) and {timesNote} (the note about the times). ' +
+                'Tickets: {ticketStatus} (whole sentences that follow Ticket status: “Not yet. Tickets are expected to go on sale in February 2027. Join the mailing list…”, “Yes, tickets are on sale now…”, “Tickets are sold out…” or “Ticket sales are closed.”), {ticketSaleMonth} (the Expected on-sale month) and {ticketPriceNote} (the Price note). ' +
+                'Speaking: {applicationsStatus} (a sentence that follows Speaker applications: not open yet, open with the deadline and the application link, or closed) and {interestUrl} (the Interest form link). ' +
+                'Contact: {contactEmail} (the Contact email). ' +
+                'Links: a full https:// address and an email address become links by themselves. To link some words, write [Partners page](/partners) for a page of this site or [the form](https://…) for another site. ' +
+                'Placeholders also work in the question.',
               multiline: true,
               validation: { isRequired: true },
             }),
@@ -435,7 +446,7 @@ export default config({
           {
             label: 'Questions',
             description:
-              'To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Each one is numbered as a clause (§ 7.01, § 7.02 …). Answers can use placeholders such as {date}, {venue}, {campus}, {capacity}, {eventName} and {interestUrl}, filled in from Event basics, Venue and Tickets & applications; open a question to see what each one means.',
+              'To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter. Each one is numbered as a clause (§ 7.01, § 7.02 …). Answers can use placeholders such as {date}, {venue}, {capacity}, {ticketStatus}, {applicationsStatus} and {interestUrl}, filled in from Event basics, Venue, Tickets & speaker applications and Contact, so they stay correct when those change; open a question to see the full list and what each one means.',
             itemLabel: (props) => props.fields.question.value || 'Question',
           },
         ),
@@ -510,7 +521,7 @@ export default config({
           {
             label: 'Small print under the tiers',
             description:
-              'Short sentences shown as numbered terms under the partnership tiers on /partners: what the amounts cover, deadlines, in-kind support. Leave the list empty to show none.',
+              'Short sentences shown as lettered terms, (a), (b), (c) …, under the partnership tiers on /partners: what the amounts cover, deadlines, in-kind support. Leave the list empty to show none.',
             itemLabel: (props) => props.value || 'Line',
           },
         ),
@@ -647,7 +658,7 @@ export default config({
         slots: fields.integer({
           label: 'Number of slots (optional)',
           description:
-            'How many partners this tier can have, shown as “1 available”. Leave blank for no limit: once a Contribution is filled in, the site then shows “Open”.',
+            'How many partners this tier can have, shown as “Available 1”. Leave blank for no limit: once a Contribution is filled in, the site then shows “Open”.',
           validation: { min: 1 },
         }),
         order: fields.integer({ label: 'Order', description: 'Lower numbers come first.', defaultValue: 0 }),

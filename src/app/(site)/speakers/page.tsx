@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import { getSettings, getSpeakers } from '@/lib/content';
 import { jsonLdString, pageJsonLd } from '@/lib/jsonld';
-import { isIndexable, SITE_NAME, venueLine } from '@/lib/site';
+import { topicPageMetadata } from '@/lib/page-meta';
+import { SITE_NAME, venueLine } from '@/lib/site';
 import { SpeakerCard, SpeakersToCome } from '@/components/sections/Speakers';
 import { Button } from '@/components/ui/Button';
 import { JsonLd } from '@/components/print/Print';
@@ -14,22 +15,8 @@ export async function generateMetadata(): Promise<Metadata> {
   const description = anyAnnounced
     ? `The speakers of ${SITE_NAME}: ${s.themeName}, ${s.dateLong}, ${s.venueName}.`
     : `Speakers for ${SITE_NAME}: ${s.themeName} are to be announced. ${s.dateLong}, ${s.venueName}.`;
-  return {
-    title: 'Speakers',
-    description,
-    alternates: { canonical: '/speakers' },
-    openGraph: {
-      type: 'website',
-      siteName: SITE_NAME,
-      title: `${SITE_NAME} · Speakers`,
-      description,
-      url: '/speakers',
-      locale: 'en_US',
-    },
-    twitter: { card: 'summary_large_image', title: `${SITE_NAME} · Speakers`, description },
-    // A list of placeholders is not worth indexing: only once a speaker is announced.
-    ...(anyAnnounced && isIndexable() ? {} : { robots: { index: false, follow: true } }),
-  };
+  // A list of placeholders is not worth indexing: only once a speaker is announced.
+  return topicPageMetadata({ title: 'Speakers', description, path: '/speakers', index: anyAnnounced });
 }
 
 /**

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 import { getSettings } from '@/lib/content';
-import { isIndexable, SITE_NAME, SITE_URL, venueLine } from '@/lib/site';
+import { isIndexable, SITE_NAME, SITE_URL, siteDescription, venueLine } from '@/lib/site';
 
 // Inter variable, self-hosted from @fontsource-variable/inter (no network at build or runtime).
 const inter = localFont({
@@ -15,7 +15,7 @@ const inter = localFont({
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
   const title = `${SITE_NAME}: ${s.themeName} · ${s.dateShort}`;
-  const description = `${SITE_NAME}: ${s.themeName}. ${s.themeTagline} ${s.dateLong}, ${venueLine(s)}.`;
+  const description = siteDescription(s);
   return {
     metadataBase: new URL(SITE_URL),
     // Every title leads with the full event name.

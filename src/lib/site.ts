@@ -117,6 +117,28 @@ export function venueLine(s: Place): string {
   return [s.venueName, s.venueCampus].filter(Boolean).join(', ');
 }
 
+const listOf = (items: string[]) =>
+  items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items[items.length - 1]}` : (items[0] ?? '');
+
+/**
+ * The closing words of the /venue search and share description, built from what
+ * the page really has: the address always, the map link when there is one, and a
+ * "Getting there" note (Venue & directions) only once its details are filled in.
+ * Notes still empty are promised as "to follow". With today's empty notes:
+ * "Address and map link; directions, parking and accessibility details to follow."
+ * With all three filled in: "Address, map link, directions, parking and accessibility."
+ */
+export function venueDescriptionTail(s: Pick<Settings, 'venueNotes' | 'mapUrl'>): string {
+  // No notes at all: the page shows its three standard ones, empty.
+  const notes = s.venueNotes.length ? s.venueNotes : ['Directions', 'Parking', 'Accessibility'].map((title) => ({ title, body: '' }));
+  const named = notes.filter((n) => n.title.trim());
+  const lower = (t: string) => t.trim().toLocaleLowerCase('en-US');
+  const ready = named.filter((n) => n.body.trim()).map((n) => lower(n.title));
+  const toFollow = named.filter((n) => !n.body.trim()).map((n) => lower(n.title));
+  const has = listOf(['Address', ...(s.mapUrl ? ['map link'] : []), ...ready]);
+  return toFollow.length ? `${has}; ${listOf(toFollow)} details to follow.` : `${has}.`;
+}
+
 /** "100 seats" */
 export function seatsLabel(capacity: number): string {
   return `${capacity} ${capacity === 1 ? 'seat' : 'seats'}`;
@@ -126,7 +148,10 @@ export function seatsLabel(capacity: number): string {
  * The fact lines engraved on the 3D microphone, built from content in the same
  * capitals as src/scene/engraving.ts (THEME, DATE_LINE, VENUE_LINE, SEATS_LINE):
  * "FINE PRINT", "FRIDAY · APRIL 23 · 2027", "LOCATELLI STUDENT ACTIVITY CENTER",
- * "100 SEATS". Not used by the scene yet: see docs/NEXT-YEAR.md ("3D engraving").
+ * "100 SEATS". The site shell passes them to the 3D scene, so the live engraving
+ * follows Event basics and Venue; the constants in engraving.ts are only its
+ * fallbacks. The still frames in public/stills are pictures of the engraving and
+ * do not follow: see docs/NEXT-YEAR.md, steps 4 and 5.
  */
 export function engravingLines(s: Pick<Settings, 'themeName' | 'dateLong' | 'venueName' | 'capacity'>) {
   const upper = (t: string) => t.toLocaleUpperCase('en-US');
@@ -136,6 +161,16 @@ export function engravingLines(s: Pick<Settings, 'themeName' | 'dateLong' | 'ven
     venueLine: upper(s.venueName),
     seatsLine: upper(seatsLabel(s.capacity)),
   };
+}
+
+/**
+ * The site-wide search and share description: "TEDxSantaClaraUniversity: Fine
+ * Print. <tagline> Friday, April 23, 2027, Locatelli Student Activity Center,
+ * Santa Clara University." The tagline is optional; left blank it is simply
+ * skipped (no double space).
+ */
+export function siteDescription(s: Pick<Settings, 'eventName' | 'themeName' | 'themeTagline' | 'dateLong'> & Place): string {
+  return [`${s.eventName}: ${s.themeName}.`, s.themeTagline.trim(), `${s.dateLong}, ${venueLine(s)}.`].filter(Boolean).join(' ');
 }
 
 /**

@@ -168,9 +168,11 @@ const nextConfig: NextConfig = {
       { source: '/api/keystatic/:path*', headers: [...common, ...noStore] },
       // Files in /public keep stable names, so they get a day of caching plus a week of
       // background revalidation rather than `immutable`. (The header logo is imported and
-      // therefore served from hashed /_next/static/media URLs instead.)
+      // therefore served from hashed /_next/static/media URLs instead.) The still frames
+      // (public/stills) are the largest images on the site and are regenerated under the
+      // same names, so they get the same policy.
       {
-        source: '/:dir(brand|images)/:path*',
+        source: '/:dir(brand|images|stills)/:path*',
         headers: [{ key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' }],
       },
       // Static uploads and assets, opened directly: an uploaded SVG (sponsor logos may be SVG)

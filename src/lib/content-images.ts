@@ -76,7 +76,8 @@ export function checkImage(
     return drop(`"${p}" is a .${ext} file, which cannot be shown here.`);
   }
 
-  const abs = join(publicDir, p);
+  // turbopackIgnore: the path is only known at build time; without it the bundler traces the whole project.
+  const abs = join(/* turbopackIgnore: true */ publicDir, p);
   let size: number;
   const head = new Uint8Array(512);
   let read = 0;
@@ -118,7 +119,7 @@ export const TEAM_PHOTO_FILES = ['photo.jpg', 'photo.jpeg', 'photo.png', 'photo.
 export function findTeamPhoto(slug: string, publicDir: string = join(process.cwd(), 'public')): string {
   for (const name of TEAM_PHOTO_FILES) {
     const rel = `/images/team/${slug}/${name}`;
-    if (existsSync(join(publicDir, rel))) return rel;
+    if (existsSync(join(/* turbopackIgnore: true */ publicDir, rel))) return rel;
   }
   return '';
 }
