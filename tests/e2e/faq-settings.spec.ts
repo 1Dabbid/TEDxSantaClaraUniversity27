@@ -106,7 +106,7 @@ test.describe('FAQ placeholders that follow the settings', () => {
 
   test('{applicationsStatus} says what Speaker applications says', () => {
     const notOpen =
-      'Formal speaker applications are not open yet. Those who register their interest get an early look at pitching a talk and hear first when applications open.';
+      'Formal speaker applications are not open yet. People on the interest list get an early look at pitching a talk and hear first when applications open.';
     expect(applicationsStatusText(today)).toBe(notOpen);
     // No interest form to register with: no promise about it.
     expect(applicationsStatusText({ ...today, interestUrl: '' })).toBe('Formal speaker applications are not open yet.');
@@ -204,6 +204,15 @@ test.describe('FAQ placeholders that follow the settings', () => {
     expect(drop('Seats are limited. Sign up ({interestUrl}).\n\nSee you there.')).toBe('Seats are limited.\n\nSee you there.');
     // A placeholder that stands for whole sentences is not part of the sentence after it.
     expect(drop('{applicationsStatus} To register, use the form: {interestUrl}.')).toBe('{applicationsStatus}');
+    // A period that only ends an abbreviation does not end the sentence: no fragment such as "If you want to help (e.g. Thanks."
+    expect(drop('If you want to help (e.g. as a volunteer), use the form: {interestUrl}. Thanks.')).toBe('Thanks.');
+    expect(drop('See Dr. Smith or use {interestUrl}. Thanks.')).toBe('Thanks.');
+    expect(drop('Doors open early. Use {interestUrl} (e.g. to volunteer or i.e. to help). Thanks.')).toBe('Doors open early. Thanks.');
+    expect(drop('Come at 5 p.m. sharp or sign up: {interestUrl}. Thanks.')).toBe('Thanks.');
+    expect(drop('Talks end at 9 p.m. Sign up at {interestUrl} for news. Thanks.')).toBe('Talks end at 9 p.m. Thanks.');
+    expect(drop('Tell us. The form: {interestUrl}. Thanks.')).toBe('Tell us. Thanks.');
+    expect(drop('Email Dr. Lee at {contactEmail}.')).toBe('');
+    expect(drop('Ask us anything, e.g. about parking: {contactEmail}.')).toBe('Ask us anything, e.g. about parking.');
     expect(drop('{ticketStatus} {ticketPriceNote} Questions go to {contactEmail}.')).toBe('{ticketStatus} {ticketPriceNote}');
     for (const text of ['Write to us ({contactEmail}) any time.', 'Use [the form]({interestUrl}) now. Bye.', 'Email [us]({contactEmail}).', 'Form ({interestUrl}).']) {
       expect(drop(text), text).not.toMatch(/\(\)|\]\(|[{}]/);
@@ -218,8 +227,13 @@ test.describe('FAQ placeholders that follow the settings', () => {
         fillPlaceholders(dropBlankPlaceholders(answer, blank), { ...base, ...faqSettingValues({ ...today, contactEmail: '', interestUrl: '' }) }).text,
       );
       expect(text, answer).not.toMatch(/\b(?:at|to|via) (?:and|or|but)\b|\b(?:at|to|via)[.,;]|:\s*(?:\.|$)| [.,;]| {2}|[{}]|\(\)|\]\(\)/);
-      // With no interest form, no answer tells visitors to use one, and none is left empty or starting mid-thought.
-      expect(text, answer).not.toMatch(/interest form/i);
+      // With no interest form, no answer tells visitors to use one or lists things only the form could do.
+      expect(text, answer).not.toMatch(/interest form|contact list|ways to take part|register/i);
+      // An answer that was nothing but the pointer to the form is empty (its question is not shown); none starts mid-thought.
+      if (text === '') {
+        expect(answer, answer).toContain('{interestUrl}');
+        continue;
+      }
       expect(text.length, answer).toBeGreaterThan(20);
       expect(text, answer).toMatch(/^[A-Z“].*[.!?]$/s);
     }
@@ -229,10 +243,19 @@ test.describe('FAQ placeholders that follow the settings', () => {
     const speak = answers.find((a) => a.includes('{applicationsStatus}'));
     expect(speak).toBe('{applicationsStatus} To register your interest in giving a talk, use the club’s interest form: {interestUrl}.');
     expect(blankFill(speak ?? '')).toBe('Formal speaker applications are not open yet.');
-    const involved = answers.find((a) => a.startsWith('There are three ways to take part'));
-    expect(blankFill(involved ?? '')).toBe(
-      'There are three ways to take part: helping to organize TEDxSantaClaraUniversity, joining the club’s contact list, and registering your interest in speaking.',
+    // "How can I get involved?" is one sentence that ends in the form's address: with the link it names
+    // what the form is for, and without it nothing is left (no list of things with no way to do them),
+    // so the loader leaves the question out, with a content warning.
+    const involved = answers.find((a) => a.includes('{interestUrl}') && a !== speak);
+    expect(involved).toBe(
+      'Use the club’s interest form to help organize {eventName}, join its contact list or register your interest in speaking: {interestUrl}.',
     );
+    expect(blankFill(involved ?? 'x')).toBe('');
+    expect(fill(involved ?? '', today)).toBe(
+      `Use the club’s interest form to help organize TEDxSantaClaraUniversity, join its contact list or register your interest in speaking: ${today.interestUrl}.`,
+    );
+    const loader = readFileSync(join(process.cwd(), 'src/lib/content.ts'), 'utf8');
+    expect(loader).toContain('nothing is left of it once the blank fields are taken out, so the question is not shown.');
   });
 
   test('facts typed by hand are reported, so they cannot go stale unnoticed', () => {
@@ -254,6 +277,23 @@ test.describe('FAQ placeholders that follow the settings', () => {
       expect(guide, `docs/EDITING.md mentions {${name}}`).toContain(`{${name}}`);
     }
     expect(Object.keys(faqSettingValues(today)).sort()).toEqual([...FAQ_ONLY_PLACEHOLDERS].sort());
+  });
+
+  test('the admin hints say what a blank field or a missing ticket link does', () => {
+    const config = readFileSync(join(process.cwd(), 'keystatic.config.ts'), 'utf8');
+    const guide = readFileSync(join(process.cwd(), 'docs/EDITING.md'), 'utf8');
+    // Ticket status: "On sale" with no ticket link yet.
+    expect(config).toContain('With “On sale” and no ticket link yet, the site and the {ticketStatus} answer say tickets are about to go on sale, not “on sale now”.');
+    expect(ticketStatusText({ ...today, ticketState: 'on-sale' })).toContain('Tickets are about to go on sale');
+    expect(guide).toContain('On sale with no ticket link yet: "Almost. Tickets are about to go on sale');
+    // Interest form link, blank.
+    expect(config).toContain('While this is blank, the whole sentence that contains {interestUrl} is left out of the answer, and a question with nothing left to say is not shown.');
+    expect(guide).toContain('the whole sentence that contains it is left out');
+    // Contact email, blank.
+    expect(config).toContain('While this is blank, those answers are shown without the address (and without the “at”, “to” or “:” before it), so read them on the page.');
+    expect(guide).toContain('the address is left out together with the "at", "to" or ":" before it');
+    // The guide tells the owner what today's two answers do with the link blank.
+    expect(guide).toContain('**How can I get involved?** is not shown at all');
   });
 });
 

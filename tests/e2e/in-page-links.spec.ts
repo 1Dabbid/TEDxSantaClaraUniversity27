@@ -123,8 +123,9 @@ for (const setup of SETUPS) {
       await page.context().close();
     });
 
-    test('the logo goes to the top and takes the #section out of the address; Back returns to the section', async ({ browser }) => {
-      for (const query of ['', QUERY]) {
+    // One test per address (plain, and with a query string): each opens one page and stays well inside the time budget.
+    for (const [label, query] of [['no query string', ''], ['with a query string', QUERY]] as const) {
+      test(`the logo goes to the top and takes the #section out of the address; Back returns to the section (${label})`, async ({ browser }) => {
         const page = await open(browser, setup, `/${query}`);
         await press(setup, page.locator('header a[href="/#tickets"]'));
         await expectLanded(page, 'tickets', `/${query}#tickets`);
@@ -138,8 +139,8 @@ for (const setup of SETUPS) {
         await expect.poll(() => address(page)).toBe(`/${query}`);
         await expect.poll(() => scrollY(page), { timeout: 9000 }).toBe(0);
         await page.context().close();
-      }
-    });
+      });
+    }
 
     test('the hero Tickets button does the same, also with an fbclid', async ({ browser }) => {
       const page = await open(browser, setup, '/?fbclid=abc');

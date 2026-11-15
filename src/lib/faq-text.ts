@@ -79,7 +79,7 @@ export function applicationsStatusText(
     return `Speaker applications are open. ${deadline ? `The deadline is ${deadline}. ` : ''}Apply here: ${s.speakerApplicationsUrl}.`;
   }
   const hearFirst = s.interestUrl
-    ? ' Those who register their interest get an early look at pitching a talk and hear first when applications open.'
+    ? ' People on the interest list get an early look at pitching a talk and hear first when applications open.'
     : '';
   return `Formal speaker applications are not open yet.${hearFirst}`;
 }
@@ -110,13 +110,37 @@ export function faqSettingValues(s: StatusSettings) {
 /** Placeholders that are filled with whole sentences of their own: the next sentence starts after them. */
 const SENTENCE_PLACEHOLDERS = String.raw`\{(?:ticketStatus|applicationsStatus|ticketPriceNote|timesNote)\}[ \t]*`;
 const SENTENCE_START = new RegExp(String.raw`[.!?]["”’)]*[ \t]+|${SENTENCE_PLACEHOLDERS}|\n+`, 'g');
+const SENTENCE_END = /[.!?]["”’)]*(?=\s|$)[ \t]*|\n/g;
+
+/** Before a period: "e.g", "i.e", or a title or name prefix ("Dr", "St"). The sentence goes on after it. */
+const ABBREVIATION = /(?:\b(?:e\.g|i\.e)|\b(?:Dr|Mr|Mrs|Ms|Prof|St|Mt|vs))$/;
+
+/**
+ * Whether the period at `stop` (followed by `after`) only ends an
+ * abbreviation: "(e.g. as a volunteer)", "See Dr. Smith", "at 5 p.m. sharp".
+ * True after "e.g", "i.e" or a title, and whenever the next word starts in
+ * lower case. Without this, the sentence taken out for a blank field would
+ * start or stop in the middle ("If you want to help (e.g. Thanks.").
+ */
+function endsAbbreviation(text: string, stop: number, after: number): boolean {
+  if (text[stop] !== '.') return false;
+  return ABBREVIATION.test(text.slice(0, stop)) || /^\p{Ll}/u.test(text.slice(after));
+}
 
 /** Where the sentence around text[from..to) starts and ends (its closing punctuation and the space after it included). */
 function sentenceAround(text: string, from: number, to: number): [start: number, end: number] {
   let start = 0;
-  for (const m of text.slice(0, from).matchAll(SENTENCE_START)) start = (m.index ?? 0) + m[0].length;
-  const rest = /[.!?]["”’)]*(?=\s|$)[ \t]*|\n/.exec(text.slice(to));
-  const end = rest ? to + rest.index + (rest[0] === '\n' ? 0 : rest[0].length) : text.length;
+  for (const m of text.slice(0, from).matchAll(SENTENCE_START)) {
+    const at = m.index ?? 0;
+    if (!endsAbbreviation(text, at, at + m[0].length)) start = at + m[0].length;
+  }
+  let end = text.length;
+  for (const m of text.slice(to).matchAll(SENTENCE_END)) {
+    const at = to + (m.index ?? 0);
+    if (endsAbbreviation(text, at, at + m[0].length)) continue;
+    end = m[0] === '\n' ? at : at + m[0].length;
+    break;
+  }
   return [start, end];
 }
 
@@ -140,6 +164,9 @@ const TOO_SHORT = 4;
  *   ("Write to {contactEmail}."), the sentence goes.
  * - {contactEmail} in brackets, "({contactEmail})", goes with its brackets;
  *   "[words]({contactEmail})" keeps the words, unlinked.
+ *
+ * A period that only ends an abbreviation ("e.g.", "Dr.", "5 p.m. sharp")
+ * does not end the sentence (endsAbbreviation).
  *
  * Other phrasings ("Rely on {contactEmail} for answers") cannot be repaired here
  * and may read wrongly; the content warning for a blank field says so.
