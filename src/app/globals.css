@@ -550,6 +550,27 @@ html:not(.motion) .reading-progress {
   }
 }
 
+/* Phones: the clauses run the full width over the engraved barrel, whose lit
+   lettering is as bright as the 13px text and as fine. A soft scrim of their
+   own, on top of the section's wash: it reaches both screen edges and fades
+   out above and below, so it has no edge to see. */
+@media (max-width: 767.98px) {
+  .theme-fine {
+    position: relative;
+    isolation: isolate;
+  }
+  .theme-fine::before {
+    content: '';
+    position: absolute;
+    /* To the screen edges exactly (the shell's padding): wider would widen the page. */
+    inset: -3.5rem calc(-1 * clamp(1.25rem, 4vw, 3.5rem));
+    z-index: -1;
+    pointer-events: none;
+    background: rgb(0 0 0 / 0.66);
+    mask-image: linear-gradient(to bottom, transparent, #000 3.5rem, #000 calc(100% - 3.5rem), transparent);
+  }
+}
+
 /* Pinned (motion, md+ and tall enough): a tall runway, a sticky stage, 9px contract text. */
 @media (min-width: 768px) and (min-height: 44rem) {
   /* 225vh: the opening, a short engraving-only beat and three phrases. Shorter
@@ -1437,6 +1458,11 @@ html.has-cursor [contenteditable] {
 #main:has(> [data-scene-stills]) > [data-still-end] {
   view-timeline-name: --fp-still-end;
 }
+/* Portrait frames by the live scene's rule (src/scene/choreography.ts, portraitFraming; the same
+   queries as SceneStills.tsx): a window taller than wide gets them all; a window narrower than the
+   desktop layout that is not taller than wide (and not short and wide like a phone on its side)
+   keeps the landscape hero and theme, as the live scene opens with the microphone at the right
+   there, and gets the portrait stage frames. */
 @media (max-aspect-ratio: 9/10) {
   #main:has(> [data-scene-stills]) > [data-section='hero'] {
     --fp-plate: image-set(url('/stills/hero-portrait.avif') type('image/avif'), url('/stills/hero-portrait.webp') type('image/webp'));
@@ -1444,6 +1470,8 @@ html.has-cursor [contenteditable] {
   #main:has(> [data-scene-stills]) > [data-section='theme'] {
     --fp-plate: image-set(url('/stills/theme-portrait.avif') type('image/avif'), url('/stills/theme-portrait.webp') type('image/webp'));
   }
+}
+@media (max-aspect-ratio: 9/10), ((max-width: 1023.98px) and (max-aspect-ratio: 1699/1000)) {
   #main:has(> [data-scene-stills]) > [data-section='speakers'] {
     --fp-plate: image-set(url('/stills/speakers-portrait.avif') type('image/avif'), url('/stills/speakers-portrait.webp') type('image/webp'));
   }
@@ -1452,6 +1480,14 @@ html.has-cursor [contenteditable] {
   }
   #main:has(> [data-scene-stills]) > [data-section='venue'] {
     --fp-plate: image-set(url('/stills/venue-portrait.avif') type('image/avif'), url('/stills/venue-portrait.webp') type('image/webp'));
+  }
+}
+/* In such a window (not taller than wide) a portrait frame is cropped to a band of its height: the
+   band is taken near the top, where the microphone stands, not through the middle of the stand
+   (the same in SceneStills.module.css). */
+@media (min-aspect-ratio: 9/10) and (max-width: 1023.98px) and (max-aspect-ratio: 1699/1000) {
+  #main:has(> [data-scene-stills]) > :is([data-section='speakers'], [data-section='schedule'], [data-section='venue']) {
+    --fp-plate-y: 12%;
   }
 }
 /* Plates: with reduced motion (no scroll-linked fades), and in browsers without
@@ -1482,7 +1518,7 @@ html.reduce-motion {
   height: min(100%, 100svh);
   z-index: -20;
   pointer-events: none;
-  background: var(--fp-plate) center / cover no-repeat;
+  background: var(--fp-plate) center var(--fp-plate-y, center) / cover no-repeat;
   mask-image: linear-gradient(to bottom, #000 62%, transparent);
 }
 /* The hero plate lines up with the viewport like the canvas (from under the header). */
