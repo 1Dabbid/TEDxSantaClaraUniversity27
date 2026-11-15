@@ -584,6 +584,33 @@ html:not(.motion) .reading-progress {
     mask-image: linear-gradient(to bottom, transparent, #000 3.5rem, #000 calc(100% - 3.5rem), transparent);
   }
 }
+/* The same in a window narrower than the desktop layout that is not taller than
+   wide (768 to 1023 px: a half-screen browser window, a small tablet on its
+   side). The live scene's macro stands at the right there, nearer the middle
+   than on a desktop (src/scene/choreography.ts, wideOpening), and the second
+   column of clauses runs out over the lit engraving. */
+@media (min-width: 768px) and (max-width: 1023.98px) and (min-aspect-ratio: 9001/10000) and (max-aspect-ratio: 1699/1000) {
+  .theme-fine {
+    position: relative;
+    isolation: isolate;
+  }
+  .theme-fine::before {
+    content: '';
+    position: absolute;
+    inset: -3.5rem calc(-1 * clamp(1.25rem, 4vw, 3.5rem));
+    z-index: -1;
+    pointer-events: none;
+    background: rgb(0 0 0 / 0.66);
+    mask-image: linear-gradient(to bottom, transparent, #000 3.5rem, #000 calc(100% - 3.5rem), transparent);
+  }
+}
+/* Pinned, the clauses keep a measure narrower than the stage: the scrim runs on
+   to the stage's right edge, which clips it (overflow: hidden, below). */
+@media (min-width: 768px) and (max-width: 1023.98px) and (min-height: 44rem) and (min-aspect-ratio: 9001/10000) and (max-aspect-ratio: 1699/1000) {
+  html.motion .theme-fine::before {
+    right: -100vw;
+  }
+}
 
 /* Pinned (motion, md+ and tall enough): a tall runway, a sticky stage, 9px contract text. */
 @media (min-width: 768px) and (min-height: 44rem) {
@@ -1473,10 +1500,10 @@ html.has-cursor [contenteditable] {
   view-timeline-name: --fp-still-end;
 }
 /* Portrait frames by the live scene's rule (src/scene/choreography.ts, portraitFraming; the same
-   queries as SceneStills.tsx): a window taller than wide gets them all; a window narrower than the
-   desktop layout that is not taller than wide (and not short and wide like a phone on its side)
-   keeps the landscape hero and theme, as the live scene opens with the microphone at the right
-   there, and gets the portrait stage frames. */
+   queries as SceneStills.tsx): a window taller than wide gets them all (9:10 itself counts as
+   tall, in the live rule too); a window narrower than the desktop layout that is not taller than
+   wide (and not short and wide like a phone on its side) keeps the landscape hero and theme, as
+   the live scene opens with the microphone at the right there, and gets the portrait stage frames. */
 @media (max-aspect-ratio: 9/10) {
   #main:has(> [data-scene-stills]) > [data-section='hero'] {
     --fp-plate: image-set(url('/stills/hero-portrait.avif') type('image/avif'), url('/stills/hero-portrait.webp') type('image/webp'));
@@ -1498,8 +1525,8 @@ html.has-cursor [contenteditable] {
 }
 /* In such a window (not taller than wide) a portrait frame is cropped to a band of its height: the
    band is taken near the top, where the microphone stands, not through the middle of the stand
-   (the same in SceneStills.module.css). */
-@media (min-aspect-ratio: 9/10) and (max-width: 1023.98px) and (max-aspect-ratio: 1699/1000) {
+   (the same in SceneStills.module.css; just over 9:10, which counts as tall). */
+@media (min-aspect-ratio: 9001/10000) and (max-width: 1023.98px) and (max-aspect-ratio: 1699/1000) {
   #main:has(> [data-scene-stills]) > :is([data-section='speakers'], [data-section='schedule'], [data-section='venue']) {
     --fp-plate-y: 12%;
   }

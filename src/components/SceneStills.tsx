@@ -28,13 +28,14 @@ import styles from './SceneStills.module.css';
 
 /**
  * Which frame a window gets, by the same rule as the live scene (src/scene/choreography.ts,
- * portraitFraming): the portrait frames for a window taller than wide (aspect under 0.9), and
+ * portraitFraming): the portrait frames for a window taller than wide (aspect 0.9 or under), and
  * also for one narrower than the desktop layout (under 1024 px wide) unless it is short and wide
  * like a phone on its side (1.7 and over). In such a narrow window that is not taller than wide
- * the live scene still opens with the microphone at the right, beside the wide hero copy
- * (wideOpening), and only then moves to the middle of the width: so the hero and the theme keep
- * their landscape frames there, and the stage frames (speakers, schedule, venue) are the portrait
- * ones. The same queries choose the plates in globals.css ("Scene stills").
+ * (wideCopyFraming) the live scene still opens with the microphone at the right, beside the hero
+ * copy (wideOpening), and only then moves to the middle of the width: so the hero and the theme
+ * keep their landscape frames there, and the stage frames (speakers, schedule, venue) are the
+ * portrait ones. A window of exactly 9:10 counts as taller than wide, here and in the live rule.
+ * The same queries choose the plates in globals.css ("Scene stills").
  */
 const TALL = '(max-aspect-ratio: 9/10)';
 const NARROW = `${TALL}, ((max-width: 1023.98px) and (max-aspect-ratio: 1699/1000))`;

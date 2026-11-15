@@ -454,10 +454,13 @@ export const MOTION_LIMITS = {
    * `speakerClearPortrait`: the counter runs the full width there and the grille has to cross its
    * ruler and caption on the way down (to about J 5.8), so until it is under the caption it either
    * keeps that air or is taken down to a dark shape behind the text: its own light (key plus rim)
-   * at most `speakerDimPortrait`.
+   * at most `speakerDimPortrait`. The same on a phone on its side (sidewaysPhone), from
+   * `speakerClearSideways`: its counter is stacked like a phone's and the frame is short, so the
+   * grille meets the numerals earlier.
    */
   speakerClear: 5.75,
   speakerClearPortrait: 5.6,
+  speakerClearSideways: 5.5,
   speakerDimPortrait: 0.2,
   speakerCopyAirPx: 6,
 
@@ -1492,7 +1495,7 @@ const END_SAMPLE_FROM = 5.4;
  * and its copy held to the foot of the page. `variant` overrides the anchor height and barrel glide keys
  * (a content variant).
  */
-function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'ax' | 'aspect'>> = {}): Shot[] {
+function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'ax' | 'aspect' | 'looks'>> = {}): Shot[] {
   const mv = { ...move, ...variant };
   const { ay, looks } = mv;
   const pullKeys = zoomKeys(mv.pull.from, mv.pull.d0, mv.pull.d1, mv.pull.profile);
@@ -1638,6 +1641,22 @@ export type ShotOptions = {
   ticketsX?: number;
   /** The hero's anchor x, measured: the grille clear of the headline (landscape), or of the headline and the facts row (the portrait move in a wide-copy window). */
   heroX?: number;
+  /**
+   * The portrait move in a window that is not taller than wide (wideCopyFraming): whether the
+   * microphone fits at the right, beside the hero's copy (the measured layout: contentLayout.ts,
+   * measureWideCopy). Without it the move opens on the phone's hero.
+   */
+  wideCopy?: boolean;
+  /**
+   * There, under 640 px wide: the hero's anchor height, measured, so the grille stands under the
+   * headline (which runs most of the width at that size) and beside the copy below it.
+   */
+  heroY?: number;
+  /**
+   * The landscape move on a phone on its side (sidewaysPhone): the seat counter is laid out as on a
+   * phone held upright there, and the grille crosses it on the way down.
+   */
+  sideways?: boolean;
   /** The Tickets room figure (the seat counter), measured: where the grille goes over the end of Tickets. */
   ticketsRoom?: TicketsRoom;
   /**
@@ -1649,35 +1668,60 @@ export type ShotOptions = {
 };
 
 /**
- * Which move a frame gets: the portrait move for a frame taller than wide (under 0.9), and also for
+ * Which move a frame gets: the portrait move for a frame taller than wide (9:10 or narrower: the
+ * boundary itself counts as tall, as it does for `max-aspect-ratio: 9/10` in the page's CSS, which
+ * stacks the hero's facts there, and for the still frames), and also for
  * a window narrower than the page's desktop layout (under 1024 px wide: a half-screen browser
  * window, a small tablet on its side) unless it is short and wide like a phone on its side (1.7
  * and over). Below 1024 px the copy runs the full width, as on a tablet held upright, and the
  * landscape move's subject, at the right of the frame, would stand in the text; the portrait move
  * keeps it small in the upper middle and takes it down under each heading. Where such a window is
- * not taller than wide, the hero's copy is still laid out wide, so the move opens with the
- * microphone at the right, beside it (wideOpening), not under the headline as on a phone. A phone
+ * not taller than wide (wideCopyFraming), the hero's copy leaves the right of the frame open, so the
+ * move opens with the microphone there, beside it (wideOpening), not under it as on a phone. A phone
  * on its side keeps the landscape move: its frame is too short for the portrait move's stage.
  * The static tier chooses its still frames by the same rule (SceneStills.tsx, globals.css).
  */
 export const portraitFraming = (width: number, height: number): boolean => {
   const aspect = width / Math.max(1, height);
-  return aspect < 0.9 || (width < 1024 && aspect < 1.7);
+  return aspect <= 0.9 || (width < 1024 && aspect < 1.7);
 };
 
 /**
- * The portrait move in a window that is not taller than wide (0.9 and over; see portraitFraming):
- * the hero's copy is laid out as on a desktop there (the headline, then the three facts side by
- * side across the left half or more of the frame), so the phone's hero, with the microphone in the
- * lower middle under the headline, would stand on the facts row.
+ * A phone on its side: the landscape move (short and wide) in a window under 768 px wide, where the
+ * page is laid out as on a phone (from 768 px the seat counter has the desktop's layout, and the
+ * grille keeps clear of it as on a desktop).
+ */
+export const sidewaysPhone = (width: number, height: number): boolean => width < 768 && !portraitFraming(width, height);
+
+/**
+ * The portrait move in a window that is not taller than wide (over 0.9; see portraitFraming).
+ * From 640 px wide the hero's copy is laid out as on a desktop there (the headline across the left
+ * half or more of the frame, then the three facts side by side), so the phone's hero, with the
+ * microphone in the lower middle under the headline, would stand on the facts row: the microphone
+ * stands at the right, beside the headline and the facts. Under 640 px (a small near-square
+ * window) the headline is set at the phone's size and runs most of the width, with the rest of the
+ * copy stacked in a narrow column under it: the microphone stands at the right too, but lower,
+ * under the end of the headline and beside that column (`heroY`). The static tier follows the same
+ * aspect (SceneStills.tsx, globals.css).
  */
 export const WIDE_COPY_ASPECT = 0.9;
+export const WIDE_COPY_MIN_WIDTH = 640;
+export const wideCopyFraming = (width: number, height: number): boolean => width / Math.max(1, height) > WIDE_COPY_ASPECT && portraitFraming(width, height);
 /** The hero's anchor x in such a window when the layout is not measured, its limits, and the macro's. */
 const WIDE_HERO_X = 0.74;
-const WIDE_HERO_X_RANGE = [0.66, 0.84] as const;
+export const WIDE_HERO_X_RANGE = [0.66, 0.84] as const;
 const WIDE_MACRO_X = 0.78;
-/** The hero's anchor height there: the microphone beside the copy, level with the headline and the facts. */
+/**
+ * As the hero scrolls out, the anchor goes this far right of the macro's place for a moment: the
+ * grille, growing as the camera pushes in, keeps its air from the end of the facts row.
+ */
+const WIDE_PUSH_AIR = 0.03;
+/**
+ * The hero's anchor height there: the microphone beside the copy, level with the headline and the
+ * facts; and the lowest it goes to stand under the headline instead (the phone's hero height).
+ */
 const WIDE_HERO_Y = 0.53;
+export const WIDE_HERO_Y_MAX = 0.66;
 /**
  * The opening of the portrait move for a wide-copy window: the hero's microphone at the right of
  * the frame, clear of the headline and the facts row (`heroX`, measured from the layout:
@@ -1686,14 +1730,49 @@ const WIDE_HERO_Y = 0.53;
  * phone (the Theme headline runs wider), and the pull out brings it to the middle of the width for
  * the stage, as on a phone. The height holds through the hero and the push
  * in (the phone's hero starts lower and rises).
+ *
+ * The light: at the right of the frame the barrel comes up behind the hero's scroll hint and the
+ * Theme stage's clause counter as the hero scrolls out (on a phone it comes up in the middle,
+ * between them), so the engraving stays as dim as it is during the push in until those small
+ * labels have passed (about J 1.1), and only then takes the macro's light.
  */
-function wideOpening(heroX: number | undefined): Pick<Move, 'ax' | 'ay'> {
+function wideOpening(heroX: number | undefined, heroY: number | undefined): Pick<Move, 'ax' | 'ay' | 'looks'> {
   const hx = Math.min(WIDE_HERO_X_RANGE[1], Math.max(WIDE_HERO_X_RANGE[0], heroX ?? WIDE_HERO_X));
+  const hy = Math.min(WIDE_HERO_Y_MAX, Math.max(WIDE_HERO_Y, heroY ?? WIDE_HERO_Y));
+  const out = Math.max(hx + 0.003, WIDE_MACRO_X + WIDE_PUSH_AIR);
+  const open = PORTRAIT_MOVE.looks.open;
   return {
-    ax: [[0.4, hx], [0.5, hx + 0.003], [0.95, Math.max(hx + 0.003, WIDE_MACRO_X)], [1.4, WIDE_MACRO_X], [1.5, WIDE_MACRO_X + 0.005], [1.8, WIDE_MACRO_X], ...PORTRAIT_MOVE.ax.filter(([j]) => j >= 2.8)],
-    ay: [[0.4, WIDE_HERO_Y], [0.5, WIDE_HERO_Y], ...PORTRAIT_MOVE.ay.filter(([j]) => j > 0.5)],
+    ax: [[0.4, hx], [0.5, hx + 0.003], [0.95, out], [1.05, out], [1.4, WIDE_MACRO_X], [1.5, WIDE_MACRO_X + 0.005], [1.8, WIDE_MACRO_X], ...PORTRAIT_MOVE.ax.filter(([j]) => j >= 2.8)],
+    ay: [[0.4, hy], [0.5, hy], ...PORTRAIT_MOVE.ay.filter(([j]) => j > 0.5)],
+    looks: {
+      ...PORTRAIT_MOVE.looks,
+      open: [
+        ...open.filter((k) => k.at < 1),
+        lk(1.1, lightAt(open, 1.1), { exposure: PUSH_PORTRAIT_LOOK.exposure, key: 0.55, env: PUSH_PORTRAIT_LOOK.env }),
+        lk(1.28, lightAt(open, 1.28)),
+        ...open.filter((k) => k.at > 1.3),
+      ],
+    },
   };
 }
+
+/**
+ * A phone on its side (the landscape move, sidewaysPhone): the seat counter is laid out as on a
+ * phone held upright, and in the short frame the grille crosses its numerals, ruler and caption on
+ * the way down (about J 5.55 to 5.85). The same treatment as the portrait move: the microphone's
+ * own light is down while it crosses (CROSSING_DIM) and back once it stands under the caption.
+ */
+const SIDEWAYS_LOOKS: Move['looks'] = {
+  ...DESKTOP_MOVE.looks,
+  stage: [
+    ...DESKTOP_MOVE.looks.stage.filter((k) => k.at < 5.5),
+    lk(5.5, lightAt(DESKTOP_MOVE.looks.stage, 5.5), CROSSING_DIM),
+    lk(5.65, SPEAKER_LOOK, CROSSING_DIM),
+    lk(5.85, SPEAKER_LOOK, CROSSING_DIM),
+    lk(5.9, SPEAKER_LOOK, { exposure: 0.96, cone: 0.38, spot: 0.78, rim: 1.3 }),
+    ...DESKTOP_MOVE.looks.stage.filter((k) => k.at > 5.95),
+  ],
+};
 
 /** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
 export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
@@ -1702,11 +1781,12 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
     if (!opts.ticketsRoom && (!opts.aspect || Math.abs(opts.aspect - PORTRAIT_ASPECT) < 0.03)) return PORTRAIT_SHOTS;
     const end = endKeys(END_PORTRAIT, opts.ticketsRoom ?? ROOM_PORTRAIT, opts.aspect ?? PORTRAIT_ASPECT);
     // A window with the wide copy layout opens on its own hero and macro (wideOpening).
-    const open = opts.aspect !== undefined && opts.aspect >= WIDE_COPY_ASPECT ? wideOpening(opts.heroX) : PORTRAIT_MOVE;
+    const open = opts.wideCopy ? wideOpening(opts.heroX, opts.heroY) : PORTRAIT_MOVE;
     return moveShots(PORTRAIT_MOVE, {
       ax: [...open.ax.filter(([j]) => j < END_PORTRAIT.from), ...end.ax],
       ay: [...open.ay.filter(([j]) => j < END_PORTRAIT.from), ...end.ay],
       aspect: opts.aspect ?? PORTRAIT_ASPECT,
+      looks: open.looks,
     });
   }
   const vx = opts.venueX === undefined ? VENUE_X : Math.min(0.68, Math.max(0.5, opts.venueX));
@@ -1729,7 +1809,8 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
     : {};
   // The stand is held in a gap a few dozen pixels wide over Tickets (Move.hold): use the real frame.
   const aspect = opts.aspect ? { aspect: opts.aspect } : {};
-  return moveShots(DESKTOP_MOVE, opts.speakersTba ? { ...keys, ...aspect } : { ...DESKTOP_ANNOUNCED, ...keys, ...aspect });
+  const looks = opts.sideways ? { looks: SIDEWAYS_LOOKS } : {};
+  return moveShots(DESKTOP_MOVE, opts.speakersTba ? { ...keys, ...aspect, ...looks } : { ...DESKTOP_ANNOUNCED, ...keys, ...aspect, ...looks });
 }
 
 /* ------------------------------------------------------------------------- */

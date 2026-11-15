@@ -1,4 +1,4 @@
-import { portraitFraming, WIDE_COPY_ASPECT } from './choreography';
+import { portraitFraming, WIDE_COPY_MIN_WIDTH, WIDE_HERO_X_RANGE, WIDE_HERO_Y_MAX, wideCopyFraming } from './choreography';
 
 /**
  * Measurements of the page copy that the camera move adapts to (landscape).
@@ -102,26 +102,37 @@ function textRight(root: Node, limit: number): number {
  * the facts row under it, which run across the left half or more of the
  * frame. There the grille's left edge sits about 12.3% of the height left of
  * the anchor (the hero's distance and lens are fixed, so the microphone's
- * size follows the frame's height); the same air.
+ * size follows the frame's height); the same air. Under 640 px wide the
+ * headline runs most of the width, so there the grille stands under it
+ * (measureHeroY) and clear of the copy below the headline: the tagline, the
+ * buttons and the stacked facts, a narrow column at the left.
  *
- * Undefined on a frame taller than wide (the copy is stacked and the
- * microphone stands under it) and without the hero.
+ * Undefined on a frame taller than wide (the phone's hero: the copy is
+ * stacked and the microphone stands under it) and without the hero.
  */
 export function measureHeroX(): number | undefined {
   if (typeof document === 'undefined') return undefined;
   const vw = window.innerWidth;
   const vh = window.innerHeight;
   if (vw < 1 || vh < 1) return undefined;
-  const portrait = portraitFraming(vw, vh);
-  if (portrait && vw / vh < WIDE_COPY_ASPECT) return undefined;
-  if (portrait) {
+  if (portraitFraming(vw, vh)) {
+    if (!wideCopyFraming(vw, vh)) return undefined;
     const title = document.querySelector<HTMLElement>('#hero-title');
     const facts = document.querySelector<HTMLElement>('.hero-facts');
     if (!title) return undefined;
     // The words' scroll-out drift is small against the air kept here: the lines as they sit.
-    const copyRight = Math.max(textRight(title, vw), facts ? textRight(facts, vw) : -1);
+    let copyRight = facts ? textRight(facts, vw) : -1;
+    if (vw >= WIDE_COPY_MIN_WIDTH) copyRight = Math.max(copyRight, textRight(title, vw));
+    else {
+      // The column under the headline: the tagline and the buttons as well as the facts.
+      const body = document.querySelector<HTMLElement>('[data-hero-body]');
+      const tagline = body?.firstElementChild;
+      if (tagline) copyRight = Math.max(copyRight, textRight(tagline, vw));
+      for (const a of body?.querySelectorAll<HTMLElement>('a:not(.scroll-cue), button') ?? []) copyRight = Math.max(copyRight, a.getBoundingClientRect().right);
+    }
     if (copyRight < 0) return undefined;
-    return Math.round((copyRight / vw + 0.035 + (0.123 * vh) / vw) * 200) / 200;
+    // A little more air in the small windows, where the column stands right under the grille.
+    return Math.round((copyRight / vw + (vw >= WIDE_COPY_MIN_WIDTH ? 0.035 : 0.045) + (0.123 * vh) / vw) * 200) / 200;
   }
   let right = -1;
   for (const w of document.querySelectorAll<HTMLElement>('#hero-title [data-hero-word]')) {
@@ -131,6 +142,42 @@ export function measureHeroX(): number | undefined {
   }
   if (right < 0) return undefined;
   return Math.round((right / vw + 0.145) * 200) / 200;
+}
+
+/**
+ * Screen y (fraction of the height) for the hero's anchor in a window that is
+ * not taller than wide and under 640 px wide (a small near-square window),
+ * where the headline runs most of the width: the grille stands under it. The
+ * grille's centre sits about 6.4% of the height above the anchor and its
+ * radius is about 6.9% of the height; it keeps 5% of the height of air under
+ * the headline's last line. Undefined elsewhere (the move's own height).
+ */
+export function measureHeroY(): number | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  if (vw < 1 || vh < 1 || vw >= WIDE_COPY_MIN_WIDTH || !wideCopyFraming(vw, vh)) return undefined;
+  let bottom = -1;
+  // In page coordinates: the same wherever the page is scrolled to (the words' scroll-out drift is small against the air kept).
+  for (const w of document.querySelectorAll<HTMLElement>('#hero-title [data-hero-word]')) bottom = Math.max(bottom, w.getBoundingClientRect().bottom + window.scrollY);
+  if (bottom < 0) return undefined;
+  return Math.round((bottom / vh + 0.183) * 100) / 100;
+}
+
+/**
+ * Whether the portrait move opens with the microphone at the right, beside the
+ * hero's copy (choreography.ts, wideOpening): a window that is not taller than
+ * wide (wideCopyFraming), where the anchor the copy asks for (measureHeroX,
+ * measureHeroY) is one the move can give. Where it is not (a longer theme
+ * title, a very small window), the grille would be pulled back onto the copy's
+ * end: the phone's hero, under the copy, is used instead.
+ */
+export function measureWideCopy(): boolean {
+  if (typeof document === 'undefined') return false;
+  if (!wideCopyFraming(window.innerWidth, window.innerHeight)) return false;
+  const x = measureHeroX();
+  const y = measureHeroY();
+  return (x === undefined || x <= WIDE_HERO_X_RANGE[1] + 0.01) && (y === undefined || y <= WIDE_HERO_Y_MAX + 0.01);
 }
 
 /**
