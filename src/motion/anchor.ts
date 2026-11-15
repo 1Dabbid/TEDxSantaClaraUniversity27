@@ -79,17 +79,37 @@ if (typeof window !== 'undefined') {
   for (const t of INPUTS) window.addEventListener(t, moved, { passive: true, capture: true });
 }
 
+// How far the deep link's target may have drifted from its landing line (fonts and
+// section scripts settling) and still count as "the reader is on it".
+const NEAR = 150;
+
+/**
+ * Is the page still where a jump to `el` put it? Not every move comes with an
+ * input event: a screen reader's reading cursor, voice control and scripts scroll
+ * without one. The landing line is html { scroll-padding-top } (the header); a
+ * target too close to the end of the page to reach it counts at the bottom.
+ */
+function stillAt(el: HTMLElement): boolean {
+  const html = document.documentElement;
+  const pad = parseFloat(getComputedStyle(html).scrollPaddingTop) || 0;
+  const top = el.getBoundingClientRect().top;
+  if (Math.abs(top - pad) <= NEAR) return true;
+  const atEnd = window.scrollY + window.innerHeight >= html.scrollHeight - 2;
+  return atEnd && top >= pad;
+}
+
 /**
  * Call right before a layout change made outside the scroll engine (`html.motion`
  * toggled); call the returned function right after it. The page then stays where
- * the reader was: on the deep link's target if they arrived on one and have not
- * scrolled since, otherwise in the same section at the same fraction. It lands
+ * the reader was: on the deep link's target if they arrived on one and the page is
+ * still there, otherwise in the same section at the same fraction. It lands
  * again as the new layout settles (fonts, section scripts reverting), and stops
  * at the first scroll input. Returns a no-op at the top of the page.
  */
 export function holdPlace(): () => void {
   const hash = userMoved ? '' : window.location.hash;
-  const target = hash ? findHashTarget(hash) : null;
+  const landed = hash ? findHashTarget(hash) : null;
+  const target = landed && stillAt(landed) ? landed : null;
   const anchor = target ? null : pickAnchor(sectionBoxes(), window.scrollY, window.innerHeight);
   if (!target && !anchor) return () => {};
 

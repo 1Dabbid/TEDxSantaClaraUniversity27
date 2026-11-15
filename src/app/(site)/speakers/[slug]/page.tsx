@@ -122,13 +122,13 @@ function Breadcrumb({ index }: { index: number }) {
     <nav aria-label="Breadcrumb" className="fine-print text-mute">
       <ol className="flex flex-wrap items-center gap-x-2">
         <li>
-          <Link href="/" className="tap inline-flex min-h-11 items-center hover:text-white">
+          <Link href="/" className="tap inline-flex min-h-11 items-center hover:text-white pointer-fine:min-h-0 pointer-fine:py-1.5">
             Home
           </Link>
         </li>
         <li aria-hidden="true">/</li>
         <li>
-          <Link href="/speakers" className="tap inline-flex min-h-11 items-center hover:text-white">
+          <Link href="/speakers" className="tap inline-flex min-h-11 items-center hover:text-white pointer-fine:min-h-0 pointer-fine:py-1.5">
             Speakers
           </Link>
         </li>
