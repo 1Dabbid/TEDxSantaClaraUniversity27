@@ -16,7 +16,7 @@ import {
   TIME_PATTERN,
 } from './content-checks';
 import { checkImage, findTeamPhoto } from './content-images';
-import { faqSettingValues, staleFaqHints, tidySpaces, TIME_TO_BE_ANNOUNCED } from './faq-text';
+import { dropBlankPlaceholders, faqSettingValues, staleFaqHints, tidySpaces, TIME_TO_BE_ANNOUNCED } from './faq-text';
 import { resolveLevel, type TeamLevel } from './team';
 import { formatCalendarDate } from './dates';
 import {
@@ -516,6 +516,26 @@ export const getSettings = cache(async (): Promise<Settings> => {
     .map((n) => ({ title: str(n.title), body: str(n.body) }))
     .filter((n) => n.title || n.body);
 
+  const ticketState = tickets?.ticketState ?? 'coming-soon';
+  const ticketUrl = link(tickets?.ticketUrl, T, 'Ticket link');
+  const ticketEmbedUrl = link(tickets?.ticketEmbedUrl, T, 'Ticket checkout embed link');
+  if (ticketState === 'on-sale' && !ticketUrl && !ticketEmbedUrl) {
+    contentWarning(
+      T,
+      'Ticket status',
+      'is “On sale” but Ticket link is empty, so there is no buy button: the site says the ticket link is going live shortly. Fill in Ticket link, or set the status back to Coming soon.',
+    );
+  }
+  const speakerApplicationsState = tickets?.speakerApplicationsState ?? 'coming-soon';
+  const speakerApplicationsUrl = link(tickets?.speakerApplicationsUrl, T, 'Speaker application link');
+  if (speakerApplicationsState === 'open' && !speakerApplicationsUrl) {
+    contentWarning(
+      T,
+      'Speaker applications',
+      'is “Open” but Speaker application link is empty, so there is no Apply button and the site still says applications are not open yet. Fill in the link, or set the status back to Coming soon.',
+    );
+  }
+
   return {
     eventName: SITE_NAME,
     themeName: s.themeName,
@@ -550,15 +570,15 @@ export const getSettings = cache(async (): Promise<Settings> => {
       eventName: SITE_NAME,
     }),
 
-    ticketState: tickets?.ticketState ?? 'coming-soon',
-    ticketUrl: link(tickets?.ticketUrl, T, 'Ticket link'),
-    ticketEmbedUrl: link(tickets?.ticketEmbedUrl, T, 'Ticket checkout embed link'),
+    ticketState,
+    ticketUrl,
+    ticketEmbedUrl,
     ticketPriceNote: str(tickets?.ticketPriceNote),
     ticketPrice: priceOf(tickets?.ticketPrice),
     ticketSaleStart: str(tickets?.ticketSaleStart),
     ticketSaleExpected: str(tickets?.ticketSaleExpected),
-    speakerApplicationsState: tickets?.speakerApplicationsState ?? 'coming-soon',
-    speakerApplicationsUrl: link(tickets?.speakerApplicationsUrl, T, 'Speaker application link'),
+    speakerApplicationsState,
+    speakerApplicationsUrl,
     speakerApplicationsDeadline: str(tickets?.speakerApplicationsDeadline),
     interestUrl: link(tickets?.interestUrl, T, 'Interest form link'),
 
@@ -635,8 +655,8 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
   const known = [...FAQ_PLACEHOLDERS, ...FAQ_ONLY_PLACEHOLDERS].map((n) => `{${n}}`).join(', ');
   /** A placeholder whose field is blank leaves a gap (or a stand-in) in the sentence: say so. */
   const blanks: [name: string, blank: boolean, where: string, effect: string][] = [
-    ['interestUrl', !s.interestUrl, 'Tickets & applications › Interest form link', 'the answer has a gap where the link was'],
-    ['contactEmail', !s.contactEmail, 'Contact, newsletter & socials › Contact email', 'the answer has a gap where the address was'],
+    ['interestUrl', !s.interestUrl, 'Tickets & applications › Interest form link', 'the answer is shown without the link'],
+    ['contactEmail', !s.contactEmail, 'Contact, newsletter & socials › Contact email', 'the answer is shown without the address'],
     ['doorsTime', !s.doorsTime, 'Event basics › Doors open at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
     ['talksTime', !s.talksTime, 'Event basics › Talks start at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
     ['endTime', !s.endTime, 'Event basics › Event ends at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
@@ -651,7 +671,8 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
     for (const hint of staleFaqHints(text, s)) {
       contentWarning('content/faq.yaml', where, `${hint}.`);
     }
-    const r = fillPlaceholders(text, values);
+    // A blank address or link takes the words leading up to it along ("at", ":"), so no sentence dangles.
+    const r = fillPlaceholders(dropBlankPlaceholders(text, [...(s.contactEmail ? [] : ['contactEmail']), ...(s.interestUrl ? [] : ['interestUrl'])]), values);
     for (const u of r.unknown) {
       contentWarning('content/faq.yaml', where, `${u} is not a known placeholder (use ${known}); it is shown as typed.`);
     }

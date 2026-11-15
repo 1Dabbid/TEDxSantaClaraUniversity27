@@ -4,6 +4,7 @@ import { expect, test } from '@playwright/test';
 import { FAQ_ONLY_PLACEHOLDERS, FAQ_PLACEHOLDERS, fillPlaceholders } from '../../src/lib/content-checks';
 import {
   applicationsStatusText,
+  dropBlankPlaceholders,
   faqPlainText,
   faqSegments,
   faqSettingValues,
@@ -23,6 +24,8 @@ import { contentValue, topicRoutes } from './helpers';
 
 const today = {
   ticketState: 'coming-soon' as const,
+  ticketUrl: '',
+  ticketEmbedUrl: '',
   ticketSaleExpected: 'February 2027',
   ticketPriceNote: 'Tickets will cost no more than $100.',
   speakerApplicationsState: 'coming-soon' as const,
@@ -46,17 +49,33 @@ test.describe('FAQ placeholders that follow the settings', () => {
     );
     expect(ticketStatusText({ ...today, ticketSaleExpected: '' })).toBe('Not yet. Join the mailing list to hear the moment they go on sale.');
     expect(ticketStatusText({ ...today, ticketSaleExpected: 'March 2027.' })).toContain('go on sale in March 2027. Join');
-    const onSale = ticketStatusText({ ...today, ticketState: 'on-sale' });
-    expect(onSale).toMatch(/^Yes, tickets are on sale now\./);
+    const onSale = ticketStatusText({ ...today, ticketState: 'on-sale', ticketUrl: 'https://tickets.example.com/e' });
+    expect(onSale).toBe('Yes, tickets are on sale now. Use the Tickets button at the top of any page.');
     expect(onSale).not.toMatch(/not yet|February/i);
+    // An embedded checkout in the Tickets section is a way to buy too.
+    expect(ticketStatusText({ ...today, ticketState: 'on-sale', ticketEmbedUrl: 'https://tickets.example.com/embed' })).toBe(onSale);
     expect(ticketStatusText({ ...today, ticketState: 'sold-out' })).toMatch(/^Tickets are sold out\./);
     expect(ticketStatusText({ ...today, ticketState: 'closed' })).toBe('Ticket sales are closed.');
   });
 
+  test('{ticketStatus}: “On sale” without a ticket link agrees with the Tickets section', () => {
+    // The Tickets section then shows "Ticket link going live shortly." and no buy button.
+    const noLink = ticketStatusText({ ...today, ticketState: 'on-sale' });
+    expect(noLink).toBe('Almost. Tickets are about to go on sale: the ticket link is going live shortly. Join the mailing list to hear the moment it does.');
+    expect(noLink).not.toMatch(/on sale now|Tickets button|February/i);
+    const section = readFileSync(join(process.cwd(), 'src/components/sections/Tickets.tsx'), 'utf8');
+    expect(section).toContain('Ticket link going live shortly.');
+    expect(noLink.toLowerCase()).toContain('ticket link is going live shortly');
+  });
+
   test('{applicationsStatus} says what Speaker applications says', () => {
-    expect(applicationsStatusText(today)).toBe('Formal speaker applications are not open yet.');
+    const notOpen =
+      'Formal speaker applications are not open yet. Those who register their interest get an early look at pitching a talk and hear first when applications open.';
+    expect(applicationsStatusText(today)).toBe(notOpen);
+    // No interest form to register with: no promise about it.
+    expect(applicationsStatusText({ ...today, interestUrl: '' })).toBe('Formal speaker applications are not open yet.');
     // "Open" without a link shows no Apply button, so the answer does not claim applications are open.
-    expect(applicationsStatusText({ ...today, speakerApplicationsState: 'open' })).toBe('Formal speaker applications are not open yet.');
+    expect(applicationsStatusText({ ...today, speakerApplicationsState: 'open' })).toBe(notOpen);
     expect(
       applicationsStatusText({ ...today, speakerApplicationsState: 'open', speakerApplicationsUrl: 'https://example.com/apply', speakerApplicationsDeadline: 'January 15, 2027' }),
     ).toBe('Speaker applications are open. The deadline is January 15, 2027. Apply here: https://example.com/apply.');
@@ -71,6 +90,22 @@ test.describe('FAQ placeholders that follow the settings', () => {
     );
   });
 
+  test('the speaker-application answer is true while applications are not open, open and closed', () => {
+    const yaml = readFileSync(join(process.cwd(), 'content/faq.yaml'), 'utf8');
+    const raw = [...yaml.matchAll(/answer: \|-\n((?: {6}.*\n?)+)/g)].map((m) => m[1].replace(/^ {6}/gm, '').trim()).find((a) => a.includes('{applicationsStatus}'));
+    test.skip(!raw, 'no answer uses {applicationsStatus}');
+    // Nothing about hearing first or getting an early look is typed by hand: that is only true before applications open.
+    expect(raw).not.toMatch(/hear first|early look|not open/i);
+    const open = fill(raw!, { ...today, speakerApplicationsState: 'open', speakerApplicationsUrl: 'https://example.com/apply', speakerApplicationsDeadline: 'March 1, 2027' });
+    const closed = fill(raw!, { ...today, speakerApplicationsState: 'closed' });
+    const notOpen = fill(raw!, today);
+    expect(notOpen).toMatch(/^Formal speaker applications are not open yet\. .*hear first when applications open\./);
+    expect(open).toMatch(/^Speaker applications are open\. The deadline is March 1, 2027\. Apply here: https:\/\/example\.com\/apply\./);
+    expect(closed).toMatch(/^Speaker applications for this event are closed\./);
+    for (const text of [open, closed]) expect(text, text).not.toMatch(/hear first|early look|not open|when applications open/i);
+    for (const text of [notOpen, open, closed]) expect(text, text).toContain(today.interestUrl);
+  });
+
   test('the answers in content/faq.yaml never contradict a changed setting', () => {
     const yaml = readFileSync(join(process.cwd(), 'content/faq.yaml'), 'utf8');
     const answers = [...yaml.matchAll(/answer: \|-\n((?: {6}.*\n?)+)/g)].map((m) => m[1].replace(/^ {6}/gm, '').trim());
@@ -78,6 +113,7 @@ test.describe('FAQ placeholders that follow the settings', () => {
     const scenario = {
       ...today,
       ticketState: 'on-sale',
+      ticketUrl: 'https://tickets.example.com/e',
       ticketSaleExpected: 'March 2027',
       ticketPriceNote: 'Tickets cost $25.',
       speakerApplicationsState: 'open',
@@ -110,6 +146,25 @@ test.describe('FAQ placeholders that follow the settings', () => {
     );
     expect(fill('Doors at {doorsTime}. {timesNote}', { ...today, doorsTime: '', timesNote: '' })).toBe(`Doors at ${TIME_TO_BE_ANNOUNCED}.`);
     expect(fill('Line one. {timesNote}\n\nLine two.', { ...today, timesNote: '' })).toBe('Line one.\n\nLine two.');
+  });
+
+  test('a blank contact email or interest link takes the words before it along', () => {
+    const blank = ['contactEmail', 'interestUrl'];
+    expect(dropBlankPlaceholders('contact the team at {contactEmail} and we will do our best.', blank)).toBe('contact the team and we will do our best.');
+    expect(dropBlankPlaceholders('Write to {contactEmail}.', blank)).toBe('Write.');
+    expect(dropBlankPlaceholders('use its interest form: {interestUrl}', blank)).toBe('use its interest form');
+    expect(dropBlankPlaceholders('Fill in the form: {interestUrl}. It is one form.', blank)).toBe('Fill in the form. It is one form.');
+    // A filled-in field is not in the list: the sentence is untouched.
+    expect(dropBlankPlaceholders('contact the team at {contactEmail} and we will', ['interestUrl'])).toBe('contact the team at {contactEmail} and we will');
+    // Every answer in content/faq.yaml reads as a whole sentence with both fields blank.
+    const yaml = readFileSync(join(process.cwd(), 'content/faq.yaml'), 'utf8');
+    const answers = [...yaml.matchAll(/answer: \|-\n((?: {6}.*\n?)+)/g)].map((m) => m[1].replace(/^ {6}/gm, '').trim());
+    for (const answer of answers) {
+      const text = tidySpaces(
+        fillPlaceholders(dropBlankPlaceholders(answer, blank), { ...base, ...faqSettingValues({ ...today, contactEmail: '', interestUrl: '' }) }).text,
+      );
+      expect(text, answer).not.toMatch(/\b(?:at|to|via) (?:and|or|but)\b|\b(?:at|to|via)[.,;]|:\s*(?:\.|$)| [.,;]| {2}|[{}]/);
+    }
   });
 
   test('facts typed by hand are reported, so they cannot go stale unnoticed', () => {
@@ -193,7 +248,10 @@ test.describe('the FAQ as served', () => {
     const s = {
       ...today,
       ticketState: (contentValue('tickets.yaml', 'ticketState') || 'coming-soon') as typeof today.ticketState,
+      ticketUrl: contentValue('tickets.yaml', 'ticketUrl'),
+      ticketEmbedUrl: contentValue('tickets.yaml', 'ticketEmbedUrl'),
       ticketSaleExpected: contentValue('tickets.yaml', 'ticketSaleExpected'),
+      interestUrl: contentValue('tickets.yaml', 'interestUrl'),
       speakerApplicationsState: (contentValue('tickets.yaml', 'speakerApplicationsState') || 'coming-soon') as typeof today.speakerApplicationsState,
       speakerApplicationsUrl: contentValue('tickets.yaml', 'speakerApplicationsUrl'),
       speakerApplicationsDeadline: contentValue('tickets.yaml', 'speakerApplicationsDeadline'),
@@ -231,6 +289,8 @@ test.describe('the FAQ as served', () => {
   test('the FAQPage structured data carries the same, filled-in answers on / and /faq', async ({ request }) => {
     const expected = ticketStatusText({
       ticketState: (contentValue('tickets.yaml', 'ticketState') || 'coming-soon') as typeof today.ticketState,
+      ticketUrl: contentValue('tickets.yaml', 'ticketUrl'),
+      ticketEmbedUrl: contentValue('tickets.yaml', 'ticketEmbedUrl'),
       ticketSaleExpected: contentValue('tickets.yaml', 'ticketSaleExpected'),
     });
     for (const route of ['/', '/faq']) {
