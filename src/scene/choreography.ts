@@ -414,7 +414,7 @@ export const MOTION_LIMITS = {
  * seats, a little below a speaker's eye, so the 100 seats fill the middle of the frame round it
  * and the grille sits below them.
  */
-export const HOUSE_LOOK = fromHouse(new Vector3(0, 1.2, 9.0));
+export const HOUSE_LOOK = fromHouse(new Vector3(0, 1.35, 9.0));
 const houseLook = new Vector3();
 
 /** World position of an aim point on the subject (the move out into the house is applied in resolveShot). */
@@ -568,7 +568,7 @@ const LOW_LOOK = { ...STAGE_LOOK, fov: 48, dof: 0.28, cone: 0.85, spot: 0.82, ke
  * out over the house; the haze kept thin so the seats read, the grille lit from behind by the rim
  * and soft under the edge blur, which keeps the middle rows sharp.
  */
-const SPEAKER_LOOK = { ...STAGE_LOOK, fov: 38, exposure: 1.04, dof: 0.5, cone: 0.5, spot: 1.0, key: 0.35, rim: 1.4, rimAng: 0.9, haze: 0, vignette: 0.58, scrimEdge: 0.7, warm: -0.18 };
+const SPEAKER_LOOK = { ...STAGE_LOOK, fov: 38, exposure: 1.0, dof: 0.5, cone: 0.4, spot: 0.8, key: 0.35, rim: 1.4, rimAng: 0.9, haze: 0, vignette: 0.58, scrimEdge: 0.7, warm: -0.18 };
 
 /*
  * Looks along the spiral pull out, between the macro and the lit stage. The key light leaves the
@@ -863,10 +863,10 @@ const DESKTOP_MOVE: Move = {
   // The aim leaves the stand for the house as the camera passes behind the grille.
   out: [
     [4.3, 0],
-    [4.9, 0.2],
-    [5.1, 0.28],
-    [5.4, 0.5],
-    [5.75, 0.86],
+    [4.9, 0.3],
+    [5.1, 0.36],
+    [5.4, 0.54],
+    [5.75, 0.87],
     [6.0, 1],
   ],
   // The stand keeps its place on screen (in the gutter by the Venue plate, then in the gap between
@@ -946,8 +946,8 @@ const DESKTOP_MOVE: Move = {
     [3.6, 0.47],
     [3.9, 0.37],
     [4.2, 0.375],
-    [4.5, 0.42],
-    [4.9, 0.435],
+    [4.5, 0.425],
+    [4.9, 0.445],
     [5.1, 0.42],
     [5.25, 0.385],
     [5.375, 0.45],
@@ -993,7 +993,7 @@ const DESKTOP_MOVE: Move = {
       lk(5.0, STAGE_LOOK, { fov: 35, cone: 1.05, spot: 1.0, key: 0.5, rim: 1.15, vignette: 0.6, scrimEdge: 0.6, warm: -0.3 }),
       lk(5.35, STAGE_LOOK, { fov: 35, cone: 0.85, spot: 1.02, key: 0.5, rim: 1.25, vignette: 0.6, scrimEdge: 0.7, warm: -0.22 }),
       lk(5.65, SPEAKER_LOOK),
-      lk(5.85, SPEAKER_LOOK, { exposure: 0.85, cone: 0.45, spot: 0.95, rim: 1.2 }),
+      lk(5.85, SPEAKER_LOOK, { exposure: 0.88, cone: 0.36, spot: 0.75, rim: 1.25 }),
       lk(6.0, SPEAKER_LOOK, DARK, { scrimEdge: 0.7, warm: -0.15 }),
     ],
   },
@@ -1211,7 +1211,7 @@ const PORTRAIT_MOVE: Move = {
       lk(5.0, STAGE_PORTRAIT, { cone: 1.1, key: 0.45, rim: 1.15, scrimEdge: 0.6, warm: -0.3 }),
       lk(5.35, STAGE_PORTRAIT, { fov: 40, cone: 0.7, key: 0.45, rim: 1.25, vignette: 0.62, warm: -0.22 }),
       lk(5.7, SPEAKER_PORTRAIT),
-      lk(5.85, SPEAKER_PORTRAIT, { exposure: 0.85, cone: 0.3, spot: 0.95, rim: 1.2 }),
+      lk(5.85, SPEAKER_PORTRAIT, { exposure: 0.88, cone: 0.3, spot: 0.75, rim: 1.25 }),
       lk(6.0, SPEAKER_PORTRAIT, DARK, { warm: -0.15 }),
     ],
   },
