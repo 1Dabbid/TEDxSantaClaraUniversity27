@@ -9,8 +9,9 @@ import { navCurrent, type NavItem } from '../nav-links';
  * link of the page you are on carries aria-current, like the header's (rule at
  * the top of nav.ts), and is set in white.
  *
- * Clicking the link of the page you are already on goes back to the top and
- * moves focus to the main content, whatever query string the address carries.
+ * Clicking the link of the page you are already on goes back to the top, takes
+ * any #section out of the address and moves focus to the main content, whatever
+ * query string the address carries.
  * That is the site-wide rule for links to the current page (src/motion/inPage.ts),
  * so nothing is handled here.
  */

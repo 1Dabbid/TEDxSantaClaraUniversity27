@@ -1,7 +1,8 @@
-import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { shareImageVersion, siteDescription, venueDescriptionTail } from '../../src/lib/site';
+import { SHARE_IMAGE_DESIGN, shareImagePath, shareImageVersion, siteDescription, venueDescriptionTail } from '../../src/lib/site';
 import { SITE_URL, contentValue, topicRoutes } from './helpers';
 
 /** The whole text of a content file (for values the flat-key helper cannot read, such as list items). */
@@ -36,9 +37,12 @@ test.describe('share images', () => {
         const target = `${image.pathname}${image.search}`;
         if (!checked.has(target)) {
           const img = await request.get(target);
-          checked.set(target, img.status() === 200 && (img.headers()['content-type'] ?? '').includes('image/png'));
+          const png = await img.body();
+          // A PNG states its size in its first chunk: width and height at bytes 16 and 20.
+          const sized = png.length > 24 && png.readUInt32BE(16) === 1200 && png.readUInt32BE(20) === 630;
+          checked.set(target, img.status() === 200 && (img.headers()['content-type'] ?? '').includes('image/png') && sized);
         }
-        expect(checked.get(target), `${path} ${key} loads as a PNG (${target})`).toBe(true);
+        expect(checked.get(target), `${path} ${key} loads as a 1200 × 630 PNG (${target})`).toBe(true);
       }
       expect(meta(html, 'property', 'og:image:width'), `${path} og:image:width`).toBe('1200');
       expect(meta(html, 'property', 'og:image:height'), `${path} og:image:height`).toBe('630');
@@ -57,21 +61,37 @@ test.describe('share images', () => {
     // The card shows the campus when there is one, so the hall's name only counts without it.
     expect(shareImageVersion({ ...card, venueName: 'Other Hall' })).toBe(v);
     expect(shareImageVersion({ ...card, venueCampus: '', venueName: 'Other Hall' })).not.toBe(shareImageVersion({ ...card, venueCampus: '' }));
+    // A redesign of the card changes it too: the design number is counted by hand (SHARE_IMAGE_DESIGN).
+    expect(shareImageVersion(card, SHARE_IMAGE_DESIGN)).toBe(v);
+    expect(shareImageVersion(card, SHARE_IMAGE_DESIGN + 1)).not.toBe(v);
+    expect(shareImagePath(card)).toBe(`/opengraph-image?v=${v}`);
   });
 
-  test('every topic page names the share image with a version, like the home page', async ({ request }) => {
-    const home = await (await request.get('/')).text();
-    expect(meta(home, 'property', 'og:image')).toMatch(/\/opengraph-image\?[0-9a-f]+$/);
+  test('the design number is raised when the card itself changes', () => {
+    // The card's source (and its fonts) as it was when SHARE_IMAGE_DESIGN was last set.
+    // If this fails, the card was edited: add one to SHARE_IMAGE_DESIGN in src/lib/site.ts
+    // (so share platforms fetch the new card on every page), then record the new values here.
+    const RECORDED = { design: 1, source: 'c3f4657e5b28803a' };
+    const dir = join(process.cwd(), 'src/app/_og');
+    const hash = createHash('sha256').update(readFileSync(join(process.cwd(), 'src/app/opengraph-image.tsx')));
+    for (const file of readdirSync(dir).sort()) hash.update(file).update(readFileSync(join(dir, file)));
+    expect({ design: SHARE_IMAGE_DESIGN, source: hash.digest('hex').slice(0, 16) }).toEqual(RECORDED);
+  });
+
+  test('the home page and every topic page name the same share image, with its version', async ({ request }) => {
     const versions = new Set<string>();
-    for (const path of topicRoutes()) {
+    for (const path of ['/', ...topicRoutes()]) {
       const html = await (await request.get(path)).text();
       const og = meta(html, 'property', 'og:image').replace(/&amp;/g, '&');
       expect(og, `${path} og:image`).toMatch(new RegExp(`^${SITE_URL}/opengraph-image\\?v=[0-9a-f]{8}$`));
       expect(meta(html, 'name', 'twitter:image').replace(/&amp;/g, '&'), `${path} twitter:image`).toBe(og);
       versions.add(og);
     }
-    // One card, one address: every topic page shares the same versioned image.
+    // One card, one address: the home page and every topic page share the same versioned image.
     expect(versions.size).toBe(1);
+    // The Event structured data on the home page names it too.
+    const home = await (await request.get('/')).text();
+    expect(home).toContain(`"image":["${[...versions][0]}"]`);
   });
 });
 

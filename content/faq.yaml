@@ -19,10 +19,10 @@ items:
       The talks are recorded and submitted for publication on the TEDx Talks YouTube channel.
   - question: How can I apply to speak?
     answer: |-
-      {applicationsStatus} To register your interest in speaking with the club, use its interest form: {interestUrl}.
+      {applicationsStatus} To register your interest in giving a talk, use the club’s interest form: {interestUrl}.
   - question: How can I get involved?
     answer: |-
-      Fill in the club’s interest form: {interestUrl}. It is one form for three things: helping to organize {eventName}, joining the club’s contact list, and registering your interest in speaking.
+      There are three ways to take part: helping to organize {eventName}, joining the club’s contact list, and registering your interest in speaking. One form covers all three, the club’s interest form: {interestUrl}.
   - question: How can my organization become a partner?
     answer: |-
       We are inviting a small number of partners to support the event. The [Partners page](/partners) explains what partnership means under TEDx rules and how to get in touch.

@@ -102,15 +102,24 @@ function whenMenuClosed(fn: () => void, frames = 0) {
 /**
  * Follow a link for which samePageLink() is true: scroll to its section and move
  * focus there (adding a history entry, with the current query kept), or, without
- * a hash, go back to the top and move focus to the main content.
+ * a hash, go back to the top and move focus to the main content. A link to the
+ * top takes a leftover #section out of the address (as its own history entry),
+ * so the address never names a section the page is no longer showing.
+ *
+ * The history entry is added before the page moves. Without the motion engine
+ * the browser restores positions on Back and Forward by itself, and the position
+ * it keeps for the entry being left is the one at the moment of pushState: pushed
+ * after the scroll, Back would change the address and leave the page where it is.
  */
 export function followInPage(url: URL, immediate: boolean) {
   const go = () => {
+    const here = location.pathname + location.search;
     if (url.hash) {
-      if (scrollToHash(url.hash, immediate) && url.hash !== location.hash) {
-        history.pushState(history.state, '', location.pathname + location.search + url.hash);
-      }
+      if (!findHashTarget(url.hash)) return;
+      if (url.hash !== location.hash) history.pushState(history.state, '', here + url.hash);
+      scrollToHash(url.hash, immediate);
     } else {
+      if (location.hash) history.pushState(history.state, '', here);
       scrollTop(immediate);
       document.getElementById('main')?.focus({ preventScroll: true });
     }

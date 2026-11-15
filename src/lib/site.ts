@@ -127,13 +127,26 @@ const listOf = (items: string[]) =>
 const STANDARD_VENUE_NOTES = ['directions', 'parking', 'accessibility'];
 
 /**
- * A short version tag for the share image (/opengraph-image), made from
- * everything drawn on the card: the theme, the date and the place. It changes
- * exactly when the card changes, so a platform that keeps a picture by its
- * address fetches the new one. Eight hex digits (FNV-1a), e.g. "9a3f01c2".
+ * The design of the share card (src/app/opengraph-image.tsx and its fonts,
+ * src/app/_og). Add one by hand whenever the card's layout, type, colors or
+ * fixed wording change: the number is part of shareImageVersion, so every page's
+ * og:image address changes with it and share platforms fetch the new card.
+ * tests/e2e/share-and-meta.spec.ts fails when the card's file changes without it.
  */
-export function shareImageVersion(s: Pick<Settings, 'themeName' | 'dateMedium' | 'venueName' | 'venueCampus'>): string {
-  const facts = [SITE_NAME, s.themeName, s.dateMedium, s.venueCampus || s.venueName].join('\n');
+export const SHARE_IMAGE_DESIGN = 1;
+
+/**
+ * A short version tag for the share image (/opengraph-image), made from
+ * everything drawn on the card: the theme, the date and the place, plus the
+ * card's design number. It changes exactly when the card changes, so a platform
+ * that keeps a picture by its address fetches the new one. Eight hex digits
+ * (FNV-1a), e.g. "9a3f01c2".
+ */
+export function shareImageVersion(
+  s: Pick<Settings, 'themeName' | 'dateMedium' | 'venueName' | 'venueCampus'>,
+  design: number = SHARE_IMAGE_DESIGN,
+): string {
+  const facts = [SITE_NAME, s.themeName, s.dateMedium, s.venueCampus || s.venueName, `design ${design}`].join('\n');
   let hash = 0x811c9dc5;
   for (let i = 0; i < facts.length; i++) {
     hash ^= facts.charCodeAt(i);
@@ -141,6 +154,15 @@ export function shareImageVersion(s: Pick<Settings, 'themeName' | 'dateMedium' |
   }
   return (hash >>> 0).toString(16).padStart(8, '0');
 }
+
+/**
+ * The share image's address on this site, e.g. "/opengraph-image?v=9a3f01c2".
+ * The one address every page names (og:image, twitter:image) and the Event
+ * structured data uses: the home page through the root layout, the topic pages
+ * through topicPageMetadata.
+ */
+export const shareImagePath = (s: Parameters<typeof shareImageVersion>[0]): string =>
+  `/opengraph-image?v=${shareImageVersion(s)}`;
 
 /**
  * The closing words of the /venue search and share description, built from what
