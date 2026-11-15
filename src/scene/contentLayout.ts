@@ -25,11 +25,15 @@ export function measureVenueX(): number | undefined {
   // The right edge of the facts' text (the columns' boxes are wider than their lines) left of the plate.
   const colRight = textRight(facts, left);
   if (colRight < 0) return undefined;
-  // The microphone's head and tail reach about 1.2% of the width right of the stand line.
-  const hi = left - PANEL_AIR_PX - 0.012 * vw;
+  // Seen from the crane over Venue the stand and the head sit up to about 1.8% of the width right
+  // of the aim line, and the tail leans a little left, so where there is room the stand moves up to
+  // 0.5% of the width further from the text. Where there is not, it keeps nearer the facts' text
+  // than the plate: the plate stands beside it through the whole crane, while the facts' row only
+  // rises to its height late in the section.
+  const hi = left - PANEL_AIR_PX - 0.018 * vw;
   const lo = colRight + AIR_PX + 6;
-  const x = lo <= hi ? lo : (lo + hi) / 2;
-  return Math.round((x / vw) * 200) / 200;
+  const x = lo <= hi ? lo + Math.min(0.005 * vw, hi - lo) : (lo + hi) / 2 - 0.002 * vw;
+  return Math.round((x / vw) * 1000) / 1000;
 }
 
 /**
@@ -50,7 +54,9 @@ export function measureSpeakersX(): number | undefined {
 /**
  * Screen x (fraction of the width) for the subject over Tickets: the middle of
  * the gap between the heading column's text and the ticket details at the
- * right, or undefined without that layout.
+ * right (or the seat counter's second numeral, which comes up under that gap
+ * as the camera comes down, when it starts further left), or undefined
+ * without that layout.
  */
 export function measureTicketsX(): number | undefined {
   if (typeof document === 'undefined') return undefined;
@@ -58,8 +64,10 @@ export function measureTicketsX(): number | undefined {
   const col = aside?.previousElementSibling;
   const vw = window.innerWidth;
   if (!aside || !col || vw < 1) return undefined;
-  const left = aside.getBoundingClientRect().left;
-  if (left < vw * 0.5) return undefined;
+  const asideLeft = aside.getBoundingClientRect().left;
+  if (asideLeft < vw * 0.5) return undefined;
+  const count = document.querySelector<HTMLElement>('[data-section="tickets"] [data-seat-count]')?.getBoundingClientRect().left;
+  const left = count && count > vw * 0.5 ? Math.min(asideLeft, count) : asideLeft;
   const right = textRight(col, left);
   if (right < 0) return undefined;
   return Math.round(((right + left) / 2 / vw) * 200) / 200;

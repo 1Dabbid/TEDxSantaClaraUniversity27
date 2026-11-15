@@ -77,7 +77,7 @@ function measureSections() {
     if (el) metrics.heights[id] = el.getBoundingClientRect().height;
   }
   const opts = contentOptions();
-  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}:${opts.speakersX ?? ''}:${opts.venueX ?? ''}:${opts.ticketsX ?? ''}:${opts.heroX ?? ''}`;
+  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}:${opts.speakersX ?? ''}:${opts.venueX ?? ''}:${opts.ticketsX ?? ''}:${opts.heroX ?? ''}:${opts.aspect?.toFixed(2) ?? ''}`;
   if (key !== contentKey) {
     contentKey = key;
     contentListeners.forEach((f) => f());
@@ -87,7 +87,10 @@ function contentOptions(): ShotOptions {
   const sched = metrics.heights.schedule;
   // The orbit was authored for a schedule about 1.45 viewports tall.
   const scheduleScale = sched ? Math.min(1, Math.max(0.4, sched / (1.45 * metrics.vh))) : 1;
-  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale, speakersX: measureSpeakersX(), venueX: measureVenueX(), ticketsX: measureTicketsX(), heroX: measureHeroX() };
+  // The frame's shape is part of the content key: the held stand over Tickets (Move.hold) depends on
+  // it, and a change of height alone (devtools, the browser bar) changes no measured x.
+  const aspect = +(window.innerWidth / Math.max(1, window.innerHeight)).toFixed(2);
+  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale, speakersX: measureSpeakersX(), venueX: measureVenueX(), ticketsX: measureTicketsX(), heroX: measureHeroX(), aspect };
 }
 const currentJourney = () => journey(scrollState.sections, metrics.heights, metrics.vh);
 
@@ -687,7 +690,7 @@ export default function Experience({
       <directionalLight ref={backRef} position={[0, 7, -8]} intensity={BACKLIGHT} color="#dfe5f2" onUpdate={reflected} />
       <Microphone quality={tier} engraving={engraving} />
       <Stage quality={tier} />
-      {/* The house faces the end of the camera's orbit (layout.ts, HOUSE_AZ). */}
+      {/* The house lies downstage of the microphone, facing the speaker's view at the end of the orbit (layout.ts, HOUSE_AZ). */}
       <group rotation={[0, HOUSE_AZ, 0]}>
         <Seats quality={tier} />
         <Venue quality={tier} />

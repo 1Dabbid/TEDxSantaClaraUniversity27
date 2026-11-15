@@ -1428,6 +1428,22 @@ html.save-data #main:has(> [data-scene-stills]) > [data-section]:not([data-secti
   mask-image: linear-gradient(to top, transparent, #000 5rem);
 }
 
+/* Tickets: the copy keeps the full veil; the seat counter below it sits over
+   the room itself (the scene's lit seats), so with the live scene its veil is
+   lighter and the house reads through. Large white numerals and the ruler
+   stay well above their contrast targets over the dim seats. */
+.tickets-scrim-copy {
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.88), rgb(0 0 0 / 0.76) 30%);
+  mask-image: linear-gradient(to bottom, transparent, #000 5rem);
+}
+.tickets-scrim-room {
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.76) 70%, rgb(0 0 0 / 0.88));
+  mask-image: linear-gradient(to top, transparent, #000 5rem);
+}
+html.motion .tickets-scrim-room {
+  background: linear-gradient(to bottom, rgb(0 0 0 / 0.76), rgb(0 0 0 / 0.4) 6rem, rgb(0 0 0 / 0.4) calc(100% - 12rem), rgb(0 0 0 / 0.8));
+}
+
 /* ------------------------------------------------------------------------- *
  * Team portraits (src/components/ui/Portrait.tsx).
  *

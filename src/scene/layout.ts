@@ -99,21 +99,29 @@ export const STAND_BASE = new Vector3(PIVOT_WORLD.x, RUG_TOP, PIVOT_WORLD.z);
 
 /**
  * The house (seats, treads, aisle lights, audience floor, stage front and the
- * stage deck that ends at it) is turned about the stage centre so that it
- * faces the camera's heading at the end of the journey: the one continuous
- * move (choreography.ts) orbits about 70 degrees round from the hero's
- * heading and pulls back over the seats into the wide house view. The house
- * axis points along azimuth HOUSE_AZ (from +Z towards +X). SEATING,
- * STAGE_EDGE_Z and the house geometry are written in house space (+Z towards
- * the audience); `toHouse` takes a world point there. The curtain, the rug,
- * the spot and the microphone stay in world space.
+ * stage deck that ends at it) is turned about the stage centre so that it lies
+ * in front of the stage, downstage of the microphone, opposite the upstage
+ * curtain: the one continuous move (choreography.ts) orbits about 200 degrees
+ * round the stand from the hero's heading and ends behind the microphone at a
+ * speaker's eye height, looking out past the grille over the seats. HOUSE_AZ
+ * is set so that view looks over the grille at the middle of the house, and
+ * the crane over Venue sees the rows sweep across beyond the rug. The house
+ * axis points along azimuth HOUSE_AZ (from +Z towards
+ * +X). SEATING, STAGE_EDGE_Z and the house geometry are written in house space
+ * (+Z towards the audience); `toHouse` takes a world point there, `fromHouse`
+ * the other way. The curtain, the rug, the spot and the microphone stay in
+ * world space.
  */
-export const HOUSE_AZ = -1.0;
+export const HOUSE_AZ = 0.2;
 const HOUSE_COS = Math.cos(HOUSE_AZ);
 const HOUSE_SIN = Math.sin(HOUSE_AZ);
 /** World point -> house space (x across the house, z towards the audience). */
 export function toHouse(p: Vector3, out = new Vector3()): Vector3 {
   return out.set(p.x * HOUSE_COS - p.z * HOUSE_SIN, p.y, p.x * HOUSE_SIN + p.z * HOUSE_COS);
+}
+/** House space -> world point. */
+export function fromHouse(p: Vector3, out = new Vector3()): Vector3 {
+  return out.set(p.x * HOUSE_COS + p.z * HOUSE_SIN, p.y, -p.x * HOUSE_SIN + p.z * HOUSE_COS);
 }
 
 /** Audience (house space): rows of seats curving around a point behind the stage. */
