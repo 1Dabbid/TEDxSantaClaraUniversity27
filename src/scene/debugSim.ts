@@ -1,6 +1,6 @@
 import { Vector3 } from 'three';
 import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
-import { MIC, MIC_MATRIX_INV, STAND_BASE, STAND_TOP_Y } from './layout';
+import { MIC, MIC_MATRIX_INV, PIVOT_WORLD, SEATING, STAND_BASE, STAND_TOP_Y, rowHeight, fromHouse, toHouse } from './layout';
 import { clearance } from './clearance';
 import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, nearCorner, stepRig, type LookOut } from './rig';
@@ -16,9 +16,14 @@ import { SECTION_IDS, type SectionId } from './scrollState';
  * continuous move (choreography.ts): per filmstrip step (J 0.125) the turn of
  * the view direction and the move of the subject on screen against
  * MOTION_LIMITS, spikes against the median of each beat, runs of steps
- * without camera change, a monotonic orbit / distance / rise, the macro's
- * descent down the engraved band through the Theme pin, and the subject
- * in frame and clear of the copy column. It returns the numbers and a list of
+ * without camera change, a monotonic orbit (one way round), the distance and
+ * height stretches (out through the pull out, up to the crane, down and in to
+ * the speaker's view), the macro's descent down the engraved band through the
+ * Theme pin, the subject in frame and clear of the copy column, and the
+ * speaker's view at the end of Tickets (behind the microphone at eye height,
+ * the seats filling the frame, the grille in the foreground band). The scale
+ * of the subject is the camera's distance to its axis (stand and microphone),
+ * whatever the camera aims at. It returns the numbers and a list of
  * failures. `metrics()` reports the older path figures (heading range,
  * anchor drift, roll across the pull back, light steps, fast-scroll rates).
  */
@@ -176,6 +181,36 @@ function alphaOf(color: string): number {
 }
 
 const r3 = (v: Vector3): [number, number, number] => [+v.x.toFixed(8), +v.y.toFixed(8), +v.z.toFixed(8)];
+
+/**
+ * The subject's axis as a polyline: the stand from its foot to the clip, then the microphone from its
+ * tail to the top of the grille. The distance from the camera to it is the scale of the subject in
+ * the frame, whatever the camera aims at (the aim leaves the subject for the house at the end).
+ */
+const SUBJECT_AXIS = [STAND_BASE.clone(), new Vector3(STAND_BASE.x, STAND_TOP_Y, STAND_BASE.z), PIVOT_WORLD.clone(), micPoint(-0.044), micPoint(0.156)];
+function subjectDist(p: Vector3): number {
+  let best = Infinity;
+  const ab = new Vector3();
+  const ap = new Vector3();
+  for (let i = 0; i < SUBJECT_AXIS.length - 1; i++) {
+    const a = SUBJECT_AXIS[i];
+    ab.subVectors(SUBJECT_AXIS[i + 1], a);
+    const t = Math.min(1, Math.max(0, ap.subVectors(p, a).dot(ab) / Math.max(1e-9, ab.lengthSq())));
+    best = Math.min(best, ap.copy(a).addScaledVector(ab, t).distanceTo(p));
+  }
+  return best;
+}
+
+/** The 100 seats (centre of each seat, world space). */
+const SEAT_POINTS: Vector3[] = [];
+SEATING.rows.forEach((n, row) => {
+  const R = SEATING.firstRadius + row * SEATING.rowGap;
+  for (let side = -1; side <= 1; side += 2)
+    for (let k = 0; k < n / 2; k++) {
+      const a = (side * (SEATING.aisle / 2 + SEATING.pitch * (k + 0.5))) / R;
+      SEAT_POINTS.push(fromHouse(new Vector3(SEATING.centre.x + Math.sin(a) * R, rowHeight(row) + 0.55, SEATING.centre.z + Math.cos(a) * R)));
+    }
+});
 
 export function installSim(getShots: () => { shots: ResolvedShot[]; away: ResolvedShot }) {
   const api = {
@@ -427,20 +462,23 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     const barrel = SPINE;
     const foot = STAND_BASE.clone();
     const fwdOf = (f: Frame) => new Vector3(...f.tgt).sub(new Vector3(...f.pos)).normalize();
-    // Orbit angle: the camera's azimuth round the vertical through its aim point.
-    const az = (f: Frame) => Math.atan2(f.pos[0] - f.tgt[0], f.pos[2] - f.tgt[2]);
+    // Orbit angle: the camera's azimuth round the vertical through the subject (the stand line).
+    const az = (f: Frame) => Math.atan2(f.pos[0] - SPINE.x, f.pos[2] - SPINE.z);
     const scr = (f: Frame, P: Vector3) => {
       const q = project(f, P, aspect);
       // x and y in units of the long side.
       return { x: q[0], y: q[1], z: q[2], lx: q[0] * Math.min(1, aspect), ly: q[1] / Math.max(1, aspect) };
     };
     const inFrame = (q: { x: number; y: number; z: number }) => q.z > 0 && q.x >= 0 && q.x <= 1 && q.y >= 0 && q.y <= 1;
-    // Beats: 1 hero + macro, 2 spiral pull out, 3 Speakers..Venue, 4 Tickets.
+    // Beats: 1 hero + macro, 2 spiral pull out to the low pass, 3 the low pass and the orbit over
+    // Schedule, 4 the crane over Venue, 5 down and in behind the microphone, 6 the speaker's view.
     const beats = [
       { id: 'b1 hero+macro', from: 0.5, to: 1.625 },
-      { id: 'b2 pull out', from: 1.625, to: 3.125 },
-      { id: 'b3 speakers-venue', from: 3.125, to: 5.0 },
-      { id: 'b4 tickets', from: 5.0, to: 6.0 },
+      { id: 'b2 pull out', from: 1.625, to: 2.875 },
+      { id: 'b3 low pass+orbit', from: 2.875, to: 4.0 },
+      { id: 'b4 crane', from: 4.0, to: 5.0 },
+      { id: 'b5 come down', from: 5.0, to: 5.625 },
+      { id: "b6 speaker's view", from: 5.625, to: 6.0 },
     ];
     type Step = { J: number; view: number; screen: number; move: number; zoom: number; beat: string };
     const steps: Step[] = [];
@@ -451,21 +489,23 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       const view = (Math.acos(Math.min(1, fwdOf(f0).dot(fwdOf(f1)))) * 180) / Math.PI;
       const p0 = new Vector3(...f0.pos);
       const p1 = new Vector3(...f1.pos);
-      const d0 = p0.distanceTo(new Vector3(...f0.tgt));
-      // Camera change as an angle: travel relative to the distance to the aim, or the turn.
+      const d0 = subjectDist(p0);
+      // Camera change as an angle: travel relative to the distance to the subject, or the turn.
       const move = Math.max(view, (Math.atan(p0.distanceTo(p1) / Math.max(1e-6, d0)) * 180) / Math.PI);
-      // Change of scale: the log of the camera-to-aim distance (a zoom in or out is a move too).
-      const d1 = p1.distanceTo(new Vector3(...f1.tgt));
+      // Change of scale: the log of the camera's distance to the subject (a zoom in or out is a move too).
+      const d1 = subjectDist(p1);
       const zoom = Math.abs(Math.log(Math.max(1e-6, d1) / Math.max(1e-6, d0)));
       // Subject on screen, in units of the frame's long side (the width on landscape, the height on
-      // portrait). While the barrel still fills the frame (the hero, the push in, the macro, to J 2.1) its
-      // anchored aim point (the lens shift); then the middle of the barrel (where the microphone is);
-      // once the pull out has landed (J 2.75), also the stand's foot: before that it is rising into
-      // the frame from below, which is the reveal itself. Points off screen in either frame do not count.
+      // portrait). While the barrel still fills the frame (the hero, the push in, the macro, to
+      // MOTION_LIMITS.frameMicFrom) its anchored aim point (the lens shift); then the middle of the
+      // barrel (where the microphone is); from frameFootFrom to frameFootTo (the low pass is over, the
+      // camera has not yet come down behind the microphone) also the stand's foot: outside that it is
+      // rising into or leaving the frame, which is the reveal or the come down itself. Points off
+      // screen in either frame do not count.
       let screen = 0;
       if (J < MOTION_LIMITS.frameMicFrom) screen = Math.hypot((f0.shift[0] - f1.shift[0]) * Math.min(1, aspect), (f0.shift[1] - f1.shift[1]) / Math.max(1, aspect));
       else {
-        for (const P of J >= MOTION_LIMITS.frameFootFrom ? [barrel, foot] : [barrel]) {
+        for (const P of J >= MOTION_LIMITS.frameFootFrom && J <= MOTION_LIMITS.frameFootTo ? [barrel, foot] : [barrel]) {
           const a = scr(f0, P);
           const b = scr(f1, P);
           if (inFrame(a) && inFrame(b)) screen = Math.max(screen, Math.hypot(a.lx - b.lx, a.ly - b.ly));
@@ -528,7 +568,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
         if (r > accel) [accel, accelAt] = [r, st[i].J];
       }
       if (maxV > MOTION_LIMITS.viewDeg) fails.push(`${b.id}: view ${maxV.toFixed(2)} deg/step at J${vAt} > ${MOTION_LIMITS.viewDeg}`);
-      if (maxS > MOTION_LIMITS.screen) fails.push(`${b.id}: subject ${(maxS * 100).toFixed(2)}%/step at J${sAt} > ${MOTION_LIMITS.screen * 100}%`);
+      const screenMax = b.from >= MOTION_LIMITS.screenNear.from - 1e-9 ? MOTION_LIMITS.screenNear.limit : MOTION_LIMITS.screen;
+      if (maxS > screenMax) fails.push(`${b.id}: subject ${(maxS * 100).toFixed(2)}%/step at J${sAt} > ${(screenMax * 100).toFixed(0)}%`);
       if (maxZ > MOTION_LIMITS.zoom) fails.push(`${b.id}: scale ${maxZ.toFixed(3)} ln/step at J${zAt} > ${MOTION_LIMITS.zoom}`);
       if (b.id !== 'b1 hero+macro' && spikeZ > MOTION_LIMITS.spike) fails.push(`${b.id}: scale spike ${spikeZ.toFixed(2)}x median at J${zAt}`);
       if (zAccel > MOTION_LIMITS.zoomAccel) fails.push(`${b.id}: scale velocity change ${zAccel.toFixed(2)} at J${zAccelAt} > ${MOTION_LIMITS.zoomAccel}`);
@@ -566,11 +607,13 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       } else run = 0;
     }
     if (longest > MOTION_LIMITS.stillRun) fails.push(`liveness: ${longest} still steps ending J${longestAt}`);
-    // Monotonic channels (fine sweep): the distance to the head from the macro's end, the orbit from
-    // the point where the camera has left the barrel (J 1.9; closer in, the aim sliding along the
-    // tilted barrel moves the azimuth by a few tenths of a degree), the height from the landing on
-    // the stage (J 2.75) to the end of Tickets. A reversal is a change of direction by more than
-    // the tolerance from the last extreme.
+    // Monotonic channels (fine sweep): the orbit from the point where the camera has left the barrel
+    // (J 1.9; closer in, the aim sliding along the tilted barrel moves the azimuth by a few tenths of
+    // a degree) to the end, in one direction; the distance to the subject grows through the pull out
+    // and falls as the camera comes down behind the microphone; the height rises from the low pass
+    // to the top of the crane and falls from there to the speaker's view (MOTION_LIMITS: pullJ,
+    // riseJ, comeDownJ). A reversal is a change of direction by more than the tolerance from the
+    // last extreme.
     const reversals = (from: number, to: number, val: (f: Frame) => number, tol: number) => {
       let dir = 0;
       let n = 0;
@@ -602,11 +645,29 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       while (d < -Math.PI) d += 2 * Math.PI;
       return +((d * 180) / Math.PI).toFixed(1);
     };
+    const sd = (f: Frame) => subjectDist(new Vector3(...f.pos));
+    const L = MOTION_LIMITS;
     const mono = {
       orbit: reversals(1.9, 6.0, az, 1e-3),
-      distance: reversals(1.7, 6.0, (f) => new Vector3(...f.pos).distanceTo(head), 1e-3),
-      height: reversals(2.75, 6.0, (f) => f.pos[1], 1e-3),
+      pullOut: reversals(L.pullJ[0], L.pullJ[1], sd, 1e-3),
+      comeDownDistance: reversals(L.comeDownJ[0], L.comeDownJ[1], sd, 1e-3),
+      rise: reversals(L.riseJ[0], L.riseJ[1], (f) => f.pos[1], 1e-3),
+      comeDownHeight: reversals(L.comeDownJ[0], L.comeDownJ[1], (f) => f.pos[1], 1e-3),
     };
+    // The direction of each monotonic stretch: the orbit one way round (towards the grille side,
+    // negative), out in the pull out, up over the rise, down and in over the come down.
+    const sgn = (from: number, to: number, val: (f: Frame) => number) => Math.sign(val(at(to)) - val(at(from)));
+    const orbitRad = (f: Frame) => {
+      let d = az(f) - az(at(1.9));
+      while (d > Math.PI) d -= 2 * Math.PI;
+      while (d < -Math.PI) d += 2 * Math.PI;
+      return d;
+    };
+    if (sgn(2.5, 2.6, orbitRad) > 0) fails.push('orbit: turns the wrong way (towards the hero side)');
+    if (sgn(L.pullJ[0], L.pullJ[1], sd) < 0) fails.push('pull out: the distance falls');
+    if (sgn(L.riseJ[0], L.riseJ[1], (f) => f.pos[1]) < 0) fails.push('rise: the camera falls');
+    if (sgn(L.comeDownJ[0], L.comeDownJ[1], (f) => f.pos[1]) > 0) fails.push('come down: the camera rises');
+    if (sgn(L.comeDownJ[0], L.comeDownJ[1], sd) > 0) fails.push('come down: the distance grows');
     for (const [k, v] of Object.entries(mono)) if (v.reversals) fails.push(`monotonic ${k}: ${v.reversals} reversals (first at J${v.firstAtJ})`);
     // The descent down the engraved band through the Theme pin (DESCENT_J): the aim's height along the
     // barrel axis (mic space) falls at every filmstrip step, never rises on the fine sweep (on to the end of the hold at the foot, DESCENT_HOLD_TO), never
@@ -648,23 +709,29 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       if (d.frameShare > MOTION_LIMITS.descentMax) fails.push(`descent: ${(d.frameShare * 100).toFixed(0)}% of the frame's height at J${d.J} > ${MOTION_LIMITS.descentMax * 100}%`);
     }
     if (dTotal < MOTION_LIMITS.descentMin * bandH) fails.push(`descent: covers ${(descent.bandShare * 100).toFixed(0)}% of the engraved band < ${MOTION_LIMITS.descentMin * 100}%`);
-    // Frame and copy column: the head and the tail of the mic from J 2.1 (the whole microphone has
-    // arrived), the stand's foot from 2.45 (the pull out has landed on the stage).
+    // Frame: the head of the mic from frameMicFrom (the whole microphone has arrived) to the end, its
+    // tail to frameTailTo (in the speaker's view it runs out below the grille), the stand's foot from
+    // frameFootFrom to frameFootTo.
     const frame = { xMin: 1, xMax: 0, yMin: 1, yMax: 0, xMinAtJ: 0 };
     let frameFails = 0;
+    const frameOut: string[] = [];
     for (const f of F) {
       if (f.J < MOTION_LIMITS.frameMicFrom || f.J > 5.98) continue;
-      for (const P of f.J >= MOTION_LIMITS.frameFootFrom ? [head, tail, foot] : [head, tail]) {
+      const parts = f.J <= MOTION_LIMITS.frameTailTo ? [head, tail] : [head];
+      for (const P of f.J >= MOTION_LIMITS.frameFootFrom && f.J <= MOTION_LIMITS.frameFootTo ? [...parts, foot] : parts) {
         const q = scr(f, P);
         if (q.x < frame.xMin) [frame.xMin, frame.xMinAtJ] = [q.x, f.J];
         frame.xMax = Math.max(frame.xMax, q.x);
         frame.yMin = Math.min(frame.yMin, q.y);
         frame.yMax = Math.max(frame.yMax, q.y);
         const out = q.z <= 0 || q.x < 0.02 || q.x > 0.98 || q.y < 0.02 || q.y > 0.98;
-        if (out) frameFails++;
+        if (out) {
+          frameFails++;
+          if (frameOut.length < 6) frameOut.push(`${P === head ? 'head' : P === tail ? 'tail' : 'foot'}@J${f.J} [${q.x.toFixed(2)}, ${q.y.toFixed(2)}]`);
+        }
       }
     }
-    if (frameFails) fails.push(`frame: ${frameFails} samples out of frame (xMin ${frame.xMin.toFixed(3)} at J${frame.xMinAtJ})`);
+    if (frameFails) fails.push(`frame: ${frameFails} samples out of frame (first: ${frameOut.join(', ')})`);
     // Copy keep-out (real layout): the head, the barrel, the tail, points down the stand and its foot
     // must stay out of every line of text and every panel on screen, with `copyMarginPx` of air,
     // from the landing of the pull out on the stage (J 2.25: the whole subject is in frame) to the end
@@ -735,6 +802,43 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       if (portrait && (copyRun > MOTION_LIMITS.portraitRun || copyHits.length > MOTION_LIMITS.portraitShare * copySteps))
         fails.push(`copy: subject behind headings / buttons / panels at ${copyHits.length} of ${copySteps} steps, longest run ${copyRun} ending J${copyRunAt}`);
     }
+    // The speaker's view (MOTION_LIMITS.speakerJ): the camera stands behind the microphone (upstage
+    // of the stand, at a speaker's eye height), the seats fill the frame (most of the 100 seats in
+    // frame, spread across most of its width) and the grille sits in the foreground band: at one
+    // side of the frame, much closer than the nearest seat.
+    const speaker: { J: number; seatsIn: number; seatSpan: number; head: number[]; headM: number; seatM: number; camY: number; upstageM: number }[] = [];
+    for (let J = L.speakerJ[0]; J <= L.speakerJ[1] + 1e-9; J += 0.05) {
+      const f = at(J);
+      if (!f) continue;
+      let n = 0;
+      let x0 = 1;
+      let x1 = 0;
+      let seatM = Infinity;
+      const cam = new Vector3(...f.pos);
+      for (const P of SEAT_POINTS) {
+        const q = scr(f, P);
+        seatM = Math.min(seatM, cam.distanceTo(P));
+        if (!inFrame(q)) continue;
+        n++;
+        x0 = Math.min(x0, q.x);
+        x1 = Math.max(x1, q.x);
+      }
+      const h = scr(f, head);
+      // Upstage: the camera on the far side of the stand from the house (house space z < 0).
+      const upstage = -toHouse(cam.clone().sub(new Vector3(SPINE.x, 0, SPINE.z))).z;
+      const row = { J: +J.toFixed(3), seatsIn: n, seatSpan: +Math.max(0, x1 - x0).toFixed(3), head: [+h.x.toFixed(3), +h.y.toFixed(3)], headM: +cam.distanceTo(head).toFixed(3), seatM: +seatM.toFixed(2), camY: +f.pos[1].toFixed(3), upstageM: +upstage.toFixed(3) };
+      speaker.push(row);
+      const why: string[] = [];
+      const minSeats = portrait ? L.speakerSeatsPortrait : L.speakerSeats;
+      if (n < minSeats) why.push(`${n} seats in frame < ${minSeats}`);
+      if (row.seatSpan < L.speakerSeatSpan) why.push(`seats span ${row.seatSpan} of the width < ${L.speakerSeatSpan}`);
+      const side = Math.min(h.x, 1 - h.x) <= L.speakerHeadSide || h.y >= 1 - L.speakerHeadSide;
+      if (!inFrame(h) || !side) why.push(`grille at [${row.head}], not within ${L.speakerHeadSide} of a side or the foot of the frame`);
+      if (row.headM > L.speakerHeadNear * seatM) why.push(`grille ${row.headM} m away, not in the foreground (nearest seat ${row.seatM} m)`);
+      if (upstage < 0.2) why.push(`camera ${row.upstageM} m upstage of the stand, not behind the microphone`);
+      if (row.camY < L.speakerEye[0] || row.camY > L.speakerEye[1]) why.push(`camera ${row.camY} m high, not at a speaker's eye height`);
+      if (why.length) fails.push(`speaker's view J${row.J}: ${why.join('; ')}`);
+    }
     // Near plane against the scene's surfaces (< 1 would clip).
     let minClr = Infinity;
     let clrAt = '';
@@ -747,10 +851,12 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       liveness: { longestStillRun: longest, endsAtJ: longestAt },
       monotonic: mono,
       descent,
-      orbitDeg: { at2_5: orbitAt(2.5), at3: orbitAt(3), at4: orbitAt(4), at5: orbitAt(5), at6: orbitAt(6) },
-      heightM: { at2_5: +at(2.5).pos[1].toFixed(2), at4: +at(4).pos[1].toFixed(2), at5: +at(5).pos[1].toFixed(2), at6: +at(6).pos[1].toFixed(2) },
+      orbitDeg: { at2_5: orbitAt(2.5), at3: orbitAt(3), at4: orbitAt(4), at5: orbitAt(5), at5_5: orbitAt(5.5), at6: orbitAt(6) },
+      heightM: { at2_5: +at(2.5).pos[1].toFixed(2), at3: +at(3).pos[1].toFixed(2), at4: +at(4).pos[1].toFixed(2), at4_9: +at(4.9).pos[1].toFixed(2), at5_5: +at(5.5).pos[1].toFixed(2), at6: +at(6).pos[1].toFixed(2) },
+      subjectM: { at2_5: +sd(at(2.5)).toFixed(2), at3: +sd(at(3)).toFixed(2), at4: +sd(at(4)).toFixed(2), at4_9: +sd(at(4.9)).toFixed(2), at5_5: +sd(at(5.5)).toFixed(2), at6: +sd(at(6)).toFixed(2) },
       frame: { ...frame, xMin: +frame.xMin.toFixed(3), xMax: +frame.xMax.toFixed(3), yMin: +frame.yMin.toFixed(3), yMax: +frame.yMax.toFixed(3) },
       clearance: { min: minClr, at: clrAt },
+      speaker,
       copy: opts.copy ? { steps: copySteps, hits: copyHits, longestRun: copyRun, longestRunAtJ: copyRunAt, minAirPx: +copyMin.toFixed(1), minAirAtJ: copyMinAt, points: copyPts } : null,
       steps,
       /** Where the subject sits on screen (fractions from the left / top) at a few positions. */
