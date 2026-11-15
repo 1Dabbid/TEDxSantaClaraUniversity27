@@ -2,7 +2,7 @@ import { Vector3 } from 'three';
 import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, RIG, SPINE, journey, micPoint, portraitFraming, resolveShots, shotsFor, sidewaysPhone, type ResolvedShot, type ShotOptions } from './choreography';
 import { MIC, MIC_MATRIX_INV, PIVOT_WORLD, SEATING, STAND_BASE, STAND_TOP_Y, rowHeight, fromHouse, toHouse } from './layout';
 import { clearance } from './clearance';
-import { measureHeroX, measureHeroY, measureSpeakersX, measureWideCopy, measureTicketsRoom, measureTicketsX, measureVenueX } from './contentLayout';
+import { measureHero, measureSpeakersX, measureTicketsRoom, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, nearCorner, REACT, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
 
@@ -118,9 +118,7 @@ function contentShots(L: Layout, over: Partial<ShotOptions>): ResolvedShot[] {
     speakersX: measureSpeakersX(),
     venueX: measureVenueX(),
     ticketsX: measureTicketsX(),
-    heroX: measureHeroX(),
-    heroY: measureHeroY(),
-    wideCopy: measureWideCopy(),
+    ...measureHero(),
     sideways: sidewaysPhone(window.innerWidth, window.innerHeight),
     aspect: +(window.innerWidth / Math.max(1, window.innerHeight)).toFixed(2),
     ticketsRoom: measureTicketsRoom(),
@@ -273,6 +271,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     layout: measure,
     /** The Tickets room figure as measured (contentLayout.ts): what the end of the move is framed by. */
     room: measureTicketsRoom,
+    /** The hero's place as measured (contentLayout.ts): the opening anchor, and whether the portrait move opens at the right (wide copy). */
+    hero: measureHero,
     copyBoxes: copyBoxesNow,
     /**
      * Where the page below Tickets starts on screen (fraction of the height from the top): the next

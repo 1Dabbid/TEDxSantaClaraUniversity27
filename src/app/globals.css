@@ -589,7 +589,7 @@ html:not(.motion) .reading-progress {
    side). The live scene's macro stands at the right there, nearer the middle
    than on a desktop (src/scene/choreography.ts, wideOpening), and the second
    column of clauses runs out over the lit engraving. */
-@media (min-width: 768px) and (max-width: 1023.98px) and (min-aspect-ratio: 9001/10000) and (max-aspect-ratio: 1699/1000) {
+@media (min-width: 768px) and (max-width: 1023.98px) and (aspect-ratio > 9/10) and (max-aspect-ratio: 1699/1000) {
   .theme-fine {
     position: relative;
     isolation: isolate;
@@ -606,7 +606,7 @@ html:not(.motion) .reading-progress {
 }
 /* Pinned, the clauses keep a measure narrower than the stage: the scrim runs on
    to the stage's right edge, which clips it (overflow: hidden, below). */
-@media (min-width: 768px) and (max-width: 1023.98px) and (min-height: 44rem) and (min-aspect-ratio: 9001/10000) and (max-aspect-ratio: 1699/1000) {
+@media (min-width: 768px) and (max-width: 1023.98px) and (min-height: 44rem) and (aspect-ratio > 9/10) and (max-aspect-ratio: 1699/1000) {
   html.motion .theme-fine::before {
     right: -100vw;
   }
@@ -1525,8 +1525,10 @@ html.has-cursor [contenteditable] {
 }
 /* In such a window (not taller than wide) a portrait frame is cropped to a band of its height: the
    band is taken near the top, where the microphone stands, not through the middle of the stand
-   (the same in SceneStills.module.css; just over 9:10, which counts as tall). */
-@media (min-aspect-ratio: 9001/10000) and (max-width: 1023.98px) and (max-aspect-ratio: 1699/1000) {
+   (the same in SceneStills.module.css). The lower bound is "wider than 9:10" exactly, the
+   complement of max-aspect-ratio: 9/10 above (9:10 itself counts as tall), so no window falls
+   between the two; the Theme scrim for such windows uses the same bound. */
+@media (aspect-ratio > 9/10) and (max-width: 1023.98px) and (max-aspect-ratio: 1699/1000) {
   #main:has(> [data-scene-stills]) > :is([data-section='speakers'], [data-section='schedule'], [data-section='venue']) {
     --fp-plate-y: 12%;
   }

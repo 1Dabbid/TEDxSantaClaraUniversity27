@@ -39,7 +39,7 @@ import {
 import { createStudioEnvironment } from './environment';
 import type { EngravingFacts } from './engraving';
 import { look } from './look';
-import { measureHeroX, measureHeroY, measureSpeakersX, measureWideCopy, measureTicketsRoom, measureTicketsX, measureVenueX } from './contentLayout';
+import { measureHero, measureSpeakersX, measureTicketsRoom, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, REACT, scrollKickFor, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
 import { houseLights, houseSeatsLit } from './houseLights';
@@ -93,7 +93,7 @@ function contentOptions(): ShotOptions {
   // The frame's shape is part of the content key: the held stand over Tickets (Move.hold) depends on
   // it, and a change of height alone (devtools, the browser bar) changes no measured x.
   const aspect = +(window.innerWidth / Math.max(1, window.innerHeight)).toFixed(2);
-  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale, speakersX: measureSpeakersX(), venueX: measureVenueX(), ticketsX: measureTicketsX(), heroX: measureHeroX(), heroY: measureHeroY(), wideCopy: measureWideCopy(), sideways: sidewaysPhone(window.innerWidth, window.innerHeight), aspect, ticketsRoom: measureTicketsRoom() };
+  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale, speakersX: measureSpeakersX(), venueX: measureVenueX(), ticketsX: measureTicketsX(), ...measureHero(), sideways: sidewaysPhone(window.innerWidth, window.innerHeight), aspect, ticketsRoom: measureTicketsRoom() };
 }
 const currentJourney = () => journey(scrollState.sections, metrics.heights, metrics.vh);
 

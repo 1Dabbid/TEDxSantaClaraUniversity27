@@ -11,10 +11,10 @@ import { expect, test, type Page } from '@playwright/test';
  * does, the microphone's own light is down (a dark shape behind the text).
  * Also: a window narrower than the desktop layout gets the portrait framing,
  * and where it is not taller than wide the hero's microphone stands at the
- * right, clear of the headline and the facts row (under 640 px wide, where
- * the headline runs most of the width: under the end of the headline, beside
- * the copy below it), and stays dim until the scroll hint and the clause
- * counter have passed over it. A phone on its side gets the phone's dimming
+ * right, clear of the headline and the facts row (under 640 px wide: under
+ * the end of the headline where it runs most of the width, beside it, as
+ * from 640 px, where the window is clearly wider than tall), and stays dim
+ * until the scroll hint and the clause counter have passed over it. A phone on its side gets the phone's dimming
  * while the grille crosses the counter.
  * Uses the debug simulator (?scene-debug=1) with the page's real copy boxes.
  */
@@ -29,6 +29,7 @@ type Sim = {
   ticketsEnd: () => number;
   motion: (o: { copy?: Record<string, Box[]>; edge?: Record<string, number> }) => Motion;
   place: (js: number[]) => { J: number; head: number[]; barrel: number[]; house: number[]; headM: number; fov: number; exp: number }[];
+  hero: () => { heroX?: number; heroY?: number; wideCopy: boolean };
 };
 
 const ORDER = ['hero', 'theme', 'speakers', 'schedule', 'venue', 'tickets'];
@@ -129,6 +130,16 @@ test.describe("the speaker's view and the seat counter", () => {
     { width: 520, height: 540, under: true },
     { width: 560, height: 600, under: true },
     { width: 600, height: 560, under: true },
+    // Under 640 px wide but clearly wider than tall: the headline stops short of the right edge and
+    // there is no room under it, so the grille stands beside it, as from 640 px (not in the lower
+    // middle, on the tagline, as on a phone).
+    { width: 639, height: 480 },
+    { width: 600, height: 400 },
+    { width: 560, height: 500, air: 20 },
+    // Between the two shapes neither place fits as measured: the grille is held under the end of
+    // the headline, a little lower than elsewhere, with what air the frame leaves.
+    { width: 480, height: 500, under: true, air: 20 },
+    { width: 440, height: 460, under: true, air: 16 },
   ]) {
     test(`${size.width}x${size.height}: the hero's microphone stands clear of the headline and the facts`, async ({ page }) => {
       await page.setViewportSize({ width: size.width, height: size.height });
@@ -157,8 +168,8 @@ test.describe("the speaker's view and the seat counter", () => {
         // Beside the headline, or (small windows) under it: never on its last letters.
         if (size.under) expect(r.head[1] - r.rPx / size.height, `${where}: under the headline (to ${r.headline.bottom.toFixed(3)})`).toBeGreaterThan(r.headline.bottom);
         else if (J === 0) expect(r.head[0] - r.rPx / size.width, `${where}: right of the headline (to ${r.headline.right.toFixed(3)})`).toBeGreaterThan(r.headline.right);
-        expect(r.headAir, `${where}: air between the grille and the copy`).toBeGreaterThanOrEqual(J <= 0.5 ? 24 : 12);
-        expect(r.barrelAir, `${where}: air between the barrel and the copy`).toBeGreaterThanOrEqual(J <= 0.5 ? 24 : 12);
+        expect(r.headAir, `${where}: air between the grille and the copy`).toBeGreaterThanOrEqual(J <= 0.5 ? (size.air ?? 24) : 12);
+        expect(r.barrelAir, `${where}: air between the barrel and the copy`).toBeGreaterThanOrEqual(J <= 0.5 ? (size.air ?? 24) : 12);
       }
       // As the hero scrolls out, the scroll hint and the Theme stage's clause counter pass over the
       // barrel at the right: the engraving keeps the push in's dim light until they have (J 1.1),
@@ -168,6 +179,28 @@ test.describe("the speaker's view and the seat counter", () => {
       expect(exp[4], 'the macro is lit').toBeGreaterThan(1);
     });
   }
+
+  // The layout changes at 640 px (the headline's size, the facts row); the microphone's place does
+  // not jump there in a window clearly wider than tall: beside the headline on both sides of it.
+  test("639x480 and 640x480: the hero's microphone stands in the same place, beside the headline", async ({ page }) => {
+    const at = async (width: number) => {
+      await page.setViewportSize({ width, height: 480 });
+      await ready(page);
+      return page.evaluate(() => {
+        const sim = (window as unknown as { __sceneSim: Sim }).__sceneSim;
+        return { hero: sim.hero(), head: sim.place([0])[0].head };
+      });
+    };
+    const narrow = await at(639);
+    const wide = await at(640);
+    for (const r of [narrow, wide]) {
+      expect(r.hero.wideCopy).toBe(true);
+      // Beside the headline: the move's own height, not a measured one under the headline.
+      expect(r.hero.heroY).toBeUndefined();
+    }
+    expect(narrow.head[1]).toBeCloseTo(wide.head[1], 3);
+    expect(Math.abs(narrow.head[0] - wide.head[0]), `grille x ${narrow.head[0]} at 639 px, ${wide.head[0]} at 640 px`).toBeLessThan(0.05);
+  });
 
   // A phone on its side keeps the landscape move, but under 768 px wide its counter is laid out
   // like a phone's: while the grille crosses the numerals, the ruler and the caption it is taken down.

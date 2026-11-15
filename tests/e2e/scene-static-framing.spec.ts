@@ -43,6 +43,10 @@ const WINDOWS = [
   { width: 1023, height: 768, opening: 'landscape', stage: 'portrait' },
   { width: 640, height: 480, opening: 'landscape', stage: 'portrait' },
   { width: 560, height: 600, opening: 'landscape', stage: 'portrait' },
+  // Under 640 px wide and clearly wider than tall: the live scene keeps the microphone at the right
+  // there too (beside the headline), so the landscape hero still is the matching one.
+  { width: 600, height: 400, opening: 'landscape', stage: 'portrait' },
+  { width: 480, height: 500, opening: 'landscape', stage: 'portrait' },
   // Exactly 9:10 counts as taller than wide, in the CSS and in the live rule alike.
   { width: 900, height: 1000, opening: 'portrait', stage: 'portrait' },
   { width: 720, height: 800, opening: 'portrait', stage: 'portrait' },
@@ -207,6 +211,35 @@ test.describe('narrow windows that are not taller than wide: the Theme clauses h
       await page.goto('/');
       await settle(page, 300);
       expect(await page.locator('.theme-fine').evaluate((el) => getComputedStyle(el, '::before').content)).toBe('none');
+    });
+  }
+});
+
+// The CSS boundary at 9:10: exactly 9:10 counts as tall, anything wider does not, with no window
+// in between (901x1001 is wider than 9:10 by less than one part in ten thousand).
+test.describe('the 9:10 boundary: no window falls between tall and not tall', () => {
+  test.use({ reducedMotion: 'reduce' });
+  for (const w of [
+    { width: 900, height: 1000, tall: true },
+    { width: 901, height: 1001, tall: false },
+    { width: 1000, height: 1111, tall: false },
+  ]) {
+    test(`${w.width}x${w.height}: ${w.tall ? 'tall: portrait frames throughout' : 'not tall: landscape hero, cropped stage plate, Theme scrim'}`, async ({ page }) => {
+      await page.setViewportSize({ width: w.width, height: w.height });
+      await page.goto('/');
+      await settle(page, 300);
+      expect(await plateImage(page, 'hero')).toContain(`/stills/hero-${w.tall ? 'portrait' : 'landscape'}`);
+      expect(await plateImage(page, 'speakers')).toContain('/stills/speakers-portrait');
+      // The stage plate's crop near the top, and the Theme clauses' scrim: only in the window that is not tall.
+      const plateY = await page.locator('[data-section="speakers"]').evaluate((el) => getComputedStyle(el).getPropertyValue('--fp-plate-y').trim());
+      const scrim = await page.locator('.theme-fine').evaluate((el) => getComputedStyle(el, '::before').content);
+      if (w.tall) {
+        expect(plateY).not.toBe('12%');
+        expect(scrim).toBe('none');
+      } else {
+        expect(plateY).toBe('12%');
+        expect(scrim).not.toBe('none');
+      }
     });
   }
 });
