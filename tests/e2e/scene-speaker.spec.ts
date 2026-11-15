@@ -10,8 +10,12 @@ import { expect, test, type Page } from '@playwright/test';
  * the grille has to cross its ruler and caption on the way down: while it
  * does, the microphone's own light is down (a dark shape behind the text).
  * Also: a window narrower than the desktop layout gets the portrait framing,
- * and where its copy is laid out wide (not taller than wide) the hero's
- * microphone stands at the right, clear of the headline and the facts row.
+ * and where it is not taller than wide the hero's microphone stands at the
+ * right, clear of the headline and the facts row (under 640 px wide, where
+ * the headline runs most of the width: under the end of the headline, beside
+ * the copy below it), and stays dim until the scroll hint and the clause
+ * counter have passed over it. A phone on its side gets the phone's dimming
+ * while the grille crosses the counter.
  * Uses the debug simulator (?scene-debug=1) with the page's real copy boxes.
  */
 
@@ -24,7 +28,7 @@ type Sim = {
   copyBoxes: () => Box[];
   ticketsEnd: () => number;
   motion: (o: { copy?: Record<string, Box[]>; edge?: Record<string, number> }) => Motion;
-  place: (js: number[]) => { J: number; head: number[]; barrel: number[]; house: number[]; headM: number; fov: number }[];
+  place: (js: number[]) => { J: number; head: number[]; barrel: number[]; house: number[]; headM: number; fov: number; exp: number }[];
 };
 
 const ORDER = ['hero', 'theme', 'speakers', 'schedule', 'venue', 'tickets'];
@@ -119,11 +123,20 @@ test.describe("the speaker's view and the seat counter", () => {
     { width: 900, height: 600 },
     { width: 1023, height: 768 },
     { width: 960, height: 600 },
+    { width: 640, height: 480 },
+    // Small near-square windows: the headline is set at the phone's size and runs most of the
+    // width, so the grille stands under its end, right of the tagline, the buttons and the facts.
+    { width: 520, height: 540, under: true },
+    { width: 560, height: 600, under: true },
+    { width: 600, height: 560, under: true },
   ]) {
     test(`${size.width}x${size.height}: the hero's microphone stands clear of the headline and the facts`, async ({ page }) => {
-      await page.setViewportSize(size);
+      await page.setViewportSize({ width: size.width, height: size.height });
       await ready(page);
-      for (const J of [0, 0.25, 0.5, 0.75]) {
+      // In the small windows the hero's last line (a faint 9px legal line, wider than the column) passes
+      // over the barrel late in the scroll-out, when the scene is already down to a dark shape: the
+      // check there stops at J 0.5.
+      for (const J of size.under ? [0, 0.25, 0.5] : [0, 0.25, 0.5, 0.75]) {
         await scrollToJ(page, J);
         await page.waitForTimeout(400);
         const r = await page.evaluate((J) => {
@@ -134,16 +147,68 @@ test.describe("the speaker's view and the seat counter", () => {
           const lines = sim.copyBoxes().filter((b) => b[4] !== 'p');
           const air = (pt: number[], rad: number) =>
             Math.min(...lines.map((b) => Math.hypot(Math.max(b[0] - pt[0], 0, pt[0] - b[2]) * window.innerWidth, Math.max(b[1] - pt[1], 0, pt[1] - b[3]) * window.innerHeight) - rad));
-          return { head: pl.head, headAir: air(pl.head, rPx), barrelAir: air(pl.barrel, rPx * 0.6), rPx };
+          const words = [...document.querySelectorAll('#hero-title [data-hero-word]')].map((w) => w.getBoundingClientRect());
+          const headline = { right: Math.max(...words.map((w) => w.right)) / window.innerWidth, bottom: Math.max(...words.map((w) => w.bottom)) / window.innerHeight };
+          return { head: pl.head, headAir: air(pl.head, rPx), barrelAir: air(pl.barrel, rPx * 0.6), rPx, headline };
         }, J);
         const where = `J${J}: grille at ${r.head}, radius ${r.rPx.toFixed(0)} px`;
         // At the right of the frame, not under the headline (the phone's hero has it at 0.46).
-        expect(r.head[0], where).toBeGreaterThan(0.6);
+        expect(r.head[0], where).toBeGreaterThan(0.56);
+        // Beside the headline, or (small windows) under it: never on its last letters.
+        if (size.under) expect(r.head[1] - r.rPx / size.height, `${where}: under the headline (to ${r.headline.bottom.toFixed(3)})`).toBeGreaterThan(r.headline.bottom);
+        else if (J === 0) expect(r.head[0] - r.rPx / size.width, `${where}: right of the headline (to ${r.headline.right.toFixed(3)})`).toBeGreaterThan(r.headline.right);
         expect(r.headAir, `${where}: air between the grille and the copy`).toBeGreaterThanOrEqual(J <= 0.5 ? 24 : 12);
         expect(r.barrelAir, `${where}: air between the barrel and the copy`).toBeGreaterThanOrEqual(J <= 0.5 ? 24 : 12);
       }
+      // As the hero scrolls out, the scroll hint and the Theme stage's clause counter pass over the
+      // barrel at the right: the engraving keeps the push in's dim light until they have (J 1.1),
+      // then takes the macro's.
+      const exp = await page.evaluate(() => (window as unknown as { __sceneSim: Sim }).__sceneSim.place([0.95, 1.0, 1.05, 1.1, 1.4]).map((p) => p.exp));
+      for (const e of exp.slice(0, 4)) expect(e, `exposure while the labels pass: ${exp}`).toBeLessThanOrEqual(0.82);
+      expect(exp[4], 'the macro is lit').toBeGreaterThan(1);
     });
   }
+
+  // A phone on its side keeps the landscape move, but under 768 px wide its counter is laid out
+  // like a phone's: while the grille crosses the numerals, the ruler and the caption it is taken down.
+  for (const size of [
+    { width: 667, height: 375 },
+    { width: 740, height: 360 },
+  ]) {
+    test(`phone on its side ${size.width}x${size.height}: the grille is clear of the copy, or dark while it crosses the counter`, async ({ page }) => {
+      const js = [5.5, 5.55, 5.6, 5.65, 5.7, 5.75, 5.8, 5.85, 5.9, 5.95];
+      await page.setViewportSize(size);
+      await ready(page);
+      const m = await speakerView(page, js);
+      expect(m.speakerCopy.map((r) => r.J)).toEqual(js);
+      for (const r of m.speakerCopy) {
+        const clear = r.airPx >= 6;
+        expect(clear || r.dim, `J${r.J}: grille ${r.airPx} px from the copy with its light at ${r.lit} (grille at ${r.grille})`).toBe(true);
+        if (!clear) expect(r.lit, `J${r.J}: light while crossing`).toBeLessThanOrEqual(0.2);
+      }
+      // It does cross there (so the dimming is doing something), and is lit again in the held view.
+      expect(m.speakerCopy.some((r) => r.airPx < 6)).toBe(true);
+      for (const r of m.speakerCopy.filter((r) => r.J >= 5.9)) {
+        expect(r.airPx, `J${r.J}: air between the grille and the copy`).toBeGreaterThanOrEqual(6);
+        expect(r.lit, `J${r.J}: the microphone is lit in the held view`).toBeGreaterThan(1);
+      }
+      expect(m.fails.filter((f) => f.startsWith("speaker's view"))).toEqual([]);
+    });
+  }
+
+  // From 768 px wide a phone on its side has the desktop's counter: the grille keeps clear of it, lit.
+  test('phone on its side 844x390: the grille keeps clear of the counter, lit', async ({ page }) => {
+    const js = [5.75, 5.8, 5.85, 5.9, 5.95];
+    await page.setViewportSize({ width: 844, height: 390 });
+    await ready(page);
+    const m = await speakerView(page, js);
+    expect(m.speakerCopy.map((r) => r.J)).toEqual(js);
+    for (const r of m.speakerCopy) {
+      expect(r.airPx, `J${r.J}: air between the grille and the copy (grille at ${r.grille})`).toBeGreaterThanOrEqual(6);
+      expect(r.lit, `J${r.J}: lit`).toBeGreaterThan(1);
+    }
+    expect(m.fails.filter((f) => f.startsWith("speaker's view"))).toEqual([]);
+  });
 
   test('a window narrower than the desktop layout gets the portrait framing; a phone on its side keeps the landscape one', async ({ page }) => {
     const barrelX = async (width: number, height: number) => {

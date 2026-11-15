@@ -1,8 +1,8 @@
 import { Vector3 } from 'three';
-import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, RIG, SPINE, journey, micPoint, portraitFraming, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
+import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, RIG, SPINE, journey, micPoint, portraitFraming, resolveShots, shotsFor, sidewaysPhone, type ResolvedShot, type ShotOptions } from './choreography';
 import { MIC, MIC_MATRIX_INV, PIVOT_WORLD, SEATING, STAND_BASE, STAND_TOP_Y, rowHeight, fromHouse, toHouse } from './layout';
 import { clearance } from './clearance';
-import { measureHeroX, measureSpeakersX, measureTicketsRoom, measureTicketsX, measureVenueX } from './contentLayout';
+import { measureHeroX, measureHeroY, measureSpeakersX, measureWideCopy, measureTicketsRoom, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, nearCorner, REACT, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
 
@@ -119,6 +119,9 @@ function contentShots(L: Layout, over: Partial<ShotOptions>): ResolvedShot[] {
     venueX: measureVenueX(),
     ticketsX: measureTicketsX(),
     heroX: measureHeroX(),
+    heroY: measureHeroY(),
+    wideCopy: measureWideCopy(),
+    sideways: sidewaysPhone(window.innerWidth, window.innerHeight),
     aspect: +(window.innerWidth / Math.max(1, window.innerHeight)).toFixed(2),
     ticketsRoom: measureTicketsRoom(),
   };
@@ -1164,7 +1167,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     // at most `speakerDimPortrait`, a dark shape behind the text.
     const speakerCopy: { J: number; airPx: number; grille: number[]; lit: number; dim: boolean }[] = [];
     if (opts.copy) {
-      const from = portrait ? L.speakerClearPortrait : L.speakerClear;
+      const sideways = sidewaysPhone(window.innerWidth, window.innerHeight);
+      const from = portrait ? L.speakerClearPortrait : sideways ? L.speakerClearSideways : L.speakerClear;
       for (const key of Object.keys(opts.copy).sort((a, b) => +a - +b)) {
         const J = +key;
         if (J < from - 1e-9 || J > 5.96) continue;
@@ -1178,10 +1182,11 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
           const dy = Math.max(b[1] - q.y, 0, q.y - b[3]) * window.innerHeight;
           air = Math.min(air, Math.hypot(dx, dy) - rPx);
         }
-        const dim = portrait && f.lit <= L.speakerDimPortrait;
+        // The same on a phone on its side (the landscape move, sidewaysPhone), whose counter is laid out like a phone's.
+        const dim = (portrait || sideways) && f.lit <= L.speakerDimPortrait;
         speakerCopy.push({ J, airPx: +air.toFixed(1), grille: [+q.x.toFixed(3), +q.y.toFixed(3), +rPx.toFixed(1)], lit: f.lit, dim });
         if (air < L.speakerCopyAirPx && !dim)
-          fails.push(`speaker's view J${J}: the grille is ${air.toFixed(0)} px from the copy (at least ${L.speakerCopyAirPx}), at [${q.x.toFixed(3)}, ${q.y.toFixed(3)}]${portrait ? `, and lit (${f.lit}, at most ${L.speakerDimPortrait} to pass behind text)` : ''}`);
+          fails.push(`speaker's view J${J}: the grille is ${air.toFixed(0)} px from the copy (at least ${L.speakerCopyAirPx}), at [${q.x.toFixed(3)}, ${q.y.toFixed(3)}]${portrait || sideways ? `, and lit (${f.lit}, at most ${L.speakerDimPortrait} to pass behind text)` : ''}`);
       }
     }
     // Near plane against the scene's surfaces (< 1 would clip).
