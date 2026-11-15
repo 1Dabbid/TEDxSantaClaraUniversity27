@@ -661,9 +661,9 @@ export default function Experience({
 
     // Adaptive quality: step down when sustained frame time is poor. At the last step, if the
     // scene is still clearly slow for several windows in a row, ask for the still frames instead
-    // (SceneGate takes the canvas down). One slow window resets nothing but itself: a hiccup or a
-    // tab coming back (the loop sleeps while hidden, and the clock restarts on waking) never adds
-    // up to that. Not under a forced `?quality=`; `?perf=slow` reads every window as slow (tests).
+    // (SceneGate hides and pauses the canvas). It takes four slow windows in a row, so a hiccup
+    // or a tab coming back (the loop sleeps while hidden, and the clock restarts on waking) never
+    // adds up to that. Not under a forced `?quality=`; `?perf=slow` reads every window as slow (tests).
     if (adaptive && (step < 4 || (handOver && fs.perfSlow !== 'done'))) {
       fs.perfT += rawDt;
       fs.perfFrames++;
