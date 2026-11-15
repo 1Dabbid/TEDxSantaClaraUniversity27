@@ -3,10 +3,10 @@ import Link from 'next/link';
 import { getFaq, getSettings } from '@/lib/content';
 import { Button } from '@/components/ui/Button';
 import { SiteShell } from '@/components/SiteShell';
-import { NOT_FOUND_METADATA } from '@/lib/page-meta';
+import { notFoundMetadata } from '@/lib/page-meta';
 
 // Shared with the switched-off admin (/keystatic), which shows this same page.
-export const metadata: Metadata = NOT_FOUND_METADATA;
+export const generateMetadata = (): Promise<Metadata> => notFoundMetadata();
 
 /**
  * Every 404 (unknown URLs, unknown speaker slugs, the switched-off admin) is

@@ -22,7 +22,7 @@ items:
       {applicationsStatus} To register your interest in giving a talk, use the club’s interest form: {interestUrl}.
   - question: How can I get involved?
     answer: |-
-      There are three ways to take part: helping to organize {eventName}, joining the club’s contact list, and registering your interest in speaking. One form covers all three, the club’s interest form: {interestUrl}.
+      Use the club’s interest form to help organize {eventName}, join its contact list or register your interest in speaking: {interestUrl}.
   - question: How can my organization become a partner?
     answer: |-
       We are inviting a small number of partners to support the event. The [Partners page](/partners) explains what partnership means under TEDx rules and how to get in touch.

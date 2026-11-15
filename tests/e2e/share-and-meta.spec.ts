@@ -93,6 +93,26 @@ test.describe('share images', () => {
     const home = await (await request.get('/')).text();
     expect(home).toContain(`"image":["${[...versions][0]}"]`);
   });
+
+  test('the 404 page names the same share image as the home page', async ({ request }) => {
+    const image = (html: string, attr: 'property' | 'name', key: string) => meta(html, attr, key).replace(/&amp;/g, '&');
+    const home = image(await (await request.get('/')).text(), 'property', 'og:image');
+    expect(home).toMatch(new RegExp(`^${SITE_URL}/opengraph-image\\?v=[0-9a-f]{8}$`));
+    // An unknown address, and the switched-off admin, which answers with the same page.
+    for (const path of ['/nope', '/keystatic']) {
+      const res = await request.get(path);
+      expect(res.status(), path).toBe(404);
+      const html = await res.text();
+      expect(image(html, 'property', 'og:image'), `${path} og:image`).toBe(home);
+      expect(image(html, 'name', 'twitter:image'), `${path} twitter:image`).toBe(home);
+      expect(html.match(/property="og:image"/g)?.length, `${path}: one og:image tag`).toBe(1);
+      expect(meta(html, 'property', 'og:image:width'), `${path} og:image:width`).toBe('1200');
+      expect(meta(html, 'property', 'og:image:alt'), `${path} og:image:alt`).toContain('TEDxSantaClaraUniversity');
+      // Still a 404 in every other respect: its own title, kept out of search results.
+      expect(meta(html, 'property', 'og:title'), `${path} og:title`).toBe('TEDxSantaClaraUniversity · Page not found (404)');
+      expect(meta(html, 'name', 'robots'), `${path} robots`).toContain('noindex');
+    }
+  });
 });
 
 test.describe('descriptions follow the content', () => {

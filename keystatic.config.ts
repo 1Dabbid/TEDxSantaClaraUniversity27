@@ -248,7 +248,7 @@ export default config({
         ticketState: fields.select({
           label: 'Ticket status',
           description:
-            'Controls the Tickets section, every Tickets button and the FAQ answer about tickets (through its {ticketStatus} placeholder). “On sale” only shows the buy button when a ticket link is filled in below.',
+            'Controls the Tickets section, every Tickets button and the FAQ answer about tickets (through its {ticketStatus} placeholder). “On sale” only shows the buy button when a ticket link is filled in below. With “On sale” and no ticket link yet, the site and the {ticketStatus} answer say tickets are about to go on sale, not “on sale now”.',
           options: [
             { label: 'Coming soon (not on sale yet)', value: 'coming-soon' },
             { label: 'On sale', value: 'on-sale' },
@@ -304,7 +304,7 @@ export default config({
         }),
         interestUrl: urlField(
           'Interest form link (speak or get involved)',
-          'The club’s interest form: register interest in speaking, join the contact list, help organize. While speaker applications are not open, the Speakers section and /speakers show “Want to speak? Register your interest” with this link, and /team shows “Get involved”. It opens in a new tab. FAQ answers that write {interestUrl} follow it.',
+          'The club’s interest form: register interest in speaking, join the contact list, help organize. While speaker applications are not open, the Speakers section and /speakers show “Want to speak? Register your interest” with this link, and /team shows “Get involved”. It opens in a new tab. FAQ answers that write {interestUrl} follow it. While this is blank, the whole sentence that contains {interestUrl} is left out of the answer, and a question with nothing left to say is not shown.',
         ),
       },
     }),
@@ -317,7 +317,7 @@ export default config({
           'Newsletter sign-up link (SendFox)',
           'The SendFox form link. While blank, the site shows “list opening soon” instead of a button.',
         ),
-        contactEmail: emailField('Contact email', 'General questions. Shown in the footer and on /faq when filled in; FAQ answers that write {contactEmail} follow it.'),
+        contactEmail: emailField('Contact email', 'General questions. Shown in the footer and on /faq when filled in; FAQ answers that write {contactEmail} follow it. While this is blank, those answers are shown without the address (and without the “at”, “to” or “:” before it), so read them on the page.'),
         partnershipsEmail: emailField(
           'Partnerships email',
           'Used by every “Become a partner” button. While blank, those buttons link to tedxscu.com.',
@@ -434,9 +434,9 @@ export default config({
               description:
                 'Plain text. Line breaks are kept. Instead of typing details that may change, write a placeholder and the site fills it in, so the answer can never contradict the rest of the site. ' +
                 'Event: {date} (e.g. Friday, April 23, 2027), {venue} (the building), {campus} (e.g. Santa Clara University), {capacity} (the seat count), {eventName} (TEDxSantaClaraUniversity), {doorsTime}, {talksTime} and {endTime} (the times in Event basics) and {timesNote} (the note about the times). ' +
-                'Tickets: {ticketStatus} (whole sentences that follow Ticket status: “Not yet. Tickets are expected to go on sale in February 2027. Join the mailing list…”, “Yes, tickets are on sale now…”, “Tickets are sold out…” or “Ticket sales are closed.”), {ticketSaleMonth} (the Expected on-sale month) and {ticketPriceNote} (the Price note). ' +
-                'Speaking: {applicationsStatus} (a sentence that follows Speaker applications: not open yet, open with the deadline and the application link, or closed) and {interestUrl} (the Interest form link). ' +
-                'Contact: {contactEmail} (the Contact email). ' +
+                'Tickets: {ticketStatus} (whole sentences that follow Ticket status: “Not yet. Tickets are expected to go on sale in February 2027. Join the mailing list…”, “Yes, tickets are on sale now…”, “Almost. Tickets are about to go on sale…” while On sale has no ticket link yet, “Tickets are sold out…” or “Ticket sales are closed.”), {ticketSaleMonth} (the Expected on-sale month) and {ticketPriceNote} (the Price note). ' +
+                'Speaking: {applicationsStatus} (a sentence that follows Speaker applications: not open yet, open with the deadline and the application link, or closed) and {interestUrl} (the Interest form link; while it is blank, the whole sentence that contains it is left out). ' +
+                'Contact: {contactEmail} (the Contact email; while it is blank, the address and the “at”, “to” or “:” before it are left out). ' +
                 'Links: a full https:// address and an email address become links by themselves. To link some words, write [Partners page](/partners) for a page of this site or [the form](https://…) for another site. ' +
                 'Placeholders also work in the question.',
               multiline: true,
