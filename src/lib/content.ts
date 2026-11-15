@@ -649,7 +649,7 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
       }
     }
     for (const hint of staleFaqHints(text, s)) {
-      contentWarning('content/faq.yaml', where, `${hint}. Otherwise this answer goes out of date when the setting changes.`);
+      contentWarning('content/faq.yaml', where, `${hint}.`);
     }
     const r = fillPlaceholders(text, values);
     for (const u of r.unknown) {

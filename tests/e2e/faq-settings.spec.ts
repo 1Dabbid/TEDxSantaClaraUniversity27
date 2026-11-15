@@ -59,7 +59,13 @@ test.describe('FAQ placeholders that follow the settings', () => {
     expect(applicationsStatusText({ ...today, speakerApplicationsState: 'open' })).toBe('Formal speaker applications are not open yet.');
     expect(
       applicationsStatusText({ ...today, speakerApplicationsState: 'open', speakerApplicationsUrl: 'https://example.com/apply', speakerApplicationsDeadline: 'January 15, 2027' }),
-    ).toBe('Speaker applications are open. The deadline is January 15, 2027. Apply here: https://example.com/apply');
+    ).toBe('Speaker applications are open. The deadline is January 15, 2027. Apply here: https://example.com/apply.');
+    // The full stop after the address is not part of the link.
+    expect(faqSegments('Apply here: https://example.com/apply. Next.').find((seg) => seg.kind === 'web')).toEqual({
+      kind: 'web',
+      href: 'https://example.com/apply',
+      label: 'example.com/apply',
+    });
     expect(applicationsStatusText({ ...today, speakerApplicationsState: 'closed', speakerApplicationsUrl: 'https://example.com/apply' })).toBe(
       'Speaker applications for this event are closed.',
     );

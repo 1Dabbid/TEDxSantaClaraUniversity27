@@ -62,7 +62,7 @@ export function applicationsStatusText(
   if (s.speakerApplicationsState === 'closed') return 'Speaker applications for this event are closed.';
   if (s.speakerApplicationsState === 'open' && s.speakerApplicationsUrl) {
     const deadline = sentence(s.speakerApplicationsDeadline);
-    return `Speaker applications are open. ${deadline ? `The deadline is ${deadline}. ` : ''}Apply here: ${s.speakerApplicationsUrl}`;
+    return `Speaker applications are open. ${deadline ? `The deadline is ${deadline}. ` : ''}Apply here: ${s.speakerApplicationsUrl}.`;
   }
   return 'Formal speaker applications are not open yet.';
 }
