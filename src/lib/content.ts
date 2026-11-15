@@ -655,8 +655,18 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
   const known = [...FAQ_PLACEHOLDERS, ...FAQ_ONLY_PLACEHOLDERS].map((n) => `{${n}}`).join(', ');
   /** A placeholder whose field is blank leaves a gap (or a stand-in) in the sentence: say so. */
   const blanks: [name: string, blank: boolean, where: string, effect: string][] = [
-    ['interestUrl', !s.interestUrl, 'Tickets & applications › Interest form link', 'the answer is shown without the link'],
-    ['contactEmail', !s.contactEmail, 'Contact, newsletter & socials › Contact email', 'the answer is shown without the address'],
+    [
+      'interestUrl',
+      !s.interestUrl,
+      'Tickets & applications › Interest form link',
+      'there is no form to send visitors to: the whole sentence that uses it is left out, and what remains of the answer may read wrongly or have a gap',
+    ],
+    [
+      'contactEmail',
+      !s.contactEmail,
+      'Contact, newsletter & socials › Contact email',
+      'the answer is shown without the address: the words around it are trimmed, and the sentence may read wrongly or have a gap',
+    ],
     ['doorsTime', !s.doorsTime, 'Event basics › Doors open at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
     ['talksTime', !s.talksTime, 'Event basics › Talks start at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
     ['endTime', !s.endTime, 'Event basics › Event ends at', `the answer says “${TIME_TO_BE_ANNOUNCED}”`],
@@ -665,13 +675,13 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
     const where = `Questions › item ${n}`;
     for (const [name, blank, field, effect] of blanks) {
       if (blank && text.includes(`{${name}}`)) {
-        contentWarning('content/faq.yaml', where, `{${name}} is used but ${field} is empty, so ${effect}. Reword the answer or fill in the field.`);
+        contentWarning('content/faq.yaml', where, `{${name}} is used but ${field} is empty, so ${effect}. Read the answer on the page, then reword it or fill in the field.`);
       }
     }
     for (const hint of staleFaqHints(text, s)) {
       contentWarning('content/faq.yaml', where, `${hint}.`);
     }
-    // A blank address or link takes the words leading up to it along ("at", ":"), so no sentence dangles.
+    // A blank address or link takes the words that depend on it along (see dropBlankPlaceholders).
     const r = fillPlaceholders(dropBlankPlaceholders(text, [...(s.contactEmail ? [] : ['contactEmail']), ...(s.interestUrl ? [] : ['interestUrl'])]), values);
     for (const u of r.unknown) {
       contentWarning('content/faq.yaml', where, `${u} is not a known placeholder (use ${known}); it is shown as typed.`);
@@ -680,7 +690,14 @@ export const getFaq = cache(async (): Promise<FaqItem[]> => {
   };
   return (f?.items ?? [])
     .filter((i) => str(i.question) && str(i.answer))
-    .map((i, n) => ({ question: fill(i.question, n + 1), answer: fill(i.answer, n + 1) }));
+    .map((i, n) => ({ question: fill(i.question, n + 1), answer: fill(i.answer, n + 1), n: n + 1 }))
+    .filter(({ question, answer, n }) => {
+      if (question && answer) return true;
+      // Every sentence depended on a blank field: a question with no answer is not shown.
+      contentWarning('content/faq.yaml', `Questions › item ${n}`, 'nothing is left of it once the blank fields are taken out, so the question is not shown.');
+      return false;
+    })
+    .map(({ question, answer }) => ({ question, answer }));
 });
 
 /** A class year such as 2029, or null (hidden) with a warning when it is not a plausible year. */

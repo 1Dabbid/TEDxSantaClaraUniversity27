@@ -5,7 +5,7 @@ import { Arrow } from '@/components/print/Print';
 import { navItems, navVisibility } from '@/components/nav';
 import type { Settings } from '@/lib/content';
 import { seatsLabel } from '@/lib/site';
-import { ticketCta, ticketSaleLine } from '@/lib/tickets';
+import { ticketCta, ticketSaleLine, ticketsBuyable } from '@/lib/tickets';
 
 export type Action = { label: string; href: string; ariaLabel?: string };
 
@@ -93,11 +93,16 @@ export async function ClosingBand({
   );
 }
 
-/** The closing heading of the ticket band, from the ticket state (same words on every page that ends on Tickets). */
+/**
+ * The closing heading of the ticket band, from the ticket state (same words on
+ * every page that ends on Tickets). "On sale" counts once there is somewhere to
+ * buy (ticketsBuyable): the ticket link, or the checkout embedded in the Tickets
+ * section, which is where the button below leads then.
+ */
 function ticketHeading(s: Settings): string {
   switch (s.ticketState) {
     case 'on-sale':
-      return s.ticketUrl ? 'Get your seat.' : `${seatsLabel(s.capacity)}. Tickets open soon.`;
+      return ticketsBuyable(s) ? 'Get your seat.' : `${seatsLabel(s.capacity)}. Tickets open soon.`;
     case 'sold-out':
       return 'Every seat is taken.';
     case 'closed':

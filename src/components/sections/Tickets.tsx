@@ -1,7 +1,11 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { Settings, TicketState } from "@/lib/content";
 import { getFaq } from "@/lib/content";
-import { ticketSaleLine } from "@/lib/tickets";
+import {
+  TICKET_CHECKOUT_ID,
+  ticketLinkPending,
+  ticketSaleLine,
+} from "@/lib/tickets";
 import { Button } from "@/components/ui/Button";
 import { WatchLive } from "@/components/ui/WatchLive";
 import { SectionLabel } from "@/components/ui/SectionLabel";
@@ -43,6 +47,18 @@ const COPY: Record<TicketState, Copy> = {
     subtitle: "Thank you.",
     body: "To everyone who will be in the room: see you there. Talks are recorded and submitted for publication on the TEDx Talks YouTube channel.",
   },
+};
+
+/**
+ * "On sale" with no ticket link and no checkout embed (ticketLinkPending): there
+ * is nothing to buy from yet, so the section does not say "on sale". It says what
+ * the FAQ's {ticketStatus} says in that state; "Ticket link going live shortly."
+ * is printed once, beside the mailing-list button.
+ */
+const LINK_PENDING: Copy = {
+  title: "Almost on sale.",
+  subtitle: "The list hears first.",
+  body: "Tickets are about to go on sale. Join the mailing list and you will hear the moment they do.",
 };
 
 /**
@@ -129,12 +145,32 @@ function TicketAction({
 }) {
   switch (settings.ticketState) {
     case "on-sale":
-      return settings.ticketUrl ? (
-        <Button href={settings.ticketUrl} size="lg">
-          Get tickets
-        </Button>
-      ) : (
-        <p className="fine-print text-white">Ticket link going live shortly.</p>
+      if (settings.ticketUrl) {
+        return (
+          <Button href={settings.ticketUrl} size="lg">
+            Get tickets
+          </Button>
+        );
+      }
+      // Only the checkout embedded further down this section: the button leads to it.
+      if (settings.ticketEmbedUrl) {
+        return (
+          <Button href={`#${TICKET_CHECKOUT_ID}`} size="lg">
+            Go to checkout
+          </Button>
+        );
+      }
+      // Nothing to buy from yet: the mailing list, and the plain reason.
+      return (
+        <>
+          <NewsletterLink
+            settings={settings}
+            label="Get ticket news by email"
+          />
+          <p className="fine-print text-white">
+            Ticket link going live shortly.
+          </p>
+        </>
       );
     case "coming-soon":
       return (
@@ -156,7 +192,7 @@ function TicketAction({
 /** Lazily loaded, sandboxed checkout. The fixed-height frame reserves space so nothing shifts on load. */
 function TicketEmbed({ src, eventName }: { src: string; eventName: string }) {
   return (
-    <figure className="mt-16 sm:mt-24">
+    <figure id={TICKET_CHECKOUT_ID} className="mt-16 sm:mt-24">
       <figcaption className="flex flex-wrap items-baseline justify-between gap-3 border-t border-white/15 pt-4">
         <span className="fine-print text-white">Checkout</span>
         <span className="fine-print text-mute">
@@ -194,7 +230,11 @@ export async function Tickets({ settings }: { settings: Settings }) {
   const faq = await getFaq();
   const showFaq = settings.sections.showFaq && faq.length > 0;
   const state = settings.ticketState;
-  const copy = COPY[state];
+  const linkPending = ticketLinkPending(settings);
+  const copy = linkPending ? LINK_PENDING : COPY[state];
+  // The register marks what a visitor can do today: until there is somewhere to
+  // buy, tickets are still "Coming soon", whatever the status field says.
+  const shownState: TicketState = linkPending ? "coming-soon" : state;
   // Coming soon with an expected month: say when, then the list.
   const saleLine = ticketSaleLine(settings);
   const body = saleLine
@@ -235,7 +275,7 @@ export async function Tickets({ settings }: { settings: Settings }) {
             <StatusRegister
               label="Ticket status"
               options={TICKET_OPTIONS}
-              value={state}
+              value={shownState}
             />
           </div>
 

@@ -6,9 +6,11 @@ import { publishedSpeakers } from './helpers';
  * such as Tickets on the home page, and the page's own link in the header, the
  * footer and the menu. They must work whatever query string the address carries
  * (shared and campaign links arrive as /?utm_source=… or /?fbclid=…), with motion
- * on and off, with a mouse and on a phone. Also here: the reader's place when
- * motion is switched off away from a deep link, the scroll cue, the speaker-page
- * breadcrumb with a mouse, and the boot script's ?perf rule.
+ * on and off, with a mouse and on a phone. Back and Forward must move the page,
+ * not only the address, and a link back to the top takes the #section out of the
+ * address. Also here: the reader's place when motion is switched off or back on
+ * away from a deep link, the scroll cue, the speaker-page breadcrumb with a
+ * mouse, and the boot script's ?perf rule.
  */
 
 const QUERY = '?utm_source=x';
@@ -80,10 +82,63 @@ for (const setup of SETUPS) {
       const page = await open(browser, setup, `/${QUERY}`);
       await press(setup, page.locator('header a[href="/#tickets"]'));
       await expectLanded(page, 'tickets', `/${QUERY}#tickets`);
-      // Back returns to where the reader was, on the same address.
+      // Back returns to where the reader was, on the same address: the page moves too.
       await page.goBack();
       await expect.poll(() => address(page)).toBe(`/${QUERY}`);
+      await expect.poll(() => scrollY(page), { timeout: 9000 }).toBe(0);
+      // And Forward goes to the section again.
+      await page.goForward();
+      await expect.poll(() => address(page)).toBe(`/${QUERY}#tickets`);
+      await expect.poll(() => offBy(page, 'tickets'), { timeout: 9000 }).toBeLessThanOrEqual(2);
       await page.context().close();
+    });
+
+    test('Back and Forward move the page between sections and the top (no query string)', async ({ browser }) => {
+      const page = await open(browser, setup, '/');
+      await press(setup, page.locator('header a[href="/#tickets"]'));
+      await expectLanded(page, 'tickets', '/#tickets');
+      // A second section, from a link inside the first (brought to the middle of the screen first).
+      const faq = page.locator('#tickets a[href="#faq"]').first();
+      await faq.evaluate((a) => a.scrollIntoView({ block: 'center', behavior: 'instant' as ScrollBehavior }));
+      await page.waitForTimeout(1200);
+      await press(setup, faq);
+      await expectLanded(page, 'faq', '/#faq');
+
+      // Back between two sections: the page is in the Tickets section again, well away from the FAQ.
+      await page.goBack();
+      await expect.poll(() => address(page)).toBe('/#tickets');
+      await expect.poll(() => offBy(page, 'faq'), { timeout: 9000 }).toBeGreaterThan(300);
+      expect(await scrollY(page)).toBeGreaterThan(1000);
+      // Back to the address without a section: the top of the page.
+      await page.goBack();
+      await expect.poll(() => address(page)).toBe('/');
+      await expect.poll(() => scrollY(page), { timeout: 9000 }).toBe(0);
+      // Forward twice: Tickets, then the FAQ.
+      await page.goForward();
+      await expect.poll(() => address(page)).toBe('/#tickets');
+      await expect.poll(() => scrollY(page), { timeout: 9000 }).toBeGreaterThan(1000);
+      await page.goForward();
+      await expect.poll(() => address(page)).toBe('/#faq');
+      await expect.poll(() => offBy(page, 'faq'), { timeout: 9000 }).toBeLessThanOrEqual(2);
+      await page.context().close();
+    });
+
+    test('the logo goes to the top and takes the #section out of the address; Back returns to the section', async ({ browser }) => {
+      for (const query of ['', QUERY]) {
+        const page = await open(browser, setup, `/${query}`);
+        await press(setup, page.locator('header a[href="/#tickets"]'));
+        await expectLanded(page, 'tickets', `/${query}#tickets`);
+        await press(setup, page.locator('header a[href="/"]').first());
+        // A copied or shared address must not open at a section the page is not showing.
+        await expectTop(page, `/${query}`);
+        await page.goBack();
+        await expect.poll(() => address(page)).toBe(`/${query}#tickets`);
+        await expect.poll(() => scrollY(page), { timeout: 9000 }).toBeGreaterThan(1000);
+        await page.goBack();
+        await expect.poll(() => address(page)).toBe(`/${query}`);
+        await expect.poll(() => scrollY(page), { timeout: 9000 }).toBe(0);
+        await page.context().close();
+      }
     });
 
     test('the hero Tickets button does the same, also with an fbclid', async ({ browser }) => {
@@ -105,8 +160,8 @@ for (const setup of SETUPS) {
       await logo.scrollIntoViewIfNeeded();
       await page.waitForTimeout(500);
       await press(setup, logo);
-      // The address is left alone by a link back to the top.
-      await expectTop(page, `/${QUERY}#tickets`);
+      // A link back to the top takes the section out of the address and keeps the query.
+      await expectTop(page, `/${QUERY}`);
       await page.context().close();
     });
 
@@ -185,6 +240,67 @@ test.describe('switching motion off away from a deep link', () => {
       await page.waitForTimeout(1500);
       await page.locator('footer [data-motion-toggle]').evaluate((el) => (el as HTMLElement).click());
       await expect(page.locator('html')).toHaveClass(NO_MOTION);
+      await page.waitForTimeout(3500);
+      expect(await offBy(page, 'tickets')).toBeLessThanOrEqual(2);
+      await page.context().close();
+    });
+  }
+});
+
+test.describe('switching motion back on away from a deep link', () => {
+  // Reduce motion was switched on in an earlier visit (the footer switch remembers it).
+  async function openReduced(browser: Browser, setup: Setup): Promise<Page> {
+    const ctx = await browser.newContext({ viewport: setup.viewport, hasTouch: setup.touch, isMobile: setup.touch, reducedMotion: 'no-preference' });
+    await ctx.addInitScript(() => {
+      try {
+        if (!sessionStorage.getItem('fp-test-seeded')) {
+          localStorage.setItem('fp:reduce-motion', '1');
+          sessionStorage.setItem('fp-test-seeded', '1');
+        }
+      } catch {
+        /* about:blank */
+      }
+    });
+    const page = await ctx.newPage();
+    await page.goto('/#tickets');
+    await expect(page.locator('html')).toHaveClass(NO_MOTION);
+    await expect.poll(() => offBy(page, 'tickets'), { timeout: 9000 }).toBeLessThanOrEqual(2);
+    await page.waitForTimeout(1500);
+    return page;
+  }
+
+  for (const setup of SETUPS.filter((s) => s.reducedMotion === 'no-preference')) {
+    test(`the reader stays at the switch, not thrown back to the deep link (${setup.name})`, async ({ browser }) => {
+      const page = await openReduced(browser, setup);
+      // Moved and activated without any wheel, touch, key or mouse event (a screen reader, voice control).
+      const toggle = page.locator('footer [data-motion-toggle]');
+      await toggle.evaluate((el) => el.scrollIntoView({ block: 'center' }));
+      await page.waitForTimeout(600);
+      expect(await offBy(page, 'tickets')).toBeGreaterThan(1000);
+      await toggle.evaluate((el) => (el as HTMLElement).click());
+      await expect(page.locator('html')).toHaveClass(MOTION);
+      await expect(page.locator('html')).toHaveAttribute('data-smooth-scroll', 'true');
+      await page.waitForTimeout(3500);
+      await expect(toggle).toBeInViewport();
+      expect(await offBy(page, 'tickets')).toBeGreaterThan(1000);
+      await page.context().close();
+    });
+
+    test(`a little way past the deep link, the reader is not put back on it (${setup.name})`, async ({ browser }) => {
+      const page = await openReduced(browser, setup);
+      await page.evaluate(() => window.scrollBy(0, 600));
+      await page.waitForTimeout(300);
+      await page.locator('footer [data-motion-toggle]').evaluate((el) => (el as HTMLElement).click());
+      await expect(page.locator('html')).toHaveClass(MOTION);
+      await page.waitForTimeout(3500);
+      expect(await offBy(page, 'tickets')).toBeGreaterThan(100);
+      await page.context().close();
+    });
+
+    test(`still on the deep link, the reader stays on its section (${setup.name})`, async ({ browser }) => {
+      const page = await openReduced(browser, setup);
+      await page.locator('footer [data-motion-toggle]').evaluate((el) => (el as HTMLElement).click());
+      await expect(page.locator('html')).toHaveClass(MOTION);
       await page.waitForTimeout(3500);
       expect(await offBy(page, 'tickets')).toBeLessThanOrEqual(2);
       await page.context().close();

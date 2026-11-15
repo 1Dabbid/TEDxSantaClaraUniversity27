@@ -1,4 +1,4 @@
-import { findHashTarget } from '../anchor';
+import { findHashTarget, mayRelandOn } from '../anchor';
 import { gsap } from '../gsap';
 import { focusTarget, followInPage, internalLink, plainClick, samePageLink, scrollToHash, scrollTop } from '../inPage';
 import { lenisRef } from '../lenisRef';
@@ -16,8 +16,9 @@ import { lenisRef } from '../lenisRef';
  *   focus moves to #main.
  * - Never intercepted: modified clicks, non-primary buttons, target/download
  *   links, external origins, /keystatic and /api, `data-no-transition`.
- * - Back/forward (popstate) is left to the router; the scroll position the
- *   visitor left a page at is restored.
+ * - Back/forward (popstate) to another page is left to the router; the scroll
+ *   position the visitor left that page at is restored. Between entries of the
+ *   same page (section links, the link back to the top) the page is moved here.
  */
 
 type Push = (href: string) => void;
@@ -205,10 +206,17 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
   // Cold load on a deep link (/#tickets): the browser jumps before web fonts, the
   // Theme runway and section scripts have settled, so the target drifts. Re-land
   // on it once layout is final, unless the visitor has already moved on.
+  //
+  // The engine also starts later in a visit (Reduce motion switched back off, a
+  // better connection). The reader may be anywhere by then, so the same test as
+  // holdPlace applies (mayRelandOn in ../anchor.ts): only while the page is still
+  // on the hash target, and never after a scroll input. Otherwise the place
+  // holdPlace kept across the switch stands.
   let cancelSettle = () => {};
   const settleColdHash = () => {
     const hash = location.hash;
-    if (!hash || !findHashTarget(hash)) return;
+    const landed = hash ? findHashTarget(hash) : null;
+    if (!landed || !mayRelandOn(landed)) return;
     let userMoved = false;
     let live = true;
     const timers: ReturnType<typeof setTimeout>[] = [];

@@ -1,5 +1,6 @@
 import type { Settings } from './content';
 import { normalizeLink } from './content-checks';
+import { ticketLinkPending } from './tickets';
 
 /**
  * FAQ answers as text: the placeholders that follow Tickets & speaker
@@ -38,15 +39,16 @@ const sentence = (t: string) => t.trim().replace(/[.\s]+$/, '');
  * {ticketStatus}: the answer to "Are tickets on sale?", from Ticket status, the
  * ticket link and Expected on-sale month. The same facts as the Tickets section,
  * as sentences. "On sale" with neither a ticket link nor an embedded checkout
- * gives visitors nothing to buy from (the Tickets section says "Ticket link
- * going live shortly."), so the answer says that too instead of "on sale now".
+ * gives visitors nothing to buy from (ticketLinkPending, lib/tickets.ts: the
+ * Tickets section says "Ticket link going live shortly."), so the answer says
+ * that too instead of "on sale now".
  */
 export function ticketStatusText(s: Pick<Settings, 'ticketState' | 'ticketUrl' | 'ticketEmbedUrl' | 'ticketSaleExpected'>): string {
   switch (s.ticketState) {
     case 'on-sale':
-      return s.ticketUrl || s.ticketEmbedUrl
-        ? 'Yes, tickets are on sale now. Use the Tickets button at the top of any page.'
-        : 'Almost. Tickets are about to go on sale: the ticket link is going live shortly. Join the mailing list to hear the moment it does.';
+      return ticketLinkPending(s)
+        ? 'Almost. Tickets are about to go on sale: the ticket link is going live shortly. Join the mailing list to hear the moment it does.'
+        : 'Yes, tickets are on sale now. Use the Tickets button at the top of any page.';
     case 'sold-out':
       return 'Tickets are sold out. Join the mailing list in case seats are released.';
     case 'closed':
@@ -105,18 +107,65 @@ export function faqSettingValues(s: StatusSettings) {
   };
 }
 
+/** Placeholders that are filled with whole sentences of their own: the next sentence starts after them. */
+const SENTENCE_PLACEHOLDERS = String.raw`\{(?:ticketStatus|applicationsStatus|ticketPriceNote|timesNote)\}[ \t]*`;
+const SENTENCE_START = new RegExp(String.raw`[.!?]["”’)]*[ \t]+|${SENTENCE_PLACEHOLDERS}|\n+`, 'g');
+
+/** Where the sentence around text[from..to) starts and ends (its closing punctuation and the space after it included). */
+function sentenceAround(text: string, from: number, to: number): [start: number, end: number] {
+  let start = 0;
+  for (const m of text.slice(0, from).matchAll(SENTENCE_START)) start = (m.index ?? 0) + m[0].length;
+  const rest = /[.!?]["”’)]*(?=\s|$)[ \t]*|\n/.exec(text.slice(to));
+  const end = rest ? to + rest.index + (rest[0] === '\n' ? 0 : rest[0].length) : text.length;
+  return [start, end];
+}
+
+/** A sentence this short after its address has gone ("Write.", "Our address is.") says nothing: it goes too. */
+const TOO_SHORT = 4;
+
 /**
  * {contactEmail} and {interestUrl} are '' while their field is blank. Before the
- * placeholders are filled, this takes the words that lead up to a blank one out
- * with it, so no sentence is left dangling:
- * "contact the team at {contactEmail} and we will" becomes "contact the team and we will",
- * "use the interest form: {interestUrl}." becomes "use the interest form."
+ * placeholders are filled, this takes a blank one out together with the words
+ * that only made sense with it, so the page never shows a gap, "()" or "[words]()".
  * `blank` lists the placeholder names whose field is empty.
+ *
+ * - {interestUrl}: the whole sentence goes. A sentence that names the form's
+ *   address is an instruction to use the form, and "use the interest form."
+ *   with no link anywhere cannot be followed.
+ *   "{applicationsStatus} To register your interest, use the form: {interestUrl}."
+ *   becomes "{applicationsStatus}".
+ * - {contactEmail}: the address goes with the "at", "to" or ":" before it:
+ *   "contact the team at {contactEmail} and we will" becomes "contact the team and we will".
+ *   When the address ends its sentence and fewer than four words are left
+ *   ("Write to {contactEmail}."), the sentence goes.
+ * - {contactEmail} in brackets, "({contactEmail})", goes with its brackets;
+ *   "[words]({contactEmail})" keeps the words, unlinked.
+ *
+ * Other phrasings ("Rely on {contactEmail} for answers") cannot be repaired here
+ * and may read wrongly; the content warning for a blank field says so.
  */
 export function dropBlankPlaceholders(text: string, blank: readonly string[]): string {
   let out = text;
   for (const name of blank) {
-    out = out.replace(new RegExp(String.raw`(?:[ \t]+(?:at|to|via|on|by)|[ \t]*:)?[ \t]*\{${name}\}`, 'g'), '');
+    const ph = String.raw`\{${name}\}`;
+    const wholeSentence = name === 'interestUrl';
+    if (!wholeSentence) {
+      out = out
+        .replace(new RegExp(String.raw`\[([^\[\]\n]+)\]\(${ph}\)`, 'g'), '$1')
+        .replace(new RegExp(String.raw`[ \t]*\([ \t]*${ph}[ \t]*\)`, 'g'), '');
+    }
+    const use = new RegExp(String.raw`(?:[ \t]+(?:at|to)|[ \t]*:)?[ \t]*${ph}`);
+    for (let m = use.exec(out); m; m = use.exec(out)) {
+      const from = m.index;
+      const to = from + m[0].length;
+      const [start, end] = sentenceAround(out, from, to);
+      const endsSentence = /^[.!?]?["”’)]*\s*$/.test(out.slice(to, end));
+      const wordsLeft = out.slice(start, from).trim().split(/\s+/).filter(Boolean).length;
+      out =
+        wholeSentence || (endsSentence && wordsLeft < TOO_SHORT)
+          ? out.slice(0, start) + out.slice(end)
+          : out.slice(0, from) + out.slice(to);
+    }
   }
   return out;
 }

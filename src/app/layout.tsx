@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import type { ReactNode } from 'react';
 import { getSettings } from '@/lib/content';
+import { shareImageMeta } from '@/lib/page-meta';
 import { isIndexable, SITE_NAME, SITE_URL, siteDescription, venueLine } from '@/lib/site';
 
 // Inter variable, self-hosted from @fontsource-variable/inter (no network at build or runtime).
@@ -16,6 +17,10 @@ export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
   const title = `${SITE_NAME}: ${s.themeName} · ${s.dateShort}`;
   const description = siteDescription(s);
+  // Named here, not left to the opengraph-image.tsx file convention: its automatic
+  // address only changes when that file does, not when the theme, date or place
+  // drawn on the card do. This one follows the card, and is the same on every page.
+  const image = shareImageMeta(s);
   return {
     metadataBase: new URL(SITE_URL),
     // Every title leads with the full event name.
@@ -30,8 +35,9 @@ export async function generateMetadata(): Promise<Metadata> {
       description,
       url: '/',
       locale: 'en_US',
+      images: [image],
     },
-    twitter: { card: 'summary_large_image', title, description },
+    twitter: { card: 'summary_large_image', title, description, images: [image] },
     other: {
       'twitter:label1': 'Date',
       'twitter:data1': s.dateLong,

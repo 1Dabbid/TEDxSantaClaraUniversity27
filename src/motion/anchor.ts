@@ -98,6 +98,22 @@ function stillAt(el: HTMLElement): boolean {
   return atEnd && top >= pad;
 }
 
+// Has the layout been switched (holdPlace) since the page loaded?
+let switched = false;
+
+/**
+ * May the scroll engine, as it starts, put the page (back) on the deep link's
+ * target `el`? Never once the visitor has scrolled by hand. On a cold load, yes:
+ * the browser's own jump drifts while fonts and section scripts settle. After a
+ * layout switch (Reduce motion turned back off, a first visit that turned motion
+ * on late) the reader may be anywhere, so only while the page is still on the
+ * target: the same test holdPlace applies, whose anchor stands otherwise.
+ */
+export function mayRelandOn(el: HTMLElement): boolean {
+  if (userMoved) return false;
+  return !switched || stillAt(el);
+}
+
 /**
  * Call right before a layout change made outside the scroll engine (`html.motion`
  * toggled); call the returned function right after it. The page then stays where
@@ -107,6 +123,7 @@ function stillAt(el: HTMLElement): boolean {
  * at the first scroll input. Returns a no-op at the top of the page.
  */
 export function holdPlace(): () => void {
+  switched = true;
   const hash = userMoved ? '' : window.location.hash;
   const landed = hash ? findHashTarget(hash) : null;
   const target = landed && stillAt(landed) ? landed : null;

@@ -13,6 +13,7 @@ import {
   tidySpaces,
   TIME_TO_BE_ANNOUNCED,
 } from '../../src/lib/faq-text';
+import { ticketCta, ticketLinkPending, ticketsBuyable } from '../../src/lib/tickets';
 import { contentValue, topicRoutes } from './helpers';
 
 /**
@@ -66,6 +67,41 @@ test.describe('FAQ placeholders that follow the settings', () => {
     const section = readFileSync(join(process.cwd(), 'src/components/sections/Tickets.tsx'), 'utf8');
     expect(section).toContain('Ticket link going live shortly.');
     expect(noLink.toLowerCase()).toContain('ticket link is going live shortly');
+  });
+
+  test('“On sale” means on sale only once there is somewhere to buy: one test for the whole site', () => {
+    const none = { ticketState: 'on-sale' as const, ticketUrl: '', ticketEmbedUrl: '' };
+    const link = { ...none, ticketUrl: 'https://tickets.example.com/e' };
+    const embed = { ...none, ticketEmbedUrl: 'https://tickets.example.com/embed' };
+    expect(ticketLinkPending(none)).toBe(true);
+    expect(ticketsBuyable(none)).toBe(false);
+    for (const s of [link, embed]) {
+      expect(ticketsBuyable(s)).toBe(true);
+      expect(ticketLinkPending(s)).toBe(false);
+    }
+    // Only "On sale" can be waiting for its link.
+    for (const ticketState of ['coming-soon', 'sold-out', 'closed'] as const) {
+      expect(ticketLinkPending({ ...none, ticketState })).toBe(false);
+      expect(ticketsBuyable({ ...link, ticketState })).toBe(false);
+    }
+    // The Tickets button is announced the same way, and only leaves the site for a ticket link.
+    expect(ticketCta(none).ariaLabel).toBe('Tickets, on sale shortly');
+    expect(ticketCta(none).href).toBe('/#tickets');
+    expect(ticketCta(embed).ariaLabel).toBe('Tickets, on sale now');
+    expect(ticketCta(embed).href).toBe('/#tickets');
+    expect(ticketCta(link).ariaLabel).toBe('Tickets, on sale now (opens in a new tab)');
+    expect(ticketCta(link).href).toBe(link.ticketUrl);
+    // Every place that says "on sale" asks the shared test, never the status field alone.
+    const src = (file: string) => readFileSync(join(process.cwd(), file), 'utf8');
+    expect(src('src/lib/faq-text.ts')).toContain('ticketLinkPending(s)');
+    expect(src('src/lib/jsonld.ts')).toContain('ticketLinkPending(s)');
+    expect(src('src/components/sections/Tickets.tsx')).toContain('ticketLinkPending(settings)');
+    expect(src('src/components/pages/ClosingBand.tsx')).toContain('ticketsBuyable(s)');
+    // The section's "going live shortly" line is the last resort: not printed above an embedded checkout.
+    const section = src('src/components/sections/Tickets.tsx');
+    expect(section.indexOf('if (settings.ticketEmbedUrl)')).toBeGreaterThan(-1);
+    expect(section.indexOf('if (settings.ticketEmbedUrl)')).toBeLessThan(section.lastIndexOf('Ticket link going live shortly.'));
+    expect(section).toContain('"Almost on sale."');
   });
 
   test('{applicationsStatus} says what Speaker applications says', () => {
@@ -148,12 +184,30 @@ test.describe('FAQ placeholders that follow the settings', () => {
     expect(fill('Line one. {timesNote}\n\nLine two.', { ...today, timesNote: '' })).toBe('Line one.\n\nLine two.');
   });
 
-  test('a blank contact email or interest link takes the words before it along', () => {
+  test('a blank contact email or interest link takes the words that depend on it along', () => {
     const blank = ['contactEmail', 'interestUrl'];
-    expect(dropBlankPlaceholders('contact the team at {contactEmail} and we will do our best.', blank)).toBe('contact the team and we will do our best.');
-    expect(dropBlankPlaceholders('Write to {contactEmail}.', blank)).toBe('Write.');
-    expect(dropBlankPlaceholders('use its interest form: {interestUrl}', blank)).toBe('use its interest form');
-    expect(dropBlankPlaceholders('Fill in the form: {interestUrl}. It is one form.', blank)).toBe('Fill in the form. It is one form.');
+    const drop = (text: string) => tidySpaces(dropBlankPlaceholders(text, blank));
+    expect(drop('contact the team at {contactEmail} and we will do our best.')).toBe('contact the team and we will do our best.');
+    expect(drop('If you have questions, contact the team at {contactEmail}.')).toBe('If you have questions, contact the team.');
+    // Too little is left to be a sentence: it goes.
+    expect(drop('Write to {contactEmail}.')).toBe('');
+    expect(drop('Questions? Email {contactEmail}.')).toBe('Questions?');
+    expect(drop('We reply within a week. Our address is {contactEmail}.')).toBe('We reply within a week.');
+    // Never "()" or "[words]()" on the page.
+    expect(drop('Write to us ({contactEmail}) any time.')).toBe('Write to us any time.');
+    expect(drop('You can [email the team]({contactEmail}) any time.')).toBe('You can email the team any time.');
+    // No form to send visitors to: the whole sentence that points at it goes, not just the link.
+    expect(drop('Applications are not open yet. To register your interest, use the form: {interestUrl}.')).toBe('Applications are not open yet.');
+    expect(drop('Fill in the form: {interestUrl}. Seats are limited.')).toBe('Seats are limited.');
+    expect(drop('Use [the interest form]({interestUrl}) to sign up. Seats are limited.')).toBe('Seats are limited.');
+    expect(drop('To volunteer, go to {interestUrl} and sign up. Thank you!')).toBe('Thank you!');
+    expect(drop('Seats are limited. Sign up ({interestUrl}).\n\nSee you there.')).toBe('Seats are limited.\n\nSee you there.');
+    // A placeholder that stands for whole sentences is not part of the sentence after it.
+    expect(drop('{applicationsStatus} To register, use the form: {interestUrl}.')).toBe('{applicationsStatus}');
+    expect(drop('{ticketStatus} {ticketPriceNote} Questions go to {contactEmail}.')).toBe('{ticketStatus} {ticketPriceNote}');
+    for (const text of ['Write to us ({contactEmail}) any time.', 'Use [the form]({interestUrl}) now. Bye.', 'Email [us]({contactEmail}).', 'Form ({interestUrl}).']) {
+      expect(drop(text), text).not.toMatch(/\(\)|\]\(|[{}]/);
+    }
     // A filled-in field is not in the list: the sentence is untouched.
     expect(dropBlankPlaceholders('contact the team at {contactEmail} and we will', ['interestUrl'])).toBe('contact the team at {contactEmail} and we will');
     // Every answer in content/faq.yaml reads as a whole sentence with both fields blank.
@@ -163,8 +217,22 @@ test.describe('FAQ placeholders that follow the settings', () => {
       const text = tidySpaces(
         fillPlaceholders(dropBlankPlaceholders(answer, blank), { ...base, ...faqSettingValues({ ...today, contactEmail: '', interestUrl: '' }) }).text,
       );
-      expect(text, answer).not.toMatch(/\b(?:at|to|via) (?:and|or|but)\b|\b(?:at|to|via)[.,;]|:\s*(?:\.|$)| [.,;]| {2}|[{}]/);
+      expect(text, answer).not.toMatch(/\b(?:at|to|via) (?:and|or|but)\b|\b(?:at|to|via)[.,;]|:\s*(?:\.|$)| [.,;]| {2}|[{}]|\(\)|\]\(\)/);
+      // With no interest form, no answer tells visitors to use one, and none is left empty or starting mid-thought.
+      expect(text, answer).not.toMatch(/interest form/i);
+      expect(text.length, answer).toBeGreaterThan(20);
+      expect(text, answer).toMatch(/^[A-Z“].*[.!?]$/s);
     }
+    // Today's two answers that use the form, with the link blank.
+    const blankFill = (answer: string) =>
+      tidySpaces(fillPlaceholders(dropBlankPlaceholders(answer, blank), { ...base, ...faqSettingValues({ ...today, contactEmail: '', interestUrl: '' }) }).text);
+    const speak = answers.find((a) => a.includes('{applicationsStatus}'));
+    expect(speak).toBe('{applicationsStatus} To register your interest in giving a talk, use the club’s interest form: {interestUrl}.');
+    expect(blankFill(speak ?? '')).toBe('Formal speaker applications are not open yet.');
+    const involved = answers.find((a) => a.startsWith('There are three ways to take part'));
+    expect(blankFill(involved ?? '')).toBe(
+      'There are three ways to take part: helping to organize TEDxSantaClaraUniversity, joining the club’s contact list, and registering your interest in speaking.',
+    );
   });
 
   test('facts typed by hand are reported, so they cannot go stale unnoticed', () => {

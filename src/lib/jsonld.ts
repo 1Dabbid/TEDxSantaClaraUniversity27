@@ -2,7 +2,8 @@ import type { FaqItem, Settings, Speaker } from './content';
 import { paragraphs } from './content';
 import { eventDateTimes, zonedDateTime } from './dates';
 import { faqPlainText } from './faq-text';
-import { CLUB_URL, SITE_NAME, SITE_URL, venueLine } from './site';
+import { CLUB_URL, shareImagePath, SITE_NAME, SITE_URL, venueLine } from './site';
+import { ticketLinkPending } from './tickets';
 
 /** Stable node ids, so pages point at one Event and one Organization instead of repeating them. */
 export const EVENT_ID = `${SITE_URL}/#event`;
@@ -67,10 +68,15 @@ function organizerJsonLd(s: Settings) {
 /**
  * The ticket offer, only once tickets are (or were) on sale: nothing while
  * "coming soon" or "closed", so search engines never see a price-less or
- * invented offer. Price, sale start and ticket link only when they are filled in.
+ * invented offer. Nothing either while the status is "On sale" with no ticket
+ * link and no checkout embed (ticketLinkPending): the site then says the link
+ * is going live shortly, and "in stock" with nowhere to buy would contradict it.
+ * Price and sale start only when they are filled in. The offer's address is the
+ * ticket link, or the Tickets section when the checkout is embedded there.
  */
 function offersJsonLd(s: Settings) {
-  if (s.ticketState !== 'on-sale' && s.ticketState !== 'sold-out') return {};
+  if ((s.ticketState !== 'on-sale' && s.ticketState !== 'sold-out') || ticketLinkPending(s)) return {};
+  const url = s.ticketUrl || (s.ticketState === 'on-sale' && s.ticketEmbedUrl ? `${SITE_URL}/#tickets` : '');
   const validFrom = s.ticketSaleStart ? zonedDateTime(s.ticketSaleStart, 0, 0) : null;
   return {
     offers: {
@@ -78,7 +84,7 @@ function offersJsonLd(s: Settings) {
       ...(s.ticketPrice !== null ? { price: s.ticketPrice, priceCurrency: 'USD' } : {}),
       availability: s.ticketState === 'on-sale' ? 'https://schema.org/InStock' : 'https://schema.org/SoldOut',
       ...(validFrom ? { validFrom } : {}),
-      ...(s.ticketUrl ? { url: s.ticketUrl } : {}),
+      ...(url ? { url } : {}),
     },
   };
 }
@@ -106,7 +112,8 @@ export function eventJsonLd(s: Settings, speakers: Speaker[]) {
     ...attendanceJsonLd(s),
     maximumAttendeeCapacity: s.capacity,
     url: SITE_URL,
-    image: [`${SITE_URL}/opengraph-image`],
+    // The same address as og:image on every page (shareImagePath).
+    image: [`${SITE_URL}${shareImagePath(s)}`],
     organizer: organizerJsonLd(s),
     ...offersJsonLd(s),
     ...(announced.length

@@ -46,7 +46,7 @@ All of these are in the admin; each field explains itself. See `docs/EDITING.md`
 - Partners page: heading, introduction, search description, first card ("2020 / The first since 2020." in 2027, about the club's return: rewrite it, it will not be true again). The theme footnote also mentions the return ("Returning to campus for the first time since 2020"), and so does the partner invitation text.
 - 404 page heading and text, footer sign-off ("End of document / Signed and dated"), page-change caption ("§ continuing…").
 
-The share image, page titles, search descriptions, structured data (JSON-LD), sitemap, the share image's alt text and the home-screen manifest are all built from Event basics, Venue and Theme copy: nothing else to edit for them.
+The share image, page titles, search descriptions, structured data (JSON-LD), sitemap, the share image's alt text and the home-screen manifest are all built from Event basics, Venue and Theme copy: nothing else to edit for them. The share image's address (`/opengraph-image?v=…`, the same on the home page and every topic page) changes by itself when the theme, date or place changes, so share platforms fetch the new card. If a developer redesigns the card itself (`src/app/opengraph-image.tsx`), they add one to `SHARE_IMAGE_DESIGN` in `src/lib/site.ts`; a test fails until they do.
 
 ## 4. Code: what still holds the 2027 theme
 
