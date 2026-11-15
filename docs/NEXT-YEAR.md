@@ -50,11 +50,11 @@ The share image, page titles, search descriptions, structured data (JSON-LD), si
 
 ## 4. Code: what still holds the 2027 theme
 
-Only these files. Each is optional except the first.
+Only these files. All of them are optional: the facts engraved on the 3D microphone (theme, date, venue, seats) now come from content, not from code.
 
 | File | What | Who |
 | --- | --- | --- |
-| `src/scene/engraving.ts` | The text etched on the 3D microphone: `THEME`, `DATE_LINE`, `VENUE_LINE`, `SEATS_LINE` (write them in capitals like the existing ones, e.g. `'SATURDAY · APRIL 15 · 2028'`), and the legal-voice `CLAUSES` and `FILLER` lines (rewrite them only if the new theme drops the "fine print" idea). Visible in the live 3D scene and in the still frames. Until the scene reads these from content (planned: see `engravingLines()` in `src/lib/site.ts`), edit them by hand, then do step 5. | anyone (one file, four strings) |
+| `src/scene/engraving.ts` | The text etched on the 3D microphone. The four fact lines (theme, date, venue, seats) are **read from content**: the site builds them from **Event basics** and **Venue & directions** (`engravingLines()` in `src/lib/site.ts`) and hands them to the scene, so the live engraving follows the admin with no code change. `THEME`, `DATE_LINE`, `VENUE_LINE` and `SEATS_LINE` in this file are only fallbacks, used if the scene is ever drawn without content; editing them changes nothing on the live site (update them only as a tidy-up). What is still code: the legal-voice `CLAUSES` and `FILLER` lines (rewrite them only if the new theme drops the "fine print" idea). **The still frames do not follow by themselves**: after changing the theme name, date, venue name or seat count in the admin, do step 5. | optional (the clauses); step 5 is not optional |
 | `src/app/icon.svg` | The site icon: a white "§" on black, the 2027 design motif. Keep it, or replace it with another outlined glyph (no TEDx logo or imitation of it), then do step 6. | designer |
 | `src/app/(site)/error.tsx`, `src/app/global-error.tsx` | "Error · Clause unreadable" on the rare crash pages (kept in code so they work even when content cannot load). | optional |
 | `src/lib/theme-copy.ts` | 2027's Theme copy wording, used only for a Theme copy field left blank. Optional: replace with the new wording so a blank field falls back to this year's lines. | optional |
@@ -64,9 +64,9 @@ Only these files. Each is optional except the first.
 
 What is **not** theme-specific and stays: the § clause numbers, mono captions and redaction bars (`src/components/print/Print.tsx`, `SectionLabel`, `clause()` in `src/lib/links.ts`), the `.fine-print` CSS class (a utility name for small uppercase labels, not visible text), the 3D scene itself (a microphone on a red rug in a room of 100 seats: `src/scene/Seats.tsx` always builds 100 seats, decoration that does not follow **Seat capacity**; at Tickets the first **Seat capacity** of them light up with the counter), the motion engine, accessibility work, quality tiers and the TEDx compliance rules above.
 
-## 5. Regenerate the still frames (after changing `src/scene/**`)
+## 5. Regenerate the still frames (after changing the theme name, date, venue name or seat count, or `src/scene/**`)
 
-Visitors without the live 3D scene see still frames from `public/stills/`; the hero and theme frames show the engraving, so after step 4's engraving edit they still show 2027's text until regenerated. It takes about 5 minutes per shot on a machine without a GPU (about 15 to 25 minutes for all five).
+Visitors without the live 3D scene (reduced motion, no WebGL, data saver, slower devices) see still frames from `public/stills/`. They are pictures of the scene, with the engraving baked in: the hero and theme frames show the theme name and the date. The live scene follows **Theme name**, **Event date**, **Venue (building) name** and **Seat capacity** by itself, but the pictures keep the old text until they are regenerated. So run this after step 2 (the new year's facts), after any later change to one of those four fields, and after any change under `src/scene/**`. It takes about 5 minutes per shot on a machine without a GPU (about 15 to 25 minutes for all five). The script photographs the build, so the content must already hold the new values when you run `npm run build`.
 
 ```bash
 npm run build
