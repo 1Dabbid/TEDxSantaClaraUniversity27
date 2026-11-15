@@ -25,12 +25,14 @@ export function measureVenueX(): number | undefined {
   // The right edge of the facts' text (the columns' boxes are wider than their lines) left of the plate.
   const colRight = textRight(facts, left);
   if (colRight < 0) return undefined;
-  // The microphone's head reaches about 1.2% of the width right of the stand line; seen from the
-  // crane over Venue its tail leans a little left, so where there is room the stand moves up to
-  // 0.3% of the width further from the text.
-  const hi = left - PANEL_AIR_PX - 0.012 * vw;
+  // Seen from the crane over Venue the stand and the head sit up to about 1.8% of the width right
+  // of the aim line, and the tail leans a little left, so where there is room the stand moves up to
+  // 0.5% of the width further from the text. Where there is not, it keeps nearer the facts' text
+  // than the plate: the plate stands beside it through the whole crane, while the facts' row only
+  // rises to its height late in the section.
+  const hi = left - PANEL_AIR_PX - 0.018 * vw;
   const lo = colRight + AIR_PX + 6;
-  const x = lo <= hi ? lo + Math.min(0.003 * vw, hi - lo) : (lo + hi) / 2;
+  const x = lo <= hi ? lo + Math.min(0.005 * vw, hi - lo) : (lo + hi) / 2 - 0.002 * vw;
   return Math.round((x / vw) * 1000) / 1000;
 }
 

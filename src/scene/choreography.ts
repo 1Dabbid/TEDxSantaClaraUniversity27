@@ -38,19 +38,27 @@ import { SECTION_IDS } from './scrollState';
  *    2 m from the stand, a wider lens) still circling; the microphone high in
  *    the frame under the beam, the rug along the bottom of the frame, the
  *    stand and its cable crossing the curtain's folds.
- * 4. Schedule, the orbit: the same orbit visibly goes round (about 70
+ * 4. Schedule, the orbit: the same orbit visibly goes round (about 65
  *    degrees over the section) while the camera rises and draws back; the
  *    beam and the microphone's silhouette against the back of the stage.
  *    Schedule's light beat is the beam's colour temperature going from warm
  *    to cool as the programme passes (`warm`).
- * 5. Venue, the crane: up to about 6 m, looking down on the pool of light on
- *    the rug, the stage edge and the first rows opening up beyond it.
+ * 5. Venue, the crane: up to about 4 m, an oblique look down (about 25
+ *    degrees, not straight down: a round rug seen from above does not change
+ *    as the camera circles it) on the pool of light, with the rows of the
+ *    house sweeping across the top of the frame as the orbit keeps going
+ *    (about 8 to 9 degrees per filmstrip step); the crane peaks halfway
+ *    through the section and starts down and in towards the house.
  * 6. Tickets, the speaker's view: the orbit carries on while the crane comes
- *    down and in, until the camera stands behind the microphone at a
- *    speaker's eye height, looking out over the grille (close and soft at
- *    the foot of the frame) at the 100 seats of the house (HOUSE_LOOK; the
- *    aim leaves the stand for the house, Aim `out`). It settles there with a
- *    slow push towards the house. About 175 degrees of orbit in all, one way.
+ *    down and in, until (about J 5.7) the camera stands behind the microphone
+ *    at a speaker's eye height, just over the grille, looking out at the 100
+ *    seats of the house (HOUSE_LOOK; the aim leaves the stand for the house,
+ *    Aim `out`), the grille close and dark in the right third of the frame.
+ *    It holds there, lit, with a slow push, to about J 5.9 (while the seat
+ *    counter runs and the page below Tickets has not yet come up over the
+ *    grille), then the lights go down. About 200 degrees of orbit in all as
+ *    keyed (measured round the stand line, about 214 on desktop, 196 on
+ *    phones), one way.
  * 7. After Tickets: the lights go down; the move eases to a stop in the dark.
  * 8. Idle: with the page at rest the frame still breathes (a few millimetres
  *    of camera float, the dust and the haze in the beam). The static tier
@@ -87,7 +95,10 @@ import { SECTION_IDS } from './scrollState';
  *   least MOTION_LIMITS.descentMin of the band in all;
  * - the speaker's view (MOTION_LIMITS.speakerJ) stands behind the microphone
  *   at a speaker's eye height with the seats filling the frame and the grille
- *   in the foreground band;
+ *   in the foreground band, above where the page below Tickets starts (the
+ *   audit passes that edge, measured at each step);
+ * - over the stage the camera keeps MOTION_LIMITS.curtainAir in front of the
+ *   back curtain;
  * - the subject stays inside the frame and, given the copy boxes of the page
  *   at each step (the audit script collects them), clear of every line of
  *   text and every panel (landscape), or behind headings, buttons and panels
@@ -304,11 +315,17 @@ export const TRACK = trackDir(0, TRACK_ELEV);
 export const MOTION_LIMITS = {
   /**
    * Largest turn of the view direction per step (degrees). 11 (the calm cut had 3.5): the orbit
-   * visibly goes round over Schedule (about 70 degrees in eight steps, 9 to 10 per step) and the
-   * view lifts from the stand to the house as the camera comes down behind the microphone; still
-   * far from a whip (the first cut turned 60 degrees and more between two neighbouring frames).
+   * visibly goes round over Schedule and Venue (about 65 and 60 degrees in eight steps each, 8 to
+   * 10 per step) and the view lifts from the stand to the house as the camera comes down behind
+   * the microphone; still far from a whip (the first cut turned 60 degrees and more between two
+   * neighbouring frames).
    */
   viewDeg: 11,
+  /**
+   * Per beat, a tighter limit on the view turn per step, so that a later edit cannot spend the
+   * Schedule orbit's budget somewhere else (a whip confined to a single step of a calm beat).
+   */
+  viewDegBeat: { 'b1 hero+macro': 3, 'b2 pull out': 9, 'b4 crane': 10, 'b5 come down': 10, "b6 speaker's view": 6 },
   /**
    * Largest move of the subject on screen per step (fraction of the frame's long side). 7% (the
    * calm cut had 3%): the subject now travels on screen with the low pass and the orbit (the stand
@@ -377,16 +394,18 @@ export const MOTION_LIMITS = {
    * lower and closer at every step.
    */
   pullJ: [1.7, 2.85] as const,
-  riseJ: [3.2, 4.9] as const,
-  comeDownJ: [4.95, 6.0] as const,
+  riseJ: [3.2, 4.45] as const,
+  comeDownJ: [4.55, 6.0] as const,
   /**
    * The speaker's view (`speakerJ`): the camera behind the microphone (upstage of the stand) at a
    * speaker's eye height (`speakerEye`, m); at least `speakerSeats` of the 100 seats in frame (phones `speakerSeatsPortrait`),
    * spread over at least `speakerSeatSpan` of its width; the grille in the foreground band: within
-   * `speakerHeadSide` of a side of the frame or of its foot (over the grille, between the counter's
-   * numerals) and nearer than `speakerHeadNear` of the distance to the nearest seat.
+   * `speakerHeadSide` of a side of the frame or of its foot (it sits in the right third, under the
+   * counter's ruler once the counter has scrolled up) and nearer than `speakerHeadNear` of the
+   * distance to the nearest seat. The window is the held part of the view, from the arrival to the
+   * moment the page below Tickets comes up over the lower frame.
    */
-  speakerJ: [5.85, 5.95] as const,
+  speakerJ: [5.7, 5.9] as const,
   speakerEye: [1.5, 1.9] as const,
   speakerSeats: 70,
   /** Phones: the narrow frame takes the middle of the house. */
@@ -394,6 +413,10 @@ export const MOTION_LIMITS = {
   speakerSeatSpan: 0.6,
   speakerHeadSide: 0.3,
   speakerHeadNear: 0.2,
+  /** With the page's edges: the grille at least this far (fraction of the height) above where the page below Tickets starts. */
+  speakerEdgeAir: 0.04,
+  /** Over the stage (J 3 to 6) the camera stays at least this far (m) in front of the back curtain. */
+  curtainAir: 0.3,
   /** While a 3D section is on screen, at most this many consecutive steps without camera change. */
   stillRun: 3,
   /**
@@ -780,10 +803,11 @@ const DESCENT_PORTRAIT: Keys = [
  * 1.25) settles on the engraved band; the macro tracks down the barrel while
  * the sleeve turns; the spiral pull out (J 1.6 to 2.85) swings round towards
  * the grille side and sinks to knee height for the low pass over Speakers.
- * The orbit carries on in the same direction (about 70 degrees over Schedule,
- * 45 over Venue, 25 over Tickets) while the camera rises from the floor to a
- * crane about 6 m up, looking down on the rug, and comes down again over
- * Tickets to a speaker's eye height behind the microphone.
+ * The orbit carries on in the same direction (about 65 degrees over Schedule,
+ * 60 over Venue, 35 over Tickets) while the camera rises from the floor to a
+ * crane about 4 m up, looking obliquely down on the rug with the house beyond,
+ * and comes down again over Tickets to a speaker's eye height behind the
+ * microphone.
  */
 /**
  * The hero's anchor x: held, then the slide right into the macro starts a
@@ -802,8 +826,16 @@ const HERO_X = 0.68;
 const SPEAKERS_X = 0.73;
 const VENUE_X = 0.64;
 const TICKETS_X = 0.56;
-/** Where the house's centre line sits across the width in the speaker's view (the grille just below it, between the counter's numerals). */
-const HOUSE_X = 0.5;
+/**
+ * Where the house's middle sits across the width in the speaker's view, for a frame of this shape
+ * (width / height): a little left of the middle, so that the grille, which the orbit has put about
+ * 20 degrees right of the view, sits in the right third of the frame (from about 72% across at
+ * J 5.7). How far across that angle lands depends on the frame's width, so a wider frame moves the
+ * house towards the middle.
+ */
+const houseX = (aspect: number) => Math.min(0.56, Math.max(0.44, 0.735 - 0.45 / aspect));
+/** The nominal landscape frame (1.7) when the frame is not known. */
+const HOUSE_X = houseX(1.7);
 
 const DESKTOP_MOVE: Move = {
   // The macro a little open (0.071 m), so the rows of the engraving fit across the frame as they pass.
@@ -818,19 +850,20 @@ const DESKTOP_MOVE: Move = {
     [3.5, 3.5],
     [3.75, 4.15],
     [4.0, 4.75],
-    [4.25, 5.2],
-    [4.5, 5.55],
-    [4.75, 5.9],
-    [4.9, 6.0],
-    [5.0, 5.65],
-    [5.125, 4.7],
-    [5.25, 3.65],
-    [5.375, 2.65],
-    [5.5, 1.85],
-    [5.625, 1.25],
-    [5.75, 0.9],
-    [5.875, 0.7],
-    [6.0, 0.6],
+    [4.25, 5.15],
+    [4.45, 5.45],
+    [4.6, 5.3],
+    [4.75, 4.95],
+    [4.9, 4.55],
+    [5.0, 4.25],
+    [5.125, 3.8],
+    [5.25, 3.0],
+    [5.375, 2.2],
+    [5.5, 1.45],
+    [5.625, 1.05],
+    [5.75, 0.86],
+    [5.875, 0.8],
+    [6.0, 0.765],
   ],
   micUntil: 2.4,
   // The descent: through the Theme pin the camera travels down the engraved barrel, from the title
@@ -862,11 +895,13 @@ const DESKTOP_MOVE: Move = {
   ],
   // The aim leaves the stand for the house as the camera passes behind the grille.
   out: [
-    [4.3, 0],
-    [4.9, 0.3],
-    [5.1, 0.36],
-    [5.4, 0.54],
-    [5.75, 0.87],
+    [4.2, 0],
+    [4.6, 0.22],
+    [4.9, 0.34],
+    [5.1, 0.4],
+    [5.4, 0.6],
+    [5.7, 0.88],
+    [5.85, 0.96],
     [6.0, 1],
   ],
   // The stand keeps its place on screen (in the gutter by the Venue plate, then in the gap between
@@ -874,15 +909,16 @@ const DESKTOP_MOVE: Move = {
   // crane's view lifts towards the stage edge and the first rows; then the grille sinks to the foot
   // of the frame.
   hold: [
-    [4.3, 1],
+    [4.2, 1],
     [5.35, 1],
-    [5.45, 0.88],
-    [5.9, 0],
+    [5.45, 0.85],
+    [5.75, 0],
   ],
   aspect: 1.7,
   // The orbit and the sink set off a step early, while the descent slows at the foot of the band, so
   // the turn builds up evenly into the pull out; then one direction all the way round to behind the
-  // microphone (about 175 degrees).
+  // microphone and a little past the line to the house, so the grille sits in the right third of the
+  // speaker's view (about 200 degrees as keyed).
   orbit: [
     [1.5, 0],
     [2.0, -0.6],
@@ -890,14 +926,15 @@ const DESKTOP_MOVE: Move = {
     [2.6, -11],
     [2.85, -26],
     [3.0, -37],
-    [3.5, -70],
-    [4.0, -107],
-    [4.5, -137],
-    [4.9, -151],
-    [5.2, -172],
-    [5.4, -175],
-    [5.75, -176.2],
-    [6.0, -177],
+    [3.5, -68],
+    [4.0, -101],
+    [4.5, -137.5],
+    [4.9, -164],
+    [5.2, -177],
+    [5.4, -184.5],
+    [5.55, -195.5],
+    [5.7, -200],
+    [6.0, -201.2],
   ],
   // Down from the hero's slight look down to near the floor for the Speakers pass, up through
   // Schedule to the crane over Venue, and down again to a speaker's eye height over Tickets.
@@ -907,18 +944,20 @@ const DESKTOP_MOVE: Move = {
     [2.3, -1.5],
     [2.6, -10.5],
     [2.85, -22],
-    [3.0, -23],
-    [3.25, -18],
+    [3.0, -24.5],
+    [3.25, -19],
     [3.5, -6],
     [3.75, 6],
-    [4.0, 20],
-    [4.5, 34],
-    [4.9, 42],
-    [5.1, 40],
-    [5.3, 32],
-    [5.5, 23],
-    [5.75, 23],
-    [6.0, 23.6],
+    [4.0, 18],
+    [4.45, 25],
+    [4.7, 24.2],
+    [5.0, 22.5],
+    [5.2, 20],
+    [5.35, 18],
+    [5.5, 16],
+    [5.65, 13.5],
+    [5.75, 13],
+    [6.0, 12.5],
   ],
   // The barrel's slide right for the macro (even, about 2% of the width per step); an even slide
   // over the pull out to its place right of the Speakers panel; then an even drift left over Schedule
@@ -944,16 +983,18 @@ const DESKTOP_MOVE: Move = {
     [2.95, 0.62],
     [3.25, 0.64],
     [3.6, 0.47],
-    [3.9, 0.37],
-    [4.2, 0.375],
-    [4.5, 0.425],
-    [4.9, 0.445],
-    [5.1, 0.42],
-    [5.25, 0.385],
-    [5.375, 0.45],
-    [5.45, 0.5],
-    [5.8, 0.375],
-    [6.0, 0.37],
+    [3.9, 0.39],
+    [4.2, 0.425],
+    [4.5, 0.475],
+    [4.85, 0.485],
+    [5.0, 0.428],
+    [5.12, 0.422],
+    [5.25, 0.41],
+    [5.375, 0.455],
+    // The grille passes the ticket details' column (small grey labels) between two of its rows.
+    [5.47, 0.535],
+    [5.7, 0.33],
+    [6.0, 0.315],
   ],
   roll: [
     [0.5, 0],
@@ -985,7 +1026,7 @@ const DESKTOP_MOVE: Move = {
     // house, the grille soft at the edge of the frame; after Tickets the lights go down.
     stage: [
       lk(2.85, LOW_LOOK),
-      lk(3.15, LOW_LOOK, { fov: 44, cone: 1.05, spot: 0.92, warm: 0.3 }),
+      lk(3.15, LOW_LOOK, { fov: 41, cone: 1.05, spot: 0.92, warm: 0.3 }),
       lk(3.5, STAGE_LOOK, { fov: 35, cone: 1.25, warm: 0.4 }),
       lk(4.0, STAGE_LOOK, { fov: 34, cone: 1.35, spot: 0.95, warm: -0.45 }),
       lk(4.3, STAGE_LOOK, { fov: 34, cone: 1.2, spot: 0.95, key: 0.45, rim: 1.1, vignette: 0.61, scrimEdge: 0.3, warm: -0.4 }),
@@ -993,7 +1034,7 @@ const DESKTOP_MOVE: Move = {
       lk(5.0, STAGE_LOOK, { fov: 35, cone: 1.05, spot: 1.0, key: 0.5, rim: 1.15, vignette: 0.6, scrimEdge: 0.6, warm: -0.3 }),
       lk(5.35, STAGE_LOOK, { fov: 35, cone: 0.85, spot: 1.02, key: 0.5, rim: 1.25, vignette: 0.6, scrimEdge: 0.7, warm: -0.22 }),
       lk(5.65, SPEAKER_LOOK),
-      lk(5.85, SPEAKER_LOOK, { exposure: 0.88, cone: 0.36, spot: 0.75, rim: 1.25 }),
+      lk(5.9, SPEAKER_LOOK, { exposure: 0.96, cone: 0.38, spot: 0.78, rim: 1.3 }),
       lk(6.0, SPEAKER_LOOK, DARK, { scrimEdge: 0.7, warm: -0.15 }),
     ],
   },
@@ -1006,7 +1047,7 @@ const DESKTOP_MOVE: Move = {
  * ticket details; then, once the aim is out in the house (the speaker's view),
  * left of the middle, so the grille sits at the right edge of the frame.
  */
-function stageAx(sx: number, vx: number, tx: number): [number, number][] {
+function stageAx(sx: number, vx: number, tx: number, hx = HOUSE_X): [number, number][] {
   // The drift from Speakers to Venue at an even rate, eased in and out over a step or so.
   const a = sx - 0.008;
   const b = vx;
@@ -1018,13 +1059,16 @@ function stageAx(sx: number, vx: number, tx: number): [number, number][] {
     [3.7, a + (b - a) * 0.88],
     [3.85, b],
     [4.1, vx + 0.001],
-    [4.9, vx],
-    [4.98, vx + (tx - vx) * 0.1],
-    [5.12, vx + (tx - vx) * 0.9],
+    [4.7, vx],
+    // As the crane comes down at the end of Venue the tail leans left, towards the facts' columns,
+    // while the plate has scrolled up out of the way: a little further from the text.
+    [4.9, vx + 0.012],
+    [4.98, vx + 0.012 + (tx - vx - 0.012) * 0.1],
+    [5.12, vx + 0.012 + (tx - vx - 0.012) * 0.9],
     [5.2, tx],
     [5.45, tx],
-    [5.8, HOUSE_X],
-    [6.0, HOUSE_X + 0.003],
+    [5.7, hx],
+    [6.0, hx + 0.004],
   ];
 }
 
@@ -1042,6 +1086,23 @@ const LOW_PORTRAIT = { ...STAGE_PORTRAIT, fov: 40, dof: 0.2, cone: 0.32, spot: 0
 /** Phones: the speaker's view, a little wider (the narrow frame takes the middle of the house). */
 const SPEAKER_PORTRAIT = { ...SPEAKER_LOOK, fov: 44, parallax: 0, cone: 0.35, scrimEdge: 0.55 };
 
+/** The phone frame the portrait move is written for (width / height). */
+const PORTRAIT_ASPECT = 0.46;
+/**
+ * Portrait anchor x over the end of Tickets: the house's middle a little left of the middle and the
+ * grille at the right side of the frame (about 72% across from J 5.7). The grille's angle off the
+ * view is set by the orbit; where that lands across the width depends on the frame's shape, so a
+ * wider portrait frame (a tablet) moves the house right to keep the grille at the side.
+ */
+function portraitEndAx(aspect: number): [number, number][] {
+  const end = Math.min(0.56, Math.max(0.42, 0.72 - (0.72 - 0.425) * (PORTRAIT_ASPECT / aspect)));
+  return [
+    [5.3, 0.5],
+    [5.7, end + 0.004],
+    [6.0, end],
+  ];
+}
+
 /*
  * Portrait: the same story with smaller angles where the narrow frame needs them: the same orbit
  * round to behind the microphone (the house is where it is), but the low pass from further off and
@@ -1056,18 +1117,19 @@ const PORTRAIT_MOVE: Move = {
   dist: [
     [3.25, 5.0],
     [3.5, 6.0],
-    [4.0, 7.4],
-    [4.5, 7.6],
-    [4.9, 7.4],
-    [5.0, 7.0],
-    [5.125, 6.2],
-    [5.25, 5.1],
-    [5.375, 3.9],
-    [5.5, 2.8],
-    [5.625, 1.75],
-    [5.75, 1.15],
-    [5.875, 0.85],
-    [6.0, 0.72],
+    [4.0, 7.0],
+    [4.45, 6.6],
+    [4.7, 6.05],
+    [4.9, 5.55],
+    [5.0, 5.25],
+    [5.125, 4.6],
+    [5.25, 3.85],
+    [5.375, 3.0],
+    [5.5, 2.1],
+    [5.625, 1.45],
+    [5.75, 1.1],
+    [5.875, 0.95],
+    [6.0, 0.88],
   ],
   micUntil: 2.4,
   mic: DESCENT_PORTRAIT,
@@ -1091,16 +1153,19 @@ const PORTRAIT_MOVE: Move = {
     [4.3, 0],
     [4.9, 0.2],
     [5.1, 0.28],
-    [5.4, 0.5],
-    [5.75, 0.86],
+    [5.4, 0.55],
+    [5.7, 0.88],
+    [5.85, 0.96],
     [6.0, 1],
   ],
   hold: [
     [4.3, 1],
-    [5.25, 1],
-    [5.9, 0],
+    [5.3, 1],
+    [5.45, 0.78],
+    [5.58, 0.32],
+    [5.7, 0],
   ],
-  aspect: 0.46,
+  aspect: PORTRAIT_ASPECT,
   orbit: [
     [1.6, 0],
     [2.0, -0.45],
@@ -1111,10 +1176,10 @@ const PORTRAIT_MOVE: Move = {
     [4.0, -92],
     [4.5, -128],
     [4.9, -150],
-    [5.25, -167],
-    [5.5, -173],
-    [5.75, -175.5],
-    [6.0, -176.5],
+    [5.25, -168],
+    [5.5, -179],
+    [5.65, -184],
+    [6.0, -185.5],
   ],
   elev: [
     [1.6, TRACK_ELEV / DEG],
@@ -1123,19 +1188,21 @@ const PORTRAIT_MOVE: Move = {
     [2.975, -14],
     [3.25, -11],
     [3.5, -5],
-    [4.0, 12],
-    [4.5, 30],
-    [4.9, 42],
-    [5.0, 41.5],
-    [5.125, 38],
-    [5.25, 32],
-    [5.375, 25],
-    [5.5, 22],
-    [5.75, 21],
-    [6.0, 23],
+    [4.0, 13],
+    [4.5, 28],
+    [4.7, 28.4],
+    [4.9, 28],
+    [5.0, 27.5],
+    [5.125, 26.5],
+    [5.25, 24.5],
+    [5.375, 22],
+    [5.5, 17],
+    [5.625, 13.5],
+    [5.75, 12],
+    [6.0, 11.2],
   ],
   // The macro pushes the barrel right, part of it off the frame, away from the theme's body copy;
-  // the speaker's view puts the house's centre line right of the middle, the grille at the left.
+  // the speaker's view puts the house's middle a little left of the middle, the grille at the right.
   ax: [
     [0.4, 0.5],
     [0.5, 0.505],
@@ -1144,10 +1211,11 @@ const PORTRAIT_MOVE: Move = {
     [1.8, 0.665],
     [2.8, 0.505],
     [2.9, 0.5],
-    [6.0, 0.5],
+    ...portraitEndAx(PORTRAIT_ASPECT),
   ],
   // One even rise of the anchor from the hero's lower middle, through the macro, to the upper middle
-  // where the stage lands; down to the middle for the speaker's view.
+  // where the stage lands; down a little for the speaker's view, the grille at about 57% of the
+  // height, above the page below Tickets as it comes up.
   ay: [
     [0.4, 0.66],
     [0.5, 0.655],
@@ -1158,9 +1226,9 @@ const PORTRAIT_MOVE: Move = {
     [3.5, 0.33],
     [4.5, 0.34],
     [5.2, 0.37],
-    [5.45, 0.47],
-    [5.85, 0.47],
-    [6.0, 0.465],
+    [5.45, 0.435],
+    [5.65, 0.413],
+    [6.0, 0.403],
   ],
   roll: [
     [0.45, 0],
@@ -1210,8 +1278,8 @@ const PORTRAIT_MOVE: Move = {
       lk(4.6, STAGE_PORTRAIT, { cone: 1.2, key: 0.4, rim: 1.1, scrimEdge: 0.6, warm: -0.35 }),
       lk(5.0, STAGE_PORTRAIT, { cone: 1.1, key: 0.45, rim: 1.15, scrimEdge: 0.6, warm: -0.3 }),
       lk(5.35, STAGE_PORTRAIT, { fov: 40, cone: 0.7, key: 0.45, rim: 1.25, vignette: 0.62, warm: -0.22 }),
-      lk(5.7, SPEAKER_PORTRAIT),
-      lk(5.85, SPEAKER_PORTRAIT, { exposure: 0.88, cone: 0.3, spot: 0.75, rim: 1.25 }),
+      lk(5.65, SPEAKER_PORTRAIT),
+      lk(5.9, SPEAKER_PORTRAIT, { exposure: 0.96, cone: 0.33, spot: 0.78, rim: 1.3 }),
       lk(6.0, SPEAKER_PORTRAIT, DARK, { warm: -0.15 }),
     ],
   },
@@ -1355,11 +1423,21 @@ export type ShotOptions = {
   ticketsX?: number;
   /** Landscape: the hero's anchor x, so the grille clears the headline (measured). */
   heroX?: number;
+  /**
+   * Width / height of the frame (rounded). Landscape: the stand is held in a gap a few dozen pixels
+   * wide over Tickets (Move.hold), and the lens shift that holds it there depends on the frame's
+   * shape; it is part of the content key, so a change of height alone rebuilds the shots.
+   */
+  aspect?: number;
 };
 
 /** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
 export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
-  if (portrait) return PORTRAIT_SHOTS;
+  if (portrait) {
+    // A wider portrait frame (a tablet) keeps the grille at the side of the speaker's view.
+    if (!opts.aspect || Math.abs(opts.aspect - PORTRAIT_ASPECT) < 0.03) return PORTRAIT_SHOTS;
+    return moveShots(PORTRAIT_MOVE, { ax: [...PORTRAIT_MOVE.ax.filter(([j]) => j < 5.3), ...portraitEndAx(opts.aspect)], aspect: opts.aspect });
+  }
   const vx = opts.venueX === undefined ? VENUE_X : Math.min(0.68, Math.max(0.5, opts.venueX));
   // Without a speakers panel (speakers announced: the card strip along the lower edge) the default holds.
   // Over Speakers the subject sits right of the panel, and well right of its Venue place (on wide
@@ -1367,13 +1445,14 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
   const sx = Math.min(0.82, Math.max(vx + 0.085, opts.speakersTba ? (opts.speakersX ?? SPEAKERS_X) : 0));
   const tx = opts.ticketsX === undefined ? TICKETS_X : Math.min(0.62, Math.max(0.5, opts.ticketsX));
   const hx = opts.heroX === undefined ? HERO_X : Math.min(0.74, Math.max(HERO_X, opts.heroX));
-  const measured = vx !== VENUE_X || sx !== SPEAKERS_X || tx !== TICKETS_X || hx !== HERO_X;
+  const measured = vx !== VENUE_X || sx !== SPEAKERS_X || tx !== TICKETS_X || hx !== HERO_X || !!opts.aspect;
   if (opts.speakersTba && !measured) return DESKTOP_SHOTS;
+  const house = opts.aspect ? houseX(opts.aspect) : HOUSE_X;
   const ax = measured
-    ? { ax: [...heroAx(hx), ...DESKTOP_MOVE.ax.filter(([j]) => j > 0.6 && j < 2.9), ...stageAx(sx, vx, tx)] }
+    ? { ax: [...heroAx(hx), ...DESKTOP_MOVE.ax.filter(([j]) => j > 0.6 && j < 2.9), ...stageAx(sx, vx, tx, house)] }
     : {};
   // The stand is held in a gap a few dozen pixels wide over Tickets (Move.hold): use the real frame.
-  const aspect = typeof window === 'undefined' ? {} : { aspect: window.innerWidth / Math.max(1, window.innerHeight) };
+  const aspect = opts.aspect ? { aspect: opts.aspect } : {};
   return moveShots(DESKTOP_MOVE, opts.speakersTba ? { ...ax, ...aspect } : { ...DESKTOP_ANNOUNCED, ...ax, ...aspect });
 }
 

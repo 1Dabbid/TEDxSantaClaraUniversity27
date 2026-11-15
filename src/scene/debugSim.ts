@@ -83,6 +83,8 @@ type Frame = {
 };
 
 const WORLD_UP = new Vector3(0, 1, 0);
+/** The back curtain's plane (world z, the face of its folds; clearance.ts keeps the near plane off it). */
+const CURTAIN_Z = -4.6;
 /** Roll (deg) of an up vector about a view direction, relative to the level horizon. */
 function rollOf(fwd: Vector3, up: Vector3): number {
   const u0 = WORLD_UP.clone().addScaledVector(fwd, -WORLD_UP.dot(fwd)).normalize();
@@ -113,6 +115,7 @@ function contentShots(L: Layout, over: Partial<ShotOptions>): ResolvedShot[] {
     venueX: measureVenueX(),
     ticketsX: measureTicketsX(),
     heroX: measureHeroX(),
+    aspect: +(window.innerWidth / Math.max(1, window.innerHeight)).toFixed(2),
   };
   return resolveShots(shotsFor(portrait, { ...base, ...over }));
 }
@@ -216,6 +219,15 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
   const api = {
     layout: measure,
     copyBoxes: copyBoxesNow,
+    /**
+     * Where the page below Tickets starts on screen (fraction of the height from the top): the next
+     * band's background fades in from there and covers the frame below it. The audit script collects
+     * it at the speaker's view steps; the grille has to stay above it.
+     */
+    ticketsEnd: () => {
+      const el = document.querySelector<HTMLElement>('[data-section="tickets"]');
+      return el ? +(el.getBoundingClientRect().bottom / window.innerHeight).toFixed(4) : 1;
+    },
     journeyAt: (y: number) => journeyAt(measure(), y),
     /**
      * Steps the rig at a fixed dt over `ys` (scroll px per step) or `js`
@@ -448,7 +460,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
    * page scrolled there; the audit script collects them), so the keep-out test uses the real layout
    * at this viewport instead of fixed fractions. `copyMarginPx` is the air kept round every box.
    */
-  const motion = (opts: { content?: Partial<ShotOptions>; step?: number; copy?: Record<string, CopyBox[]>; copyMarginPx?: number } = {}) => {
+  const motion = (opts: { content?: Partial<ShotOptions>; step?: number; copy?: Record<string, CopyBox[]>; copyMarginPx?: number; edge?: Record<string, number> } = {}) => {
     const step = opts.step ?? 0.125;
     const js: number[] = [];
     for (let J = 0; J <= 6.0 + 1e-9; J += 0.001) js.push(+J.toFixed(3));
@@ -471,14 +483,15 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     };
     const inFrame = (q: { x: number; y: number; z: number }) => q.z > 0 && q.x >= 0 && q.x <= 1 && q.y >= 0 && q.y <= 1;
     // Beats: 1 hero + macro, 2 spiral pull out to the low pass, 3 the low pass and the orbit over
-    // Schedule, 4 the crane over Venue, 5 down and in behind the microphone, 6 the speaker's view.
+    // Schedule, 4 the crane over Venue, 5 down and in behind the microphone, 6 the speaker's view (held).
     const beats = [
       { id: 'b1 hero+macro', from: 0.5, to: 1.625 },
       { id: 'b2 pull out', from: 1.625, to: 2.875 },
       { id: 'b3 low pass+orbit', from: 2.875, to: 4.0 },
       { id: 'b4 crane', from: 4.0, to: 5.0 },
-      { id: 'b5 come down', from: 5.0, to: 5.625 },
-      { id: "b6 speaker's view", from: 5.625, to: 6.0 },
+      // The come down arrives at the speaker's view about J 5.7 and holds it to the fade at the end.
+      { id: 'b5 come down', from: 5.0, to: 5.75 },
+      { id: "b6 speaker's view", from: 5.75, to: 6.0 },
     ];
     type Step = { J: number; view: number; screen: number; move: number; zoom: number; beat: string };
     const steps: Step[] = [];
@@ -567,7 +580,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
         const r = Math.abs(st[i].view - st[i - 1].view) / big;
         if (r > accel) [accel, accelAt] = [r, st[i].J];
       }
-      if (maxV > MOTION_LIMITS.viewDeg) fails.push(`${b.id}: view ${maxV.toFixed(2)} deg/step at J${vAt} > ${MOTION_LIMITS.viewDeg}`);
+      const viewMax = Math.min(MOTION_LIMITS.viewDeg, MOTION_LIMITS.viewDegBeat[b.id as keyof typeof MOTION_LIMITS.viewDegBeat] ?? Infinity);
+      if (maxV > viewMax) fails.push(`${b.id}: view ${maxV.toFixed(2)} deg/step at J${vAt} > ${viewMax}`);
       const screenMax = b.from >= MOTION_LIMITS.screenNear.from - 1e-9 ? MOTION_LIMITS.screenNear.limit : MOTION_LIMITS.screen;
       if (maxS > screenMax) fails.push(`${b.id}: subject ${(maxS * 100).toFixed(2)}%/step at J${sAt} > ${(screenMax * 100).toFixed(0)}%`);
       if (maxZ > MOTION_LIMITS.zoom) fails.push(`${b.id}: scale ${maxZ.toFixed(3)} ln/step at J${zAt} > ${MOTION_LIMITS.zoom}`);
@@ -640,15 +654,29 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       return { reversals: n, firstAtJ: firstAt };
     };
     const orbitAt = (J: number) => {
-      let d = az(at(J)) - az(at(1.66));
-      while (d > Math.PI) d -= 2 * Math.PI;
-      while (d < -Math.PI) d += 2 * Math.PI;
+      // Unwrapped (azU, below): the orbit may pass the half turn.
+      const d = (azU.get(at(J)) ?? 0) - (azU.get(at(1.66)) ?? 0);
       return +((d * 180) / Math.PI).toFixed(1);
     };
     const sd = (f: Frame) => subjectDist(new Vector3(...f.pos));
     const L = MOTION_LIMITS;
+    // The azimuth unwrapped along the sweep (the orbit may pass the half turn).
+    const azU = new Map<Frame, number>();
+    let azPrev = NaN;
+    let azAcc = 0;
+    for (const f of F) {
+      const a = az(f);
+      if (!Number.isNaN(azPrev)) {
+        let d = a - azPrev;
+        while (d > Math.PI) d -= 2 * Math.PI;
+        while (d < -Math.PI) d += 2 * Math.PI;
+        azAcc += d;
+      } else azAcc = a;
+      azPrev = a;
+      azU.set(f, azAcc);
+    }
     const mono = {
-      orbit: reversals(1.9, 6.0, az, 1e-3),
+      orbit: reversals(1.9, 6.0, (f) => azU.get(f) ?? az(f), 1e-3),
       pullOut: reversals(L.pullJ[0], L.pullJ[1], sd, 1e-3),
       comeDownDistance: reversals(L.comeDownJ[0], L.comeDownJ[1], sd, 1e-3),
       rise: reversals(L.riseJ[0], L.riseJ[1], (f) => f.pos[1], 1e-3),
@@ -806,7 +834,10 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     // of the stand, at a speaker's eye height), the seats fill the frame (most of the 100 seats in
     // frame, spread across most of its width) and the grille sits in the foreground band: at one
     // side of the frame, much closer than the nearest seat.
-    const speaker: { J: number; seatsIn: number; seatSpan: number; head: number[]; headM: number; seatM: number; camY: number; upstageM: number }[] = [];
+    // With the page's edges (`edge`: where the page below Tickets starts on screen at each step, from
+    // `ticketsEnd()`), the grille must also sit at least `speakerEdgeAir` above it: below that the
+    // next band's background covers the frame and the speaker's view would lose its foreground.
+    const speaker: { J: number; seatsIn: number; seatSpan: number; head: number[]; headM: number; seatM: number; camY: number; upstageM: number; edge?: number }[] = [];
     for (let J = L.speakerJ[0]; J <= L.speakerJ[1] + 1e-9; J += 0.05) {
       const f = at(J);
       if (!f) continue;
@@ -837,6 +868,11 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       if (row.headM > L.speakerHeadNear * seatM) why.push(`grille ${row.headM} m away, not in the foreground (nearest seat ${row.seatM} m)`);
       if (upstage < 0.2) why.push(`camera ${row.upstageM} m upstage of the stand, not behind the microphone`);
       if (row.camY < L.speakerEye[0] || row.camY > L.speakerEye[1]) why.push(`camera ${row.camY} m high, not at a speaker's eye height`);
+      const edge = opts.edge?.[J.toFixed(3)];
+      if (edge !== undefined) {
+        Object.assign(row, { edge });
+        if (h.y > edge - L.speakerEdgeAir) why.push(`grille at y ${row.head[1]}, under the page below Tickets (starts at ${edge})`);
+      }
       if (why.length) fails.push(`speaker's view J${row.J}: ${why.join('; ')}`);
     }
     // Near plane against the scene's surfaces (< 1 would clip).
@@ -844,6 +880,13 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     let clrAt = '';
     for (const f of F) if (f.clr < minClr) [minClr, clrAt] = [f.clr, `${f.obj}@J${f.J}`];
     if (minClr < 1) fails.push(`clearance ${minClr} at ${clrAt}`);
+    // Air between the camera and the back curtain's folds (world z = CURTAIN_Z) over the stage: the
+    // near plane can shrink to pass close to it, but a crane that grazes the curtain is one edit away
+    // from passing through it.
+    let curtainM = Infinity;
+    let curtainAt = 0;
+    for (const f of F) if (f.J >= 3 && f.J <= 6 && f.pos[2] - CURTAIN_Z < curtainM) [curtainM, curtainAt] = [f.pos[2] - CURTAIN_Z, f.J];
+    if (curtainM < MOTION_LIMITS.curtainAir) fails.push(`curtain: camera ${curtainM.toFixed(3)} m from the back curtain at J${curtainAt} < ${MOTION_LIMITS.curtainAir}`);
     return {
       viewport: `${window.innerWidth}x${window.innerHeight}`,
       limits: MOTION_LIMITS,
@@ -856,6 +899,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       subjectM: { at2_5: +sd(at(2.5)).toFixed(2), at3: +sd(at(3)).toFixed(2), at4: +sd(at(4)).toFixed(2), at4_9: +sd(at(4.9)).toFixed(2), at5_5: +sd(at(5.5)).toFixed(2), at6: +sd(at(6)).toFixed(2) },
       frame: { ...frame, xMin: +frame.xMin.toFixed(3), xMax: +frame.xMax.toFixed(3), yMin: +frame.yMin.toFixed(3), yMax: +frame.yMax.toFixed(3) },
       clearance: { min: minClr, at: clrAt },
+      curtain: { minM: +curtainM.toFixed(3), atJ: curtainAt },
       speaker,
       copy: opts.copy ? { steps: copySteps, hits: copyHits, longestRun: copyRun, longestRunAtJ: copyRunAt, minAirPx: +copyMin.toFixed(1), minAirAtJ: copyMinAt, points: copyPts } : null,
       steps,
