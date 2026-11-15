@@ -58,7 +58,11 @@ class SceneBoundary extends Component<{ onFail: () => void; children: ReactNode 
 
 const FLAG = 'fp:home-visited';
 
-/** The scene was found too slow earlier in this visit (QA overrides in the URL start afresh). */
+/**
+ * The scene was found too slow earlier in this visit (QA overrides in the URL start
+ * afresh). The boot script in src/components/SiteShell.tsx makes the same test for
+ * `html.scene-likely`: keep the two in step.
+ */
 function wasSlow(): boolean {
   if (typeof window === 'undefined') return false;
   try {

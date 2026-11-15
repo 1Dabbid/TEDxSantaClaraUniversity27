@@ -83,7 +83,7 @@ To remove a slot entirely, untick **Published**.
 ### Publish the schedule
 
 1. **The event > Schedule**.
-2. Under **Running order**, click **Add** for each moment. A box opens with **Time** (e.g. 5:30 PM, shown as typed), **Title**, **Description (optional)** and **Kind** (Talk, Break, Doors, Reception or Program; the site shows the same word next to the item: use Reception for doors with drinks or food, Program for anything else, such as the close). Click **Add** (or **Done** when editing an existing item) to close the box.
+2. Under **Running order**, click **Add** for each moment. A box opens with **Time** (e.g. 5:30 PM, shown as typed), **Title**, **Description (optional)** and **Kind** (Talk, Break, Doors, Reception or No label; the site shows the chosen word next to the item: use Reception for doors with drinks or food, and No label for anything else, such as the close, which then shows no label). Click **Add** (or **Done** when editing an existing item) to close the box.
 3. To reorder, drag the handle, or focus it and press Enter, then the arrow keys, then Enter.
 4. Tick **Show the running order** and **Save**. While it is unticked, the site shows a short "running order to follow" note. The **Schedule** link is in the menu either way, because /schedule always states the date.
 

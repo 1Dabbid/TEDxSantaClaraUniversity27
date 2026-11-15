@@ -3,8 +3,9 @@
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 import { getQuality, useQuality } from '@/lib/quality';
-import { holdPlace } from './anchor';
+import { findHashTarget, holdPlace } from './anchor';
 import type { Engine } from './engine';
+import { focusTarget, initInPageLinks } from './inPage';
 import { MOTION_OFF } from './useSectionMotion';
 
 /**
@@ -16,7 +17,8 @@ import { MOTION_OFF } from './useSectionMotion';
  * - Lazily loads the engine (gsap, reveals, cursor, magnetic, header, page
  *   transitions) and re-scans on every route change.
  * - Renders the curtain and cursor layers (aria-hidden, inert, pointer-events none).
- * - In static mode it still moves focus to #main after client-side navigations.
+ * - In static mode it still moves focus to #main after client-side navigations,
+ *   and follows links that stay on the current page (src/motion/inPage.ts).
  */
 
 let enginePromise: Promise<typeof import('./engine')> | null = null;
@@ -85,6 +87,10 @@ export default function MotionRoot({ caption = 'continuing' }: { caption?: strin
     settle();
   }, [quality, admin]);
 
+  // Links to the page already shown (section jumps, the page's own link) when the
+  // engine is not running: reduced motion, the static tier, before the engine loads.
+  useEffect(() => (admin ? undefined : initInPageLinks()), [admin]);
+
   useEffect(() => {
     // Motion stays off for this page view once the engine failed (a reload tries again).
     if (!active || engineFailed) return;
@@ -123,8 +129,11 @@ export default function MotionRoot({ caption = 'continuing' }: { caption?: strin
     }
     if (engineRef.current) {
       engineRef.current.route(false);
-    } else if (!window.location.hash) {
-      document.getElementById('main')?.focus({ preventScroll: true });
+    } else {
+      // The router has scrolled; focus follows: the section a hash names, else the content.
+      const target = window.location.hash ? findHashTarget(window.location.hash) : null;
+      if (target) focusTarget(target);
+      else if (!window.location.hash) document.getElementById('main')?.focus({ preventScroll: true });
     }
   }, [pathname]);
 

@@ -1,12 +1,15 @@
 import { findHashTarget } from '../anchor';
 import { gsap } from '../gsap';
+import { focusTarget, followInPage, internalLink, plainClick, samePageLink, scrollToHash, scrollTop } from '../inPage';
 import { lenisRef } from '../lenisRef';
 
 /**
  * Internal link handling for the App Router.
  *
- * - Same-page hash links: smooth Lenis scroll with header offset, URL updated,
- *   focus moved to the target.
+ * - Same-page links (the rule is samePageLink in ../inPage.ts: the current query
+ *   string does not make it another page): smooth Lenis scroll to the hash target
+ *   with header offset, URL updated, focus moved to the target; without a hash,
+ *   back to the top.
  * - Other internal pages: a black curtain with a fine-print caption covers the
  *   page, router.push runs, and the curtain lifts when the new pathname has
  *   rendered (see `onRoute`). Scroll resets to the top (or the hash target) and
@@ -34,41 +37,6 @@ export type Navigation = {
   onRoute: (initial: boolean) => void;
   destroy: () => void;
 };
-
-const headerOffset = () => document.querySelector<HTMLElement>('[data-site-header]')?.offsetHeight ?? 0;
-
-function focusTarget(el: HTMLElement) {
-  if (!el.hasAttribute('tabindex') && !el.matches('a[href],button,input,select,textarea,summary')) {
-    el.setAttribute('tabindex', '-1');
-  }
-  el.focus({ preventScroll: true });
-}
-
-export function scrollToHash(hash: string, immediate = false): boolean {
-  const el = findHashTarget(hash);
-  if (!el) return false;
-  const lenis = lenisRef.current;
-  if (lenis) {
-    // Lenis already honours html { scroll-padding-top: var(--header-h) }.
-    lenis.scrollTo(el, {
-      immediate,
-      force: true,
-      duration: 1.6,
-      easing: (t: number) => (t === 1 ? 1 : 1 - Math.pow(2, -10 * t)),
-    });
-  } else {
-    const y = el.getBoundingClientRect().top + window.scrollY - headerOffset();
-    window.scrollTo({ top: y, behavior: immediate ? 'auto' : 'smooth' });
-  }
-  focusTarget(el);
-  return true;
-}
-
-function scrollTop(immediate: boolean) {
-  const lenis = lenisRef.current;
-  if (lenis) lenis.scrollTo(0, { immediate, force: true, duration: 1.4 });
-  else window.scrollTo({ top: 0, behavior: immediate ? 'auto' : 'smooth' });
-}
 
 const keyOf = (url: URL | Location) => url.pathname + url.search;
 
@@ -154,18 +122,6 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
     router.push(url.pathname + url.search + url.hash);
   };
 
-  const internal = (target: EventTarget | null): { a: HTMLAnchorElement; url: URL } | null => {
-    const a = (target as Element | null)?.closest?.('a[href]') as HTMLAnchorElement | null;
-    if (!a) return null;
-    if ((a.target && a.target !== '_self') || a.hasAttribute('download') || a.hasAttribute('data-no-transition')) return null;
-    const href = a.getAttribute('href') ?? '';
-    if (!href || href === '#' || /^(mailto:|tel:|javascript:)/i.test(href)) return null;
-    const url = new URL(a.href, location.href);
-    if (url.origin !== location.origin) return null;
-    if (url.pathname.startsWith('/keystatic') || url.pathname.startsWith('/api')) return null;
-    return { a, url };
-  };
-
   const prefetch = (url: URL) => {
     const key = keyOf(url);
     if (key === keyOf(location) || prefetched.has(key)) return;
@@ -175,48 +131,23 @@ export function initNavigation(router: Router, curtain: HTMLElement | null): Nav
 
   // Prefetch on intent so the push after the curtain resolves immediately.
   const onIntent = (e: Event) => {
-    const hit = internal(e.target);
+    const hit = internalLink(e.target);
     if (hit) prefetch(hit.url);
   };
 
   const onClick = (e: MouseEvent) => {
-    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-    const hit = internal(e.target);
+    if (!plainClick(e)) return;
+    const hit = internalLink(e.target);
     if (!hit) return;
     const { url } = hit;
-
-    const samePage = keyOf(url) === keyOf(location);
-    if (samePage) {
-      e.preventDefault();
-      if (url.hash) {
-        // Keyboard activation (detail 0) jumps: focus-driven scrolling is never animated.
-        const instant = e.detail === 0;
-        const go = () => {
-          if (scrollToHash(url.hash, instant) && url.hash !== location.hash) {
-            history.pushState(history.state, '', url.hash);
-          }
-        };
-        // An open mobile menu locks scrolling; wait until it has closed.
-        if (html.hasAttribute('data-menu-open')) whenMenuClosed(go);
-        else go();
-      } else {
-        scrollTop(e.detail === 0);
-        const main = document.getElementById('main');
-        if (main) main.focus({ preventScroll: true });
-      }
+    e.preventDefault();
+    if (samePageLink(url)) {
+      // Keyboard activation (detail 0) jumps: focus-driven scrolling is never animated.
+      followInPage(url, e.detail === 0);
       return;
     }
-    e.preventDefault();
     prefetch(url);
     void navigate(url);
-  };
-
-  const whenMenuClosed = (fn: () => void, frames = 0) => {
-    if (!html.hasAttribute('data-menu-open') || frames > 40) {
-      requestAnimationFrame(fn);
-      return;
-    }
-    requestAnimationFrame(() => whenMenuClosed(fn, frames + 1));
   };
 
   // Track the position on the current page continuously (cheap: one number). The

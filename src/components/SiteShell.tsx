@@ -41,9 +41,11 @@ import SceneGate from '@/motion/SceneGate';
  * hidden from the first paint and the page shows black until the canvas fades in.
  * The GPU probe clears the class if the scene cannot run (src/lib/quality.ts), and
  * the stills then fade in. Not added when the scene was already found too slow
- * during this visit (sessionStorage; ignored under a `?quality=` override).
+ * during this visit (sessionStorage; ignored when the URL carries `quality=` or
+ * `perf=`, the same test as wasSlow() in src/motion/SceneGate.tsx: keep the two
+ * in step, or the stills show first and the canvas then fades in over them).
  */
-const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection,q=new URLSearchParams(location.search).get('quality'),f=q==='high'||q==='low',e=c&&c.effectiveType,g=e==='2g'||e==='slow-2g',u=0,n=0,s=0;try{u=localStorage.getItem('${REDUCE_MOTION_KEY}')==='1';n=localStorage.getItem('${NO_WEBGL_KEY}')==='1'}catch(x){}try{s=!q&&sessionStorage.getItem('${SCENE_SLOW_KEY}')==='1'}catch(x){}if(u)d.classList.add('${REDUCE_MOTION_CLASS}');else if(f||(q!=='static'&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData)&&!g&&window.WebGLRenderingContext&&!n)){d.classList.add('motion');if(location.pathname==='/'&&!g&&!s&&!matchMedia('(forced-colors: active)').matches)d.classList.add('${SCENE_LIKELY_CLASS}')}}catch(x){}`;
+const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection,q=new URLSearchParams(location.search).get('quality'),f=q==='high'||q==='low',e=c&&c.effectiveType,g=e==='2g'||e==='slow-2g',u=0,n=0,s=0;try{u=localStorage.getItem('${REDUCE_MOTION_KEY}')==='1';n=localStorage.getItem('${NO_WEBGL_KEY}')==='1'}catch(x){}try{s=!/[?&](quality|perf)=/.test(location.search)&&sessionStorage.getItem('${SCENE_SLOW_KEY}')==='1'}catch(x){}if(u)d.classList.add('${REDUCE_MOTION_CLASS}');else if(f||(q!=='static'&&!matchMedia('(prefers-reduced-motion: reduce)').matches&&!(c&&c.saveData)&&!g&&window.WebGLRenderingContext&&!n)){d.classList.add('motion');if(location.pathname==='/'&&!g&&!s&&!matchMedia('(forced-colors: active)').matches)d.classList.add('${SCENE_LIKELY_CLASS}')}}catch(x){}`;
 
 /**
  * The public site's chrome: site CSS, motion boot, skip link, header, the WebGL

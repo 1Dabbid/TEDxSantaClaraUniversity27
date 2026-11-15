@@ -331,7 +331,12 @@ html:not(.motion) .reading-progress {
   html.motion .hero-floor {
     mask-image: linear-gradient(to right, #000, #000 40%, rgb(0 0 0 / 0.4) 58%, transparent 72%);
   }
-  /* The scroll cue then sits on the open scene: its own small scrim. */
+  /* The scroll cue then sits on the open scene, on wide screens right over the lit
+     microphone: its own scrim. A soft pool, not a bar: dark enough under the words
+     for 4.5:1 against a white highlight (0.8 leaves at most #333 behind #b8b8b8),
+     then a long falloff with no edge to see. The cue is an invitation to start
+     scrolling, so it fades out over the first few lines of scroll (HeroMotion.tsx)
+     and its pool never rides up across the barrel. */
   html.motion .scroll-cue {
     position: relative;
     isolation: isolate;
@@ -340,9 +345,16 @@ html:not(.motion) .reading-progress {
     content: '';
     position: absolute;
     /* Wider than the page gutter on the right: the hero clips it (overflow-x-clip in Hero.tsx). */
-    inset: -2rem -4.5rem -2rem -5rem;
+    inset: -4.5rem -4.5rem -4.5rem -7rem;
     z-index: -1;
-    background: radial-gradient(closest-side, rgb(0 0 0 / 0.92), rgb(0 0 0 / 0.86) 70%, rgb(0 0 0 / 0));
+    background: radial-gradient(
+      closest-side,
+      rgb(0 0 0 / 0.82),
+      rgb(0 0 0 / 0.8) 58%,
+      rgb(0 0 0 / 0.5) 76%,
+      rgb(0 0 0 / 0.18) 90%,
+      rgb(0 0 0 / 0)
+    );
     pointer-events: none;
   }
 }
@@ -395,8 +407,10 @@ html:not(.motion) .reading-progress {
   html.motion .hero-rule {
     animation: draw-x 1.2s var(--ease-weight) 0.3s both;
   }
+  /* `backwards`, not `both`: once the intro has played, the opacity belongs to the
+     scroll-out again (HeroMotion fades the cue as scrolling starts). */
   html.motion .scroll-cue {
-    animation: fade-in 0.8s ease 1.3s both;
+    animation: fade-in 0.8s ease 1.3s backwards;
   }
   html.motion .scroll-cue-line::after {
     animation: cue 2.4s var(--ease-weight) 1.6s infinite;

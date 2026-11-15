@@ -8,11 +8,17 @@ import { useSectionMotion, type MotionKit } from '../useSectionMotion';
  * and it fades while the 3D microphone takes the frame. Phones get a shorter,
  * lighter version (no drift: the words are stacked; the body below the fold
  * stays put). The intro is CSS.
+ *
+ * The scroll cue ("Scroll to read…") has done its job once scrolling starts: it
+ * is gone within the first eighth of a screen, so it and its scrim never travel
+ * up across the lit microphone (globals.css, .scroll-cue). Hidden, not just
+ * transparent, so an invisible link cannot be clicked or tabbed to.
  */
 function setup({ gsap, root }: MotionKit) {
   const title = root.querySelector<HTMLElement>('[data-hero-title]');
   const words = Array.from(root.querySelectorAll<HTMLElement>('[data-hero-word]'));
   const body = root.querySelector<HTMLElement>('[data-hero-body]');
+  const cue = root.querySelector<HTMLElement>('.scroll-cue');
   if (!title) return;
 
   const mm = gsap.matchMedia();
@@ -26,6 +32,20 @@ function setup({ gsap, root }: MotionKit) {
     if (!phone) tl.to(words, { x: (_i: number, el: HTMLElement) => Number(el.dataset.heroWord) * 0.06 * window.innerWidth }, 0);
     // On phones the body is still being read while the title leaves: leave it alone.
     if (body && !phone) tl.to(body, { y: -70, opacity: 0, ease: 'power1.in' }, 0);
+    // The cue is not shown on phones (`hidden sm:flex`).
+    if (cue && !phone) {
+      gsap.fromTo(
+        cue,
+        { autoAlpha: 1 },
+        {
+          autoAlpha: 0,
+          ease: 'none',
+          immediateRender: false,
+          // Measured from the top of the page, not from the section: from the first pixel of scroll.
+          scrollTrigger: { trigger: root, start: 0, end: () => Math.round(window.innerHeight * 0.12), scrub: true, invalidateOnRefresh: true },
+        },
+      );
+    }
   });
   return () => mm.revert();
 }
