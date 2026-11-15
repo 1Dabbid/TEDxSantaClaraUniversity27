@@ -1644,12 +1644,13 @@ export type ShotOptions = {
   /**
    * The portrait move in a window that is not taller than wide (wideCopyFraming): whether the
    * microphone fits at the right, beside the hero's copy (the measured layout: contentLayout.ts,
-   * measureWideCopy). Without it the move opens on the phone's hero.
+   * measureHero). Without it the move opens on the phone's hero.
    */
   wideCopy?: boolean;
   /**
-   * There, under 640 px wide: the hero's anchor height, measured, so the grille stands under the
-   * headline (which runs most of the width at that size) and beside the copy below it.
+   * There, under 640 px wide, in a window where the headline runs most of the width: the hero's
+   * anchor height, measured, so the grille stands under the headline and beside the copy below it.
+   * Not set where the grille stands beside the headline, as from 640 px (a window clearly wider than tall).
    */
   heroY?: number;
   /**
@@ -1701,8 +1702,10 @@ export const sidewaysPhone = (width: number, height: number): boolean => width <
  * stands at the right, beside the headline and the facts. Under 640 px (a small near-square
  * window) the headline is set at the phone's size and runs most of the width, with the rest of the
  * copy stacked in a narrow column under it: the microphone stands at the right too, but lower,
- * under the end of the headline and beside that column (`heroY`). The static tier follows the same
- * aspect (SceneStills.tsx, globals.css).
+ * under the end of the headline and beside that column (`heroY`); where such a window is clearly
+ * wider than tall the headline stops short of the right edge and the microphone stands beside it,
+ * as from 640 px (contentLayout.ts, measureHero). The static tier follows the same aspect
+ * (SceneStills.tsx, globals.css).
  */
 export const WIDE_COPY_ASPECT = 0.9;
 export const WIDE_COPY_MIN_WIDTH = 640;
@@ -1718,14 +1721,16 @@ const WIDE_MACRO_X = 0.78;
 const WIDE_PUSH_AIR = 0.03;
 /**
  * The hero's anchor height there: the microphone beside the copy, level with the headline and the
- * facts; and the lowest it goes to stand under the headline instead (the phone's hero height).
+ * facts; the lowest it goes to stand under the headline instead (the phone's hero height); and the
+ * lowest it is held at where the copy fits neither place (contentLayout.ts, measureHero).
  */
-const WIDE_HERO_Y = 0.53;
+export const WIDE_HERO_Y = 0.53;
 export const WIDE_HERO_Y_MAX = 0.66;
+export const WIDE_HERO_Y_LOWEST = 0.72;
 /**
  * The opening of the portrait move for a wide-copy window: the hero's microphone at the right of
  * the frame, clear of the headline and the facts row (`heroX`, measured from the layout:
- * contentLayout.ts, measureHeroX); it slides right early in the push in, so the growing grille keeps
+ * contentLayout.ts, measureHero); it slides right early in the push in, so the growing grille keeps
  * clear of the facts row while that scrolls out, into a macro that sits further right than on a
  * phone (the Theme headline runs wider), and the pull out brings it to the middle of the width for
  * the stage, as on a phone. The height holds through the hero and the push
@@ -1738,7 +1743,7 @@ export const WIDE_HERO_Y_MAX = 0.66;
  */
 function wideOpening(heroX: number | undefined, heroY: number | undefined): Pick<Move, 'ax' | 'ay' | 'looks'> {
   const hx = Math.min(WIDE_HERO_X_RANGE[1], Math.max(WIDE_HERO_X_RANGE[0], heroX ?? WIDE_HERO_X));
-  const hy = Math.min(WIDE_HERO_Y_MAX, Math.max(WIDE_HERO_Y, heroY ?? WIDE_HERO_Y));
+  const hy = Math.min(WIDE_HERO_Y_LOWEST, Math.max(WIDE_HERO_Y, heroY ?? WIDE_HERO_Y));
   const out = Math.max(hx + 0.003, WIDE_MACRO_X + WIDE_PUSH_AIR);
   const open = PORTRAIT_MOVE.looks.open;
   return {
