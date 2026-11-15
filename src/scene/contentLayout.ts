@@ -1,3 +1,5 @@
+import { portraitFraming } from './choreography';
+
 /**
  * Measurements of the page copy that the camera move adapts to (landscape).
  *
@@ -95,7 +97,7 @@ function textRight(root: Node, limit: number): number {
 export function measureHeroX(): number | undefined {
   if (typeof document === 'undefined') return undefined;
   const vw = window.innerWidth;
-  if (vw < 1 || vw / Math.max(1, window.innerHeight) < 0.9) return undefined;
+  if (vw < 1 || portraitFraming(vw, window.innerHeight)) return undefined;
   let right = -1;
   for (const w of document.querySelectorAll<HTMLElement>('#hero-title [data-hero-word]')) {
     // The words' own scroll-out drift is a transform: measure where they sit without it.
@@ -104,4 +106,53 @@ export function measureHeroX(): number | undefined {
   }
   if (right < 0) return undefined;
   return Math.round((right / vw + 0.145) * 200) / 200;
+}
+
+/**
+ * The Tickets room figure (the seat counter: two big numerals, the ruler, a caption line, then
+ * empty space to the end of the section), as fractions of the viewport, or undefined without it.
+ * Over the end of Tickets the grille comes down between the numerals and rides up in the empty
+ * space under the caption (choreography.ts, endKeys). Rounded, so the shots are rebuilt only when
+ * the layout really changes.
+ */
+export function measureTicketsRoom(): { gapL: number; gapR: number; hv: number; gap: number; num: number; air: number } | undefined {
+  if (typeof document === 'undefined') return undefined;
+  const sec = document.querySelector<HTMLElement>('[data-section="tickets"]');
+  const count = sec?.querySelector<HTMLElement>('[data-seat-count]');
+  const row = count?.parentElement;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  if (!sec || !count || !row || vw < 1 || vh < 1) return undefined;
+  const bottom = sec.getBoundingClientRect().bottom;
+  const height = sec.getBoundingClientRect().height;
+  // The first numeral is the row's leading text; the second is the counter itself.
+  const range = document.createRange();
+  let first = -1;
+  for (const n of row.childNodes) {
+    if (n.nodeType !== Node.TEXT_NODE || !n.textContent?.trim()) continue;
+    range.selectNodeContents(n);
+    first = Math.max(first, range.getBoundingClientRect().right);
+  }
+  const second = count.getBoundingClientRect().left;
+  if (first < 0 || second <= first) return undefined;
+  // The last line of text in the section is the caption under the ruler (the counter's own digits
+  // roll inside a clipped box: they are not lines of the page).
+  let last = -1;
+  const walker = document.createTreeWalker(sec, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.textContent?.trim() || !n.parentElement || n.parentElement.closest('.sr-only') || row.contains(n)) continue;
+    range.selectNodeContents(n);
+    for (const r of range.getClientRects()) if (r.height > 1 && r.bottom <= bottom && r.bottom > last) last = r.bottom;
+  }
+  const numBottom = row.getBoundingClientRect().bottom;
+  if (last < numBottom) return undefined;
+  const r3 = (v: number) => Math.round(v * 200) / 200;
+  return {
+    gapL: r3(first / vw),
+    gapR: r3(second / vw),
+    hv: Math.round((height / vh) * 100) / 100,
+    gap: r3((bottom - last) / vh),
+    num: r3((bottom - numBottom) / vh),
+    air: Math.round((12 / vh) * 1000) / 1000,
+  };
 }

@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { MIC_AXIS, VIEW_AZ, fromHouse, micToWorld } from './layout';
+import { MIC, MIC_AXIS, VIEW_AZ, fromHouse, micToWorld } from './layout';
 import type { SectionId } from './scrollState';
 import { SECTION_IDS } from './scrollState';
 
@@ -53,19 +53,25 @@ import { SECTION_IDS } from './scrollState';
  *    down and in, until (about J 5.7) the camera stands behind the microphone
  *    at a speaker's eye height, just over the grille, looking out at the 100
  *    seats of the house (HOUSE_LOOK; the aim leaves the stand for the house,
- *    Aim `out`), the grille close and dark in the right third of the frame.
- *    It holds there, lit, with a slow push, to about J 5.9 (while the seat
- *    counter runs and the page below Tickets has not yet come up over the
- *    grille), then the lights go down. About 200 degrees of orbit in all as
- *    keyed (measured round the stand line, about 214 on desktop, 196 on
- *    phones), one way.
- * 7. After Tickets: the lights go down; the move eases to a stop in the dark.
+ *    Aim `out`), the grille close and dark in the foreground. The seat counter
+ *    (numerals, ruler, caption) scrolls up through the whole frame here, so
+ *    the grille is led by the page (endKeys): it comes down between the two
+ *    numerals to the foot of the frame, then rides up under the counter's
+ *    caption, in the empty space above the end of the section, drifting to
+ *    the right, while the camera sinks behind it to a speaker's eye. It holds
+ *    that view, lit, to about J 5.9 (while the counter runs), then the lights
+ *    go down. About 190 degrees of orbit in all as keyed, one way.
+ * 7. After Tickets: the lights go down; the move eases to a stop in the dark,
+ *    and the scene stays dark (and stops drawing) under Team, FAQ, Newsletter
+ *    and the footer.
  * 8. Idle: with the page at rest the frame still breathes (a few millimetres
  *    of camera float, the dust and the haze rolling in the beam). The static
  *    tier (reduced motion) has no canvas at all.
  * 9. Reacting: on top of these keys (never changing them), rig.ts (REACT)
- *    orbits the camera a little with the pointer, the device tilt or a slow
- *    sway, gives the view a little weight, and the lights follow the pointer.
+ *    orbits the camera a little round the subject with the pointer, the
+ *    device tilt or a slow sway, gives the view a little weight, and the
+ *    lights follow the pointer. The subject keeps its place on screen (the
+ *    room slides behind it), and the speaker's view answers least (`react`).
  *
  * The camera is held on a sphere round the subject: an aim point (`aim`,
  * held at the screen anchor), a distance (`dist`), an orbit angle (`orbit`,
@@ -110,9 +116,10 @@ import { SECTION_IDS } from './scrollState';
  *   passes behind body copy (the veils: scrim, scrimEdge, band, shade; the
  *   rendered frames are checked for the contrast behind the copy).
  *
- * Journey coordinate `J`: continuous over the home page; section k (in
- * SECTION_IDS order) spans [k, k+1) and the fraction is how far the viewport
- * centre has travelled through it. So J = 0.5 is the hero's middle at the
+ * Journey coordinate `J`: continuous over the home page, 0 at the top to 9 at
+ * the foot (Team, FAQ and Newsletter are sections 6 to 8; the scene is dark
+ * from DARK_FROM = 6 on); section k (in SECTION_IDS order) spans [k, k+1) and
+ * the fraction is how far the viewport centre has travelled through it. So J = 0.5 is the hero's middle at the
  * viewport centre; on a 1440x900 screen 1.22..1.78 is the pinned part of the
  * 225vh theme runway and the speakers stage pins at about 2.25; 2.5 is
  * speakers centred, and so on.
@@ -207,6 +214,12 @@ export type Shot = {
   warm?: number;
   /** Turn of the barrel sleeve (engraving, knurl) about the mic axis, radians. */
   turn?: number;
+  /**
+   * How much the camera answers the visitor here (pointer, tilt, sway, scroll kick; rig.ts REACT),
+   * 0..1, default 1. Turned down where the framing has no room to give: the speaker's view, where
+   * the grille is a hand's breadth from the lens.
+   */
+  react?: number;
 };
 
 export type ResolvedShot = {
@@ -259,6 +272,7 @@ export type ResolvedShot = {
   env: number;
   warm: number;
   turn: number;
+  react: number;
 };
 
 /**
@@ -298,6 +312,8 @@ export const micPoint = (y: number) => micToWorld(new Vector3(0, y, 0));
 
 /** The middle of the barrel (the hero's aim): the top of the stand line and the centre of the orbit. */
 export const SPINE = micPoint(0.095);
+/** The centre of the grille: the point the end of Tickets is framed by (Move.holdHead). */
+export const GRILLE = micPoint(MIC.grilleC);
 /** Elevation of the hero's camera axis (radians): the camera looks a little down on the subject. */
 export const TRACK_ELEV = 0.07;
 const DEG = Math.PI / 180;
@@ -343,6 +359,14 @@ export const MOTION_LIMITS = {
    * by at most `screenNear.limit` per step (the parallax of a close pass is the point of the shot).
    */
   screenNear: { from: 5.0, limit: 0.14 },
+  /**
+   * From `rideFrom` the grille meets the seat counter and then rides up the frame with the page, in
+   * the empty space under the counter's caption (endKeys): it keeps its place against the copy the
+   * reader is following. A step is judged there by the smaller of the subject's move on screen and
+   * its move against the page (the page's own scroll over the step taken out).
+   */
+  rideFrom: 5.625,
+
   /** No step may be more than this many times the median step of its beat. */
   spike: 2.2,
   /** Largest change of scale per step: |change of ln(camera-to-aim distance)| (0.47 is 1.6x). */
@@ -404,21 +428,35 @@ export const MOTION_LIMITS = {
    * The speaker's view (`speakerJ`): the camera behind the microphone (upstage of the stand) at a
    * speaker's eye height (`speakerEye`, m); at least `speakerSeats` of the 100 seats in frame (phones `speakerSeatsPortrait`),
    * spread over at least `speakerSeatSpan` of its width; the grille in the foreground band: within
-   * `speakerHeadSide` of a side of the frame or of its foot (it sits in the right third, under the
-   * counter's ruler once the counter has scrolled up) and nearer than `speakerHeadNear` of the
+   * `speakerHeadSide` of a side of the frame or of its foot (it arrives at the foot of the frame and
+   * rides up the right side under the seat counter's caption) and nearer than `speakerHeadNear` of the
    * distance to the nearest seat. The window is the held part of the view, from the arrival to the
    * moment the page below Tickets comes up over the lower frame.
    */
   speakerJ: [5.7, 5.9] as const,
+  /** Phones: the grille comes down between the counter's numerals a little later (the frame's long side is its height), so the view arrives later. */
+  speakerJPortrait: [5.75, 5.9] as const,
+
   speakerEye: [1.5, 1.9] as const,
   speakerSeats: 70,
   /** Phones: the narrow frame takes the middle of the house. */
   speakerSeatsPortrait: 20,
   speakerSeatSpan: 0.6,
-  speakerHeadSide: 0.3,
+  speakerHeadSide: 0.37,
+
   speakerHeadNear: 0.2,
   /** With the page's edges: the grille at least this far (fraction of the height) above where the page below Tickets starts. */
   speakerEdgeAir: 0.04,
+  /**
+   * With the page's copy: from `speakerClear` (phones `speakerClearPortrait`: the grille reaches the
+   * foot of the counter later there) to the fade, with the page at rest, the grille's disc keeps at
+   * least `speakerCopyAirPx` from every line of text: it rides in the empty space under the seat
+   * counter's caption, never on the numerals, the ruler's numbers or the caption.
+   */
+  speakerClear: 5.75,
+  speakerClearPortrait: 5.85,
+  speakerCopyAirPx: 6,
+
   /** Over the stage (J 3 to 6) the camera stays at least this far (m) in front of the back curtain. */
   curtainAir: 0.3,
   /** While a 3D section is on screen, at most this many consecutive steps without camera change. */
@@ -515,7 +553,7 @@ const DARK = { exposure: 0, drift: 0, parallax: 0, key: 0, spot: 0, cone: 1, vig
  * sharp point of the edge blur as an offset from the screen anchor, so that
  * every field interpolates along the move.
  */
-type Look = Omit<Shot, 'at' | 'aim' | 'dist' | 'orbit' | 'elev' | 'lift' | 'anchor' | 'roll' | 'keyDir' | 'focus' | 'turn'> & {
+type Look = Omit<Shot, 'at' | 'aim' | 'dist' | 'orbit' | 'elev' | 'lift' | 'anchor' | 'roll' | 'keyDir' | 'focus' | 'turn' | 'react'> & {
   kx?: number;
   ky?: number;
   kz?: number;
@@ -614,8 +652,11 @@ const PULL_STAND = { fov: 31, exposure: 1, dof: 0.22, drift: 0.005, parallax: 0.
 
 /**
  * Journey position at or beyond which the scene is fully dark: the end of
- * Tickets. The text-only partner band after Tickets has no data-section, so J
- * rests at 6 while it scrolls past; the scene is already black behind it.
+ * Tickets. The journey carries on below it (the partner band has no
+ * data-section, so J rests at 6 while it scrolls past, then Team, FAQ and
+ * Newsletter take J on to 9 at the foot of the page); the scene is black
+ * behind all of it and the render loop sleeps (Experience.tsx). The shot list
+ * always carries a shot exactly here (moveShots), whatever its sampling grid.
  */
 export const DARK_FROM = 6.0;
 
@@ -730,11 +771,24 @@ type Move = {
    * keys place the aim itself, as everywhere else.
    */
   hold?: Keys;
+  /**
+   * Optional, with `hold`: which point is held at the anchor keys, by J: 0 the point on the stand
+   * line at the aim's height, 1 the centre of the grille (GRILLE).
+   */
+  holdHead?: Keys;
   /** Nominal width / height of the frame, for `hold`. */
   aspect?: number;
   looks: { open: readonly LightKey[]; pull: readonly LightKey[]; stage: readonly LightKey[] };
   /** Optional: the upper-middle band veil (Shot.band) by J, over the looks. */
   band?: Keys;
+  /** Optional: how much the camera answers the visitor (Shot.react) by J; 1 where there are no keys. */
+  react?: Keys;
+  /**
+   * Optional: from `from` (the last `elev` key) the camera's height above the top of the stand line
+   * (m, by J) is keyed instead of its elevation, which follows from it and the distance: close
+   * behind the microphone the height is what the eye reads, and it has to fall at every step.
+   */
+  rise?: { from: number; keys: Keys };
 };
 type LightKey = { at: number } & Required<Look>;
 const lk = (at: number, ...parts: Partial<Look>[]): LightKey => Object.assign({ at }, LOOK_BASE, ...parts);
@@ -830,16 +884,109 @@ const HERO_X = 0.68;
 const SPEAKERS_X = 0.73;
 const VENUE_X = 0.64;
 const TICKETS_X = 0.56;
+/* ------------------------------------------------------------------------- */
+/* The end of Tickets: the grille and the seat counter                       */
+/* ------------------------------------------------------------------------- */
+
 /**
- * Where the house's middle sits across the width in the speaker's view, for a frame of this shape
- * (width / height): a little left of the middle, so that the grille, which the orbit has put about
- * 20 degrees right of the view, sits in the right third of the frame (from about 72% across at
- * J 5.7). How far across that angle lands depends on the frame's width, so a wider frame moves the
- * house towards the middle.
+ * The Tickets room figure as the page lays it out (contentLayout.ts, measureTicketsRoom): the two
+ * big numerals of the seat counter with a gap between them, the ruler, a caption line, then empty
+ * space down to the end of the section. Fractions of the viewport: `gapL`, `gapR` the gap between
+ * the numerals (of the width); `hv` the section's height, `gap` the empty space under the caption,
+ * `num` from the foot of the numerals to the end of the section and `air` 12 px (of the height).
  */
-const houseX = (aspect: number) => Math.min(0.56, Math.max(0.44, 0.735 - 0.45 / aspect));
-/** The nominal landscape frame (1.7) when the frame is not known. */
-const HOUSE_X = houseX(1.7);
+export type TicketsRoom = { gapL: number; gapR: number; hv: number; gap: number; num: number; air: number };
+/** The room at 1440x900 and on a 390x844 phone, when the page is not measured. */
+const ROOM_DESKTOP: TicketsRoom = { gapL: 0.373, gapR: 0.579, hv: 1.54, gap: 0.16, num: 0.316, air: 0.013 };
+const ROOM_PORTRAIT: TicketsRoom = { gapL: 0.373, gapR: 0.579, hv: 1.668, gap: 0.114, num: 0.376, air: 0.014 };
+
+/**
+ * How the grille is placed over the end of Tickets, where the seat counter (numerals, ruler,
+ * caption) scrolls up through the whole frame while the camera stands behind the microphone. No
+ * fixed place on screen stays clear of it, so the grille is led by the page:
+ * - it comes down the frame (`descent`, its height by J) in the lane between the two numerals
+ *   while the counter rises to meet it, so it passes the counter quickly and between the figures;
+ * - once it is under the caption it rides up with the page in the empty space between the caption
+ *   and the end of the section (its disc, of radius `r` there, keeps the room's `air` from the
+ *   caption, and its centre END_EDGE_AIR above the end of the section, where the next band's
+ *   ground comes up), as near as that space allows to where it sits in the nominal room, so the
+ *   house behind it stays put, and drifts to the side (`vx` of the width per J, to `xEnd`).
+ * `rLane` is its radius while it passes between the numerals (the camera is still further off).
+ * All of it is a lens shift on top of the camera's own move (Move.hold), which is written so that
+ * in the nominal room the shift barely moves the house. With the page at rest the grille sits in
+ * its place; behind a page that is still scrolling it trails a little, as the whole camera does.
+ */
+type EndSpec = { from: number; r: number; rLane: number; yMax: number; descent: Keys; nominal: TicketsRoom; vx: number; xEnd: number };
+/** The grille's centre stays this far (of the height) above the end of the Tickets section (MOTION_LIMITS.speakerEdgeAir and a little). */
+const END_EDGE_AIR = 0.047;
+
+const END_DESKTOP: EndSpec = {
+  from: 5.5,
+  r: 0.048,
+  rLane: 0.03,
+  yMax: 0.885,
+  descent: [
+    [5.5, 0.55],
+    [5.6, 0.7],
+    [5.72, 0.88],
+    [6.0, 0.885],
+  ],
+  nominal: ROOM_DESKTOP,
+  vx: 0.66,
+  xEnd: 0.8,
+};
+const END_PORTRAIT: EndSpec = {
+  from: 5.5,
+  r: 0.036,
+  rLane: 0.024,
+  yMax: 0.93,
+  descent: [
+    [5.5, 0.497],
+    [5.6, 0.584],
+    [5.7, 0.671],
+    [5.8, 0.758],
+    [5.9, 0.845],
+    [6.0, 0.93],
+  ],
+  nominal: ROOM_PORTRAIT,
+  vx: 0.8,
+  xEnd: 0.76,
+};
+
+/** The grille's place on screen (anchor keys, x and y) from `spec.from` to the end of Tickets. */
+function endKeys(spec: EndSpec, room: TicketsRoom, aspect: number): { ax: [number, number][]; ay: [number, number][] } {
+  const mid = (room.gapL + room.gapR) / 2;
+  // In the gap between the numerals, towards the second one where the gap is wide (the bar between
+  // them sits in its left half).
+  const lane = Math.max(mid, room.gapR - spec.rLane / aspect - 0.03);
+  const edge = (r: TicketsRoom, J: number) => 0.5 + (6 - J) * r.hv;
+  const ax: [number, number][] = [];
+  const ay: [number, number][] = [];
+  let xFrom = -1;
+  for (let k = 0; ; k++) {
+    const J = +(spec.from + k * 0.025).toFixed(3);
+    if (J > 6 + 1e-9) break;
+    const lo = edge(room, J) - room.gap + spec.r + room.air;
+    const hi = edge(room, J) - END_EDGE_AIR;
+    const nominal = edge(spec.nominal, J) - spec.nominal.gap / 2;
+    const ride = lo <= hi ? Math.min(hi, Math.max(lo, nominal)) : (lo + hi) / 2;
+    const y = Math.min(track(spec.descent, J), ride, spec.yMax);
+    // Sideways once the grille is below the foot of the numerals.
+    if (xFrom < 0 && y - spec.rLane >= edge(room, J) - room.num) xFrom = J;
+    ax.push([J, xFrom < 0 ? lane : Math.min(Math.max(lane, spec.xEnd), lane + spec.vx * (J - xFrom))]);
+    ay.push([J, y]);
+  }
+  return { ax, ay };
+}
+
+/**
+ * How much the camera answers the visitor over the end of Tickets (Shot.react): fully until the
+ * crane starts down behind the microphone, a third in the speaker's view.
+ */
+const SPEAKER_REACT: Keys = [
+  [5.25, 1],
+  [5.65, 0.35],
+];
 
 const DESKTOP_MOVE: Move = {
   // The macro a little open (0.071 m), so the rows of the engraving fit across the frame as they pass.
@@ -847,7 +994,7 @@ const DESKTOP_MOVE: Move = {
   pull: { from: 1.6, d0: 0.072, d1: 2.3, profile: PULL_PROFILE },
   // After the landing of the pull out (J 2.85): the low pass draws back a little over Speakers, the
   // orbit widens over Schedule, the crane holds wide over Venue, then over Tickets the camera comes
-  // down and in until it stands behind the microphone, and settles there with a slow push.
+  // down and in until it stands behind the microphone, and keeps closing in slowly to the end.
   dist: [
     [3.0, 2.45],
     [3.25, 2.9],
@@ -904,25 +1051,43 @@ const DESKTOP_MOVE: Move = {
     [4.9, 0.34],
     [5.1, 0.4],
     [5.4, 0.6],
-    [5.7, 0.88],
-    [5.85, 0.96],
+    [5.5, 0.7],
+    [5.625, 0.85],
+    [5.75, 0.924],
+    [5.875, 0.96],
     [6.0, 1],
   ],
   // The stand keeps its place on screen (in the gutter by the Venue plate, then in the gap between
   // the Tickets heading and the ticket details) while the aim starts out into the house, so the
-  // crane's view lifts towards the stage edge and the first rows; then the grille sinks to the foot
-  // of the frame.
+  // crane's view lifts towards the stage edge and the first rows; from J 5.3 the point that is held
+  // becomes the grille itself, which comes down between the seat counter's numerals to the foot of
+  // the frame and rides up under the counter's caption (endKeys).
   hold: [
     [4.2, 1],
-    [5.35, 1],
-    [5.45, 0.85],
-    [5.75, 0],
+    [6.0, 1],
+  ],
+  holdHead: [
+    [5.3, 0],
+    [5.5, 1],
   ],
   aspect: 1.7,
+  // Over Venue the stand rides in a gutter a few dozen pixels wide beside the location plate, seen
+  // from the crane (the grille and the foot at different depths, so an orbit moves one against the
+  // other): the camera barely answers there (0.15). The speaker's view has no room to give either: the
+  // grille is close to the lens and the seat counter runs across the frame (rig.ts keeps the grille
+  // in its place and lets the house slide behind it).
+  react: [
+    [3.9, 1],
+    [4.3, 0.15],
+    [4.85, 0.15],
+    [5.05, 1],
+    ...SPEAKER_REACT,
+  ],
   // The orbit and the sink set off a step early, while the descent slows at the foot of the band, so
   // the turn builds up evenly into the pull out; then one direction all the way round to behind the
-  // microphone and a little past the line to the house, so the grille sits in the right third of the
-  // speaker's view (about 200 degrees as keyed).
+  // microphone: in line with the house while the grille comes down between the seat counter's
+  // numerals (the orbit all but rests there), then a little past the line as the grille rides up the
+  // right of the frame (about 190 degrees as keyed).
   orbit: [
     [1.5, 0],
     [2.0, -0.6],
@@ -934,11 +1099,13 @@ const DESKTOP_MOVE: Move = {
     [4.0, -101],
     [4.5, -137.5],
     [4.9, -164],
-    [5.2, -177],
-    [5.4, -184.5],
-    [5.55, -195.5],
-    [5.7, -200],
-    [6.0, -201.2],
+    [5.2, -176],
+    [5.4, -177.3],
+    [5.6, -178.6],
+    [5.7, -181.7],
+    [5.8, -185.2],
+    [5.9, -188.7],
+    [6.0, -191.5],
   ],
   // Down from the hero's slight look down to near the floor for the Speakers pass, up through
   // Schedule to the crane over Venue, and down again to a speaker's eye height over Tickets.
@@ -959,21 +1126,32 @@ const DESKTOP_MOVE: Move = {
     [5.2, 20],
     [5.35, 18],
     [5.5, 16],
-    [5.65, 13.5],
-    [5.75, 13],
-    [6.0, 12.5],
   ],
+  // Behind the microphone the camera's height is what counts (it only comes down): it stays high
+  // over the grille, which sits at the foot of the frame under the seats, until the grille has
+  // passed the seat counter (about J 5.7), then sinks behind it to a speaker's eye, so the grille
+  // rises up the frame with the page.
+  rise: {
+    from: 5.5,
+    keys: [
+      [5.6, 0.374],
+      [5.7, 0.357],
+      [5.8, 0.26],
+      [5.9, 0.171],
+      [6.0, 0.095],
+    ],
+  },
   // The barrel's slide right for the macro (even, about 2% of the width per step); an even slide
   // over the pull out to its place right of the Speakers panel; then an even drift left over Schedule
   // into the gutter between the Venue facts and the location plate; over Tickets into the gap between
-  // the heading and the ticket details, and once the aim is out in the house, left of the middle
-  // (stageAx).
+  // the heading and the ticket details (stageAx), and from there the grille's own place (endKeys).
   ax: [
     ...heroAx(HERO_X),
     [1.3, 0.758],
     [1.45, ANCHOR_MACRO[0]],
     [1.75, 0.763],
     ...stageAx(SPEAKERS_X, VENUE_X, TICKETS_X),
+    ...endKeys(END_DESKTOP, ROOM_DESKTOP, 1.7).ax,
   ],
   ay: [
     [0.45, 0.4],
@@ -994,11 +1172,8 @@ const DESKTOP_MOVE: Move = {
     [5.0, 0.428],
     [5.12, 0.422],
     [5.25, 0.41],
-    [5.375, 0.455],
-    // The grille passes the ticket details' column (small grey labels) between two of its rows.
-    [5.47, 0.535],
-    [5.7, 0.33],
-    [6.0, 0.315],
+    [5.3, 0.425],
+    ...endKeys(END_DESKTOP, ROOM_DESKTOP, 1.7).ay,
   ],
   roll: [
     [0.5, 0],
@@ -1048,10 +1223,9 @@ const DESKTOP_MOVE: Move = {
  * The anchor's x from Speakers to the end, for the subject's place right of
  * the Speakers panel (`sx`) and over Venue (`vx`), measured from the
  * layout, and over Tickets (`tx`) in the gap between the heading and the
- * ticket details; then, once the aim is out in the house (the speaker's view),
- * left of the middle, so the grille sits at the right edge of the frame.
+ * ticket details, to J 5.3; from there the keys place the grille (endKeys).
  */
-function stageAx(sx: number, vx: number, tx: number, hx = HOUSE_X): [number, number][] {
+function stageAx(sx: number, vx: number, tx: number): [number, number][] {
   // The drift from Speakers to Venue at an even rate, eased in and out over a step or so.
   const a = sx - 0.008;
   const b = vx;
@@ -1070,9 +1244,7 @@ function stageAx(sx: number, vx: number, tx: number, hx = HOUSE_X): [number, num
     [4.98, vx + 0.012 + (tx - vx - 0.012) * 0.1],
     [5.12, vx + 0.012 + (tx - vx - 0.012) * 0.9],
     [5.2, tx],
-    [5.45, tx],
-    [5.7, hx],
-    [6.0, hx + 0.004],
+    [5.3, tx],
   ];
 }
 
@@ -1092,20 +1264,6 @@ const SPEAKER_PORTRAIT = { ...SPEAKER_LOOK, fov: 44, parallax: 0, cone: 0.35, sc
 
 /** The phone frame the portrait move is written for (width / height). */
 const PORTRAIT_ASPECT = 0.46;
-/**
- * Portrait anchor x over the end of Tickets: the house's middle a little left of the middle and the
- * grille at the right side of the frame (about 72% across from J 5.7). The grille's angle off the
- * view is set by the orbit; where that lands across the width depends on the frame's shape, so a
- * wider portrait frame (a tablet) moves the house right to keep the grille at the side.
- */
-function portraitEndAx(aspect: number): [number, number][] {
-  const end = Math.min(0.56, Math.max(0.42, 0.72 - (0.72 - 0.425) * (PORTRAIT_ASPECT / aspect)));
-  return [
-    [5.3, 0.5],
-    [5.7, end + 0.004],
-    [6.0, end],
-  ];
-}
 
 /*
  * Portrait: the same story with smaller angles where the narrow frame needs them: the same orbit
@@ -1158,18 +1316,21 @@ const PORTRAIT_MOVE: Move = {
     [4.9, 0.2],
     [5.1, 0.28],
     [5.4, 0.55],
-    [5.7, 0.88],
+    [5.58, 0.655],
+    [5.72, 0.885],
     [5.85, 0.96],
     [6.0, 1],
   ],
   hold: [
     [4.3, 1],
-    [5.3, 1],
-    [5.45, 0.78],
-    [5.58, 0.32],
-    [5.7, 0],
+    [6.0, 1],
+  ],
+  holdHead: [
+    [5.3, 0],
+    [5.5, 1],
   ],
   aspect: PORTRAIT_ASPECT,
+  react: SPEAKER_REACT,
   orbit: [
     [1.6, 0],
     [2.0, -0.45],
@@ -1180,10 +1341,13 @@ const PORTRAIT_MOVE: Move = {
     [4.0, -92],
     [4.5, -128],
     [4.9, -150],
-    [5.25, -168],
-    [5.5, -179],
-    [5.65, -184],
-    [6.0, -185.5],
+    [5.25, -166],
+    [5.5, -174],
+    [5.6, -175],
+    [5.7, -175.3],
+    [5.8, -177.3],
+    [5.9, -179.7],
+    [6.0, -181.7],
   ],
   elev: [
     [1.6, TRACK_ELEV / DEG],
@@ -1201,12 +1365,21 @@ const PORTRAIT_MOVE: Move = {
     [5.25, 24.5],
     [5.375, 22],
     [5.5, 17],
-    [5.625, 13.5],
-    [5.75, 12],
-    [6.0, 11.2],
   ],
+  rise: {
+    from: 5.5,
+    keys: [
+      [5.6, 0.384],
+      [5.7, 0.371],
+      [5.8, 0.352],
+      [5.85, 0.302],
+      [5.9, 0.232],
+      [5.95, 0.163],
+      [6.0, 0.104],
+    ],
+  },
   // The macro pushes the barrel right, part of it off the frame, away from the theme's body copy;
-  // the speaker's view puts the house's middle a little left of the middle, the grille at the right.
+  // over the end of Tickets the keys place the grille (endKeys).
   ax: [
     [0.4, 0.5],
     [0.5, 0.505],
@@ -1215,11 +1388,12 @@ const PORTRAIT_MOVE: Move = {
     [1.8, 0.665],
     [2.8, 0.505],
     [2.9, 0.5],
-    ...portraitEndAx(PORTRAIT_ASPECT),
+    [5.3, 0.5],
+    ...endKeys(END_PORTRAIT, ROOM_PORTRAIT, PORTRAIT_ASPECT).ax,
   ],
   // One even rise of the anchor from the hero's lower middle, through the macro, to the upper middle
-  // where the stage lands; down a little for the speaker's view, the grille at about 57% of the
-  // height, above the page below Tickets as it comes up.
+  // where the stage lands; over the end of Tickets the grille comes down through the seat counter and
+  // rides up under its caption, above the page below Tickets as it comes up (endKeys).
   ay: [
     [0.4, 0.66],
     [0.5, 0.655],
@@ -1230,9 +1404,9 @@ const PORTRAIT_MOVE: Move = {
     [3.5, 0.33],
     [4.5, 0.34],
     [5.2, 0.37],
-    [5.45, 0.435],
-    [5.65, 0.413],
-    [6.0, 0.403],
+    [5.3, 0.415],
+    [5.4, 0.43],
+    ...endKeys(END_PORTRAIT, ROOM_PORTRAIT, PORTRAIT_ASPECT).ay,
   ],
   roll: [
     [0.45, 0],
@@ -1291,11 +1465,14 @@ const PORTRAIT_MOVE: Move = {
 
 /** Step of the sampled shots of the move (J). */
 const MOVE_STEP = 0.0625;
+/** From here to the end of Tickets the shots are sampled at half that step (moveShots). */
+const END_SAMPLE_FROM = 5.4;
 
 /**
  * The shot list of one move: a shot at J 0 (the hero at rest), then shots
  * sampled from the keys at an even spacing from the start of the push in to the
- * end of Tickets. `variant` overrides the anchor height and barrel glide keys
+ * end of Tickets, a shot exactly at the end of Tickets (DARK_FROM: lights out)
+ * and its copy held to the foot of the page. `variant` overrides the anchor height and barrel glide keys
  * (a content variant).
  */
 function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'ax' | 'aspect'>> = {}): Shot[] {
@@ -1322,6 +1499,11 @@ function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'a
     return SPINE.y - (track(ay, J) - track(mv.barrelY, J)) * 2 * Math.exp(track(logDist, J)) * half;
   };
   const stand: Keys = [[glideTo, glideAim(glideTo)], ...mv.stand.filter(([j]) => j > glideTo)];
+  // The elevation, or from Move.rise the elevation that puts the camera at the keyed height.
+  const riseFrom = mv.rise ? mv.rise.from : Infinity;
+  const rise: Keys = mv.rise ? [[riseFrom, Math.exp(track(logDist, riseFrom)) * Math.sin(track(mv.elev, riseFrom) * DEG)], ...mv.rise.keys] : [];
+  const elevAt = (J: number) =>
+    J > riseFrom ? Math.asin(Math.min(1, Math.max(-1, track(rise, J) / Math.exp(track(logDist, J))))) / DEG : track(mv.elev, J);
   const shotAt = (J: number): Shot => {
     const { kx, ky, kz, fdx, fdy, ...rest } = look(J);
     const anchor = [track(mv.ax, J), track(ay, J)] as const;
@@ -1331,13 +1513,15 @@ function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'a
       aim: J < mv.micUntil ? { mic: track(mv.mic, J) } : { stand: J < glideTo ? glideAim(J) : track(stand, J), out: mv.out ? track(mv.out, J) : 0, outX: mv.outX },
       dist: Math.exp(track(logDist, J)),
       orbit: track(mv.orbit, J),
-      elev: track(mv.elev, J),
+      elev: elevAt(J),
+
       anchor,
       roll: track(mv.roll, J),
       turn: track(TURN, J),
       keyDir: [kx, ky, kz],
       focus: [anchor[0] + fdx, 1 - anchor[1] + fdy],
       band: mv.band ? track(mv.band, J) : rest.band,
+      react: mv.react ? track(mv.react, J) : 1,
     };
   };
   // Hold the point on the stand at the anchor keys while the aim swings out (Move.hold).
@@ -1348,7 +1532,8 @@ function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'a
     const pos = SPINE.clone().addScaledVector(trackDir((shot.orbit ?? 0) * DEG, (shot.elev ?? 0) * DEG), shot.dist);
     const stand = aimPoint({ stand: shot.aim.stand });
     const fwd = aimOut(pos, stand.clone(), shot.aim.out, shot.aim.outX ?? 0).sub(pos).normalize();
-    const P = stand.sub(pos);
+    const hw = mv.holdHead ? track(mv.holdHead, J) : 0;
+    const P = (hw > 0 ? stand.lerp(GRILLE, hw) : stand).sub(pos);
     const right = new Vector3().crossVectors(fwd, new Vector3(0, 1, 0)).normalize();
     const up = new Vector3().crossVectors(right, fwd);
     const z = P.dot(fwd);
@@ -1364,8 +1549,17 @@ function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'a
     const J = +(mv.push.from + k * MOVE_STEP).toFixed(4);
     if (J > DARK_FROM + 1e-9) break;
     out.push(held(J));
+    // Over the end of Tickets the grille is led by the page (endKeys) while the camera comes down
+    // close behind it: a shot at every half step there, so the lens shift that holds the grille
+    // stays true between the shots.
+    const half = +(J + MOVE_STEP / 2).toFixed(5);
+    if (J >= END_SAMPLE_FROM && half < DARK_FROM) out.push(held(half));
   }
-  // After Tickets the lights stay down and the move has come to rest.
+  // The sampling grid starts at the push in, so it need not land on the end of Tickets: the dark
+  // shot is always added exactly there. Without it the last sampled shot (half way through the
+  // fade) would be held for the rest of the page.
+  if (out[out.length - 1].at < DARK_FROM - 1e-9) out.push(held(DARK_FROM));
+  // After Tickets (Team, FAQ, Newsletter: J 6 to 9) the lights stay down and the move has come to rest.
   out.push({ ...out[out.length - 1], at: 9.5 });
   return out;
 }
@@ -1427,6 +1621,8 @@ export type ShotOptions = {
   ticketsX?: number;
   /** Landscape: the hero's anchor x, so the grille clears the headline (measured). */
   heroX?: number;
+  /** The Tickets room figure (the seat counter), measured: where the grille goes over the end of Tickets. */
+  ticketsRoom?: TicketsRoom;
   /**
    * Width / height of the frame (rounded). Landscape: the stand is held in a gap a few dozen pixels
    * wide over Tickets (Move.hold), and the lens shift that holds it there depends on the frame's
@@ -1435,12 +1631,32 @@ export type ShotOptions = {
   aspect?: number;
 };
 
+/**
+ * Which move a frame gets: the portrait move for a frame taller than wide (under 0.9), and also for
+ * a window narrower than the page's desktop layout (under 1024 px wide: a half-screen browser
+ * window, a small tablet on its side) unless it is short and wide like a phone on its side (1.7
+ * and over). Below 1024 px the copy runs the full width, as on a tablet held upright, and the
+ * landscape move's subject, at the right of the frame, would stand in the text; the portrait move
+ * keeps it small in the upper middle and takes it down under each heading. A phone on its side
+ * keeps the landscape move: its frame is too short for the portrait hero (the microphone under
+ * the headline).
+ */
+export const portraitFraming = (width: number, height: number): boolean => {
+  const aspect = width / Math.max(1, height);
+  return aspect < 0.9 || (width < 1024 && aspect < 1.7);
+};
+
 /** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
 export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
   if (portrait) {
-    // A wider portrait frame (a tablet) keeps the grille at the side of the speaker's view.
-    if (!opts.aspect || Math.abs(opts.aspect - PORTRAIT_ASPECT) < 0.03) return PORTRAIT_SHOTS;
-    return moveShots(PORTRAIT_MOVE, { ax: [...PORTRAIT_MOVE.ax.filter(([j]) => j < 5.3), ...portraitEndAx(opts.aspect)], aspect: opts.aspect });
+    // The grille follows the seat counter as this frame lays it out (a tablet's is wider and shorter).
+    if (!opts.ticketsRoom && (!opts.aspect || Math.abs(opts.aspect - PORTRAIT_ASPECT) < 0.03)) return PORTRAIT_SHOTS;
+    const end = endKeys(END_PORTRAIT, opts.ticketsRoom ?? ROOM_PORTRAIT, opts.aspect ?? PORTRAIT_ASPECT);
+    return moveShots(PORTRAIT_MOVE, {
+      ax: [...PORTRAIT_MOVE.ax.filter(([j]) => j < END_PORTRAIT.from), ...end.ax],
+      ay: [...PORTRAIT_MOVE.ay.filter(([j]) => j < END_PORTRAIT.from), ...end.ay],
+      aspect: opts.aspect ?? PORTRAIT_ASPECT,
+    });
   }
   const vx = opts.venueX === undefined ? VENUE_X : Math.min(0.68, Math.max(0.5, opts.venueX));
   // Without a speakers panel (speakers announced: the card strip along the lower edge) the default holds.
@@ -1449,15 +1665,20 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
   const sx = Math.min(0.82, Math.max(vx + 0.085, opts.speakersTba ? (opts.speakersX ?? SPEAKERS_X) : 0));
   const tx = opts.ticketsX === undefined ? TICKETS_X : Math.min(0.62, Math.max(0.5, opts.ticketsX));
   const hx = opts.heroX === undefined ? HERO_X : Math.min(0.74, Math.max(HERO_X, opts.heroX));
-  const measured = vx !== VENUE_X || sx !== SPEAKERS_X || tx !== TICKETS_X || hx !== HERO_X || !!opts.aspect;
+  const measured = vx !== VENUE_X || sx !== SPEAKERS_X || tx !== TICKETS_X || hx !== HERO_X || !!opts.aspect || !!opts.ticketsRoom;
   if (opts.speakersTba && !measured) return DESKTOP_SHOTS;
-  const house = opts.aspect ? houseX(opts.aspect) : HOUSE_X;
-  const ax = measured
-    ? { ax: [...heroAx(hx), ...DESKTOP_MOVE.ax.filter(([j]) => j > 0.6 && j < 2.9), ...stageAx(sx, vx, tx, house)] }
+  // The grille's place over the end of Tickets, for the seat counter as this frame lays it out.
+  const end = endKeys(END_DESKTOP, opts.ticketsRoom ?? ROOM_DESKTOP, opts.aspect ?? 1.7);
+  const ay0 = opts.speakersTba ? DESKTOP_MOVE.ay : (DESKTOP_ANNOUNCED.ay ?? DESKTOP_MOVE.ay);
+  const keys = measured
+    ? {
+        ax: [...heroAx(hx), ...DESKTOP_MOVE.ax.filter(([j]) => j > 0.6 && j < 2.9), ...stageAx(sx, vx, tx), ...end.ax],
+        ay: [...ay0.filter(([j]) => j < END_DESKTOP.from), ...end.ay],
+      }
     : {};
   // The stand is held in a gap a few dozen pixels wide over Tickets (Move.hold): use the real frame.
   const aspect = opts.aspect ? { aspect: opts.aspect } : {};
-  return moveShots(DESKTOP_MOVE, opts.speakersTba ? { ...ax, ...aspect } : { ...DESKTOP_ANNOUNCED, ...ax, ...aspect });
+  return moveShots(DESKTOP_MOVE, opts.speakersTba ? { ...keys, ...aspect } : { ...DESKTOP_ANNOUNCED, ...keys, ...aspect });
 }
 
 /* ------------------------------------------------------------------------- */
@@ -1537,6 +1758,7 @@ export function resolveShot(s: Shot): ResolvedShot {
     env: s.env ?? 1,
     warm: s.warm ?? 0,
     turn: s.turn ?? 0,
+    react: s.react ?? 1,
   };
 }
 
@@ -1575,6 +1797,7 @@ const scalarKeys = [
   'env',
   'warm',
   'turn',
+  'react',
 ] as const;
 const vectorKeys = ['target', 'origin', 'keyDir'] as const;
 

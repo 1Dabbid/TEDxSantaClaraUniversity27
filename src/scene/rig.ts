@@ -1,5 +1,5 @@
 import { Vector3 } from 'three';
-import { RIG, emptyShot, sampleShots, type ResolvedShot } from './choreography';
+import { RIG, SPINE, emptyShot, micPoint, sampleShots, type ResolvedShot } from './choreography';
 import { Damped, DampedVec3, Spring, SpringVec3 } from './damp';
 import { clearance } from './clearance';
 import type { look as lookState } from './look';
@@ -36,9 +36,16 @@ const DEG = Math.PI / 180;
  * - Pointer (or device tilt, or a slow automatic sway on touch screens without
  *   tilt) orbits the camera a little round the subject, so the subject keeps its
  *   place on screen and the stage, the seats and the haze slide behind it like a
- *   real space. The angle grows with the focus distance: a fraction of a degree
- *   in the macro (which stays controlled), up to about four degrees on the wide
- *   shots. The view also leans a little up or down with the pointer. On touch screens
+ *   real space. The angle grows with the distance to the subject: a fraction of a
+ *   degree in the macro (which stays controlled), up to about four degrees on the
+ *   wide shots. The orbit is always round the subject, not the look point: where
+ *   the view looks past the microphone (the aim on its way out into the house over
+ *   Venue and Tickets, the speaker's view with the grille under a metre from the
+ *   lens and the look point nine metres off) the camera's travel is set by the
+ *   distance to the microphone and the view turns to keep it where it was authored,
+ *   so the reaction can never carry it out of the frame or across the copy. Each
+ *   shot also says how much it answers (Shot.react; the speaker's view a third).
+ *   The view also leans a little up or down with the pointer. On touch screens
  *   scrolling itself swings the room (the scroll kick), on top of the tilt or sway.
  * - Weight: when a turn starts or stops the view trails by a small, bounded
  *   angle and settles with a slight overshoot, like a heavy fluid head (`lag*`);
@@ -105,6 +112,32 @@ export function orbitFor(dist: number): number {
   return REACT.orbitNear + (REACT.orbitFar - REACT.orbitNear) * k;
 }
 
+/**
+ * The subject as two segments: the stand line from the floor to the barrel's middle, and the
+ * microphone's axis from its tail to the top of the grille.
+ */
+const SUBJECT_SEGS: readonly (readonly [Vector3, Vector3])[] = [
+  [new Vector3(SPINE.x, 0, SPINE.z), SPINE.clone()],
+  [micPoint(-0.044), micPoint(0.156)],
+];
+const subjA = new Vector3();
+const subjB = new Vector3();
+/** The point of the subject nearest to `p` (the look point), into `out`. */
+export function subjectNear(p: Vector3, out: Vector3): Vector3 {
+  let best = Infinity;
+  for (const [a, b] of SUBJECT_SEGS) {
+    const ab = subjA.subVectors(b, a);
+    const t = Math.min(1, Math.max(0, subjB.subVectors(p, a).dot(ab) / ab.lengthSq()));
+    const q = subjB.copy(a).addScaledVector(ab, t);
+    const d = q.distanceToSquared(p);
+    if (d < best) {
+      best = d;
+      out.copy(q);
+    }
+  }
+  return out;
+}
+
 /** Slow automatic sway in pointer units (two incommensurate periods per axis, ~14 s). */
 export function swayAt(t: number, out: { x: number; y: number }) {
   out.x = REACT.sway * (0.75 * Math.sin(t * 0.45 + 0.4) + 0.25 * Math.sin(t * 0.73 + 2.1));
@@ -168,6 +201,7 @@ export function createRig() {
     tmpB: new Vector3(),
     tmpC: new Vector3(),
     tmpD: new Vector3(),
+    tmpE: new Vector3(),
   };
 }
 export type Rig = ReturnType<typeof createRig>;
@@ -397,14 +431,24 @@ export function stepRig(
   const pY = input.pointerY * (1 - sw) + sway.y * sw - kick * 0.3;
   const px = rig.px.step(Number.isFinite(pX) ? Math.max(-1, Math.min(1, pX)) : 0, REACT.pointerSmooth, dt) * react;
   const py = rig.py.step(Number.isFinite(pY) ? Math.max(-1, Math.min(1, pY)) : 0, REACT.pointerSmooth, dt) * react;
-  const orbit = Math.max(s.parallax, orbitFor(dist) * dist) * (input.portrait ? REACT.portraitOrbit : 1);
+  // The orbit is round the subject: its depth along the view (the look point's own distance while
+  // the aim is on the subject) sets the camera's travel, and where the look point lies beyond the
+  // subject the view turns with the travel (the idle float included) so the subject stays where
+  // the shot put it.
+  const share = Number.isFinite(s.react) ? Math.max(0, Math.min(1, s.react)) : 1;
+  const depth = Math.min(dist, Math.max(0.02, subjectNear(target, rig.tmpE).sub(pos).dot(view)));
+  // The camera's share of the input (the lights keep following the pointer in full: out.px, out.py).
+  const cx = px * share;
+  const cy = py * share;
+  const orbit = Math.max(s.parallax, orbitFor(depth) * depth) * (input.portrait ? REACT.portraitOrbit : 1);
+  const keep = 1 - dist / depth;
   const dx = Math.sin(t * 0.21) * 0.6 + Math.sin(t * 0.13 + 1.7) * 0.4;
   const dy = Math.sin(t * 0.17 + 0.6) * 0.6 + Math.sin(t * 0.07) * 0.4;
   // Breathing along the view axis: 0.4% of the distance close in, capped at 5 mm on the wide stage
   // shots, so the idle float stays a few millimetres however far the camera has pulled back.
   const breathe = s.drift > 0 ? Math.sin(t * 0.31) * Math.min(0.004 * dist, 0.005) : 0;
-  const ox = dx * s.drift + px * orbit;
-  const oy = dy * s.drift * 0.6 + py * orbit * REACT.pitch;
+  const ox = dx * s.drift + cx * orbit;
+  const oy = dy * s.drift * 0.6 + cy * orbit * REACT.pitch;
   out.position
     .copy(target)
     .addScaledVector(out.fwd, -(dist + breathe))
@@ -414,8 +458,8 @@ export function stepRig(
   const leanK = input.portrait ? REACT.portrait : 1;
   out.target
     .copy(target)
-    .addScaledVector(out.right, dist * Math.tan(lagX + px * REACT.leanX * leanK))
-    .addScaledVector(out.camUp, dist * Math.tan(lagY + py * REACT.leanY * leanK));
+    .addScaledVector(out.right, dist * Math.tan(lagX + cx * REACT.leanX * leanK) + ox * keep)
+    .addScaledVector(out.camUp, dist * Math.tan(lagY + cy * REACT.leanY * leanK) + oy * keep);
   out.px = px;
   out.py = py;
   out.lagX = lagX;
@@ -452,4 +496,5 @@ function copyInto(dst: ResolvedShot, src: ResolvedShot) {
   dst.spot = src.spot;
   dst.shiftX = src.shiftX;
   dst.shiftY = src.shiftY;
+  dst.react = src.react;
 }

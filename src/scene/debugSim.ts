@@ -1,8 +1,8 @@
 import { Vector3 } from 'three';
-import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, RIG, SPINE, journey, micPoint, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
+import { DESCENT_HOLD_TO, DESCENT_J, MOTION_LIMITS, RIG, SPINE, journey, micPoint, portraitFraming, resolveShots, shotsFor, type ResolvedShot, type ShotOptions } from './choreography';
 import { MIC, MIC_MATRIX_INV, PIVOT_WORLD, SEATING, STAND_BASE, STAND_TOP_Y, rowHeight, fromHouse, toHouse } from './layout';
 import { clearance } from './clearance';
-import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
+import { measureHeroX, measureSpeakersX, measureTicketsRoom, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, nearCorner, REACT, stepRig, type LookOut } from './rig';
 import { SECTION_IDS, type SectionId } from './scrollState';
 
@@ -108,7 +108,7 @@ function project(f: Frame, P: Vector3, aspect: number): [number, number, number]
 
 /** The shot list Experience would use for this viewport, with some content options overridden. */
 function contentShots(L: Layout, over: Partial<ShotOptions>): ResolvedShot[] {
-  const portrait = window.innerWidth / Math.max(1, window.innerHeight) < 0.9;
+  const portrait = portraitFraming(window.innerWidth, window.innerHeight);
   const sched = L.heights.schedule;
   const base: ShotOptions = {
     speakersTba: !!document.querySelector('.speakers-runway--tba'),
@@ -118,6 +118,7 @@ function contentShots(L: Layout, over: Partial<ShotOptions>): ResolvedShot[] {
     ticketsX: measureTicketsX(),
     heroX: measureHeroX(),
     aspect: +(window.innerWidth / Math.max(1, window.innerHeight)).toFixed(2),
+    ticketsRoom: measureTicketsRoom(),
   };
   return resolveShots(shotsFor(portrait, { ...base, ...over }));
 }
@@ -146,6 +147,41 @@ function copyBoxesNow(): CopyBox[] {
   const visible = (el: Element) =>
     !el.closest('.scene-canvas, [data-scene-stills]') &&
     (el as HTMLElement & { checkVisibility?: (o: object) => boolean }).checkVisibility?.({ opacityProperty: true, visibilityProperty: true }) !== false;
+  // The box an element's content is clipped to by its ancestors (overflow hidden / clip, or an inset
+  // clip-path): the seat counter's digits roll inside one, and the digits outside it are not on screen.
+  const clips = new Map<Element, DOMRect | null>();
+  const insetOf = (clipPath: string, r: DOMRect): DOMRect | null => {
+    const m = /^inset\(([^)]*)\)/.exec(clipPath);
+    if (!m) return null;
+    const v = m[1].split(/\s+round\s+/)[0].trim().split(/\s+/);
+    const len = (s: string | undefined, size: number) => (!s ? NaN : s.endsWith('%') ? (parseFloat(s) / 100) * size : s.endsWith('px') || /^-?[\d.]+$/.test(s) ? parseFloat(s) : NaN);
+    const t = len(v[0], r.height);
+    const ri = len(v[1] ?? v[0], r.width);
+    const b = len(v[2] ?? v[0], r.height);
+    const l = len(v[3] ?? v[1] ?? v[0], r.width);
+    if (![t, ri, b, l].every(Number.isFinite)) return null;
+    return new DOMRect(r.left + l, r.top + t, Math.max(0, r.width - l - ri), Math.max(0, r.height - t - b));
+  };
+  const clipOf = (el: Element): DOMRect | null => {
+    const hit = clips.get(el);
+    if (hit !== undefined) return hit;
+    let box: DOMRect | null = null;
+    for (let a: Element | null = el; a && a !== document.body; a = a.parentElement) {
+      const cs = getComputedStyle(a);
+      const inset = cs.clipPath && cs.clipPath !== 'none' ? insetOf(cs.clipPath, a.getBoundingClientRect()) : null;
+      if (!inset && cs.overflowX === 'visible' && cs.overflowY === 'visible') continue;
+      const r = inset ?? a.getBoundingClientRect();
+      if (!box) box = r;
+
+      else {
+        const l = Math.max(box.left, r.left);
+        const t = Math.max(box.top, r.top);
+        box = new DOMRect(l, t, Math.max(0, Math.min(box.right, r.right) - l), Math.max(0, Math.min(box.bottom, r.bottom) - t));
+      }
+    }
+    clips.set(el, box);
+    return box;
+  };
   const range = document.createRange();
   const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
@@ -154,7 +190,15 @@ function copyBoxesNow(): CopyBox[] {
     const cs = getComputedStyle(el);
     if (+cs.opacity < 0.05) continue;
     range.selectNodeContents(n);
-    for (const r of range.getClientRects()) push(r, parseFloat(cs.fontSize) >= 20 ? 'h' : 't');
+    const clip = clipOf(el);
+    for (const r of range.getClientRects()) {
+      if (!clip) push(r, parseFloat(cs.fontSize) >= 20 ? 'h' : 't');
+      else {
+        const l = Math.max(clip.left, r.left);
+        const t = Math.max(clip.top, r.top);
+        push(new DOMRect(l, t, Math.max(0, Math.min(clip.right, r.right) - l), Math.max(0, Math.min(clip.bottom, r.bottom) - t)), parseFloat(cs.fontSize) >= 20 ? 'h' : 't');
+      }
+    }
   }
   for (const el of document.body.querySelectorAll('*')) {
     const cs = getComputedStyle(el);
@@ -222,6 +266,8 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     /** The live reaction constants (rig.ts REACT), for tuning from the console; the page uses the same object. */
     reactTune: REACT as Record<string, number>,
     layout: measure,
+    /** The Tickets room figure as measured (contentLayout.ts): what the end of the move is framed by. */
+    room: measureTicketsRoom,
     copyBoxes: copyBoxesNow,
     /**
      * Where the page below Tickets starts on screen (fraction of the height from the top): the next
@@ -374,6 +420,85 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
         minClr: Math.min(...F.map((f) => f.clr)),
         finite: F.every((f) => [...f.pos, ...f.tgt, ...f.up].every(Number.isFinite)),
       };
+    },
+    /**
+     * How far the reaction carries the subject on screen at a journey position: the page held at J,
+     * the rig settled, then the pointer held at each side and corner (or, with `sway`, the automatic
+     * sway of a touch screen for `seconds`, with an optional held scroll kick). Reports the largest
+     * displacement (px) of the grille and of any part of the subject in frame at rest (grille, barrel,
+     * stand foot) against the frame at rest, where the grille went (fractions of the frame), and how
+     * far the house's middle slid behind it (px).
+     */
+    subjectShift(opts: { J: number; sway?: boolean; seconds?: number; kick?: number }) {
+      const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+      const portrait = portraitFraming(window.innerWidth, window.innerHeight);
+      const settle = Array(240).fill(opts.J);
+      const base = api.run({ js: settle, drift: false, portrait }).at(-1)!;
+      const head = micPoint(0.1302);
+      const parts = [head, SPINE, STAND_BASE.clone()];
+      const house = fromHouse(new Vector3(0, 1.35, 9.0));
+      const at = (f: Frame, P: Vector3) => project(f, P, aspect);
+      const inside = (q: number[]) => q[2] > 0 && q[0] >= 0 && q[0] <= 1 && q[1] >= 0 && q[1] <= 1;
+      const rest = parts.map((P) => at(base, P));
+      const house0 = at(base, house);
+      const px = (a: number[], b: number[]) => Math.hypot((a[0] - b[0]) * window.innerWidth, (a[1] - b[1]) * window.innerHeight);
+      const runs: Frame[][] = [];
+      if (opts.sway) {
+        const n = Math.round((opts.seconds ?? 30) * 60);
+        runs.push(api.run({ js: [...settle, ...Array(n).fill(opts.J)], react: 1, sway: 1, kick: opts.kick, portrait }).slice(settle.length));
+      } else {
+        for (const p of [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, -1], [-1, 1], [1, -1], [1, 1]] as [number, number][])
+          runs.push(api.run({ js: [...settle, ...Array(180).fill(opts.J)], drift: false, react: 1, pointer: p, portrait }).slice(settle.length));
+      }
+      let headPx = 0;
+      let maxPx = 0;
+      let housePx = 0;
+      let headIn = inside(rest[0]);
+      const box = [1, 1, 0, 0];
+      for (const F of runs)
+        for (const f of F) {
+          parts.forEach((P, i) => {
+            if (!inside(rest[i])) return;
+            const q = at(f, P);
+            const d = px(q, rest[i]);
+            maxPx = Math.max(maxPx, d);
+            if (i === 0) {
+              headPx = Math.max(headPx, d);
+              headIn &&= inside(q);
+              box[0] = Math.min(box[0], q[0]);
+              box[1] = Math.min(box[1], q[1]);
+              box[2] = Math.max(box[2], q[0]);
+              box[3] = Math.max(box[3], q[1]);
+            }
+          });
+          housePx = Math.max(housePx, px(at(f, house), house0));
+        }
+      return {
+        J: opts.J,
+        headPx: +headPx.toFixed(1),
+        maxPx: +maxPx.toFixed(1),
+        housePx: +housePx.toFixed(1),
+        headIn,
+        headRest: [+rest[0][0].toFixed(3), +rest[0][1].toFixed(3)],
+        headBox: box.map((v) => +v.toFixed(3)),
+      };
+    },
+    /**
+     * Where things sit on screen with the page held at each J (the rig settled, no reaction): the
+     * grille, the barrel's middle and the house's look point (fractions from the left / top), the
+     * camera's height, its distance to the grille (m) and the angle from the view to the house (deg).
+     */
+    place(js: number[]) {
+      const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+      const house = fromHouse(new Vector3(0, 1.35, 9.0));
+      return js.map((J) => {
+        const f = api.run({ js: Array(240).fill(J), drift: false, portrait: portraitFraming(window.innerWidth, window.innerHeight) }).at(-1)!;
+        const r = (P: Vector3) => project(f, P, aspect).slice(0, 2).map((v) => +v.toFixed(3));
+        const cam = new Vector3(...f.pos);
+        const view = new Vector3(...f.tgt).sub(cam).normalize();
+        const off = (Math.acos(Math.min(1, view.dot(house.clone().sub(cam).normalize()))) * 180) / Math.PI;
+        return { J, head: r(micPoint(0.1302)), barrel: r(SPINE), house: r(house), camY: +f.pos[1].toFixed(3), headM: +cam.distanceTo(micPoint(0.1302)).toFixed(3), fov: f.fov, exp: f.exp, houseDeg: +off.toFixed(2) };
+      });
     },
     /**
      * A fling: the journey jumps from `from` to `to` in one frame and back, at 60 fps. Reports the
@@ -576,7 +701,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
    * page scrolled there; the audit script collects them), so the keep-out test uses the real layout
    * at this viewport instead of fixed fractions. `copyMarginPx` is the air kept round every box.
    * `pointer` holds the pointer there for the whole sweep with the scene reacting, to check that the
-   * reaction keeps the subject clear of the copy too.
+   * reaction keeps the subject in frame and clear of the copy too (`placeFails`).
    */
   const motion = (
     opts: {
@@ -597,12 +722,12 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       content: opts.content,
       pointer: opts.pointer,
       react: opts.pointer ? 1 : 0,
-      portrait: window.innerWidth / Math.max(1, window.innerHeight) < 0.9,
+      portrait: portraitFraming(window.innerWidth, window.innerHeight),
     });
     const byJ = new Map(F.map((f) => [f.J.toFixed(3), f]));
     const at = (J: number) => byJ.get(J.toFixed(3)) as Frame;
     const aspect = window.innerWidth / Math.max(1, window.innerHeight);
-    const portrait = aspect < 0.9;
+    const portrait = portraitFraming(window.innerWidth, window.innerHeight);
     const head = micPoint(0.1302);
     const tail = micPoint(-0.044);
     const barrel = SPINE;
@@ -627,7 +752,11 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       { id: 'b5 come down', from: 5.0, to: 5.75 },
       { id: "b6 speaker's view", from: 5.75, to: 6.0 },
     ];
+    // The Tickets section's height in viewport heights: how far the page scrolls per J over the end of Tickets.
+    const pageL = measure();
+    const pageHv = (pageL.heights.tickets ?? 0) / Math.max(1, pageL.vh);
     type Step = { J: number; view: number; screen: number; move: number; zoom: number; beat: string };
+
     const steps: Step[] = [];
     for (let J = 0.5; J <= 6.0 - step + 1e-9; J += step) {
       const f0 = at(J);
@@ -652,10 +781,15 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       let screen = 0;
       if (J < MOTION_LIMITS.frameMicFrom) screen = Math.hypot((f0.shift[0] - f1.shift[0]) * Math.min(1, aspect), (f0.shift[1] - f1.shift[1]) / Math.max(1, aspect));
       else {
+        // From rideFrom the grille rides up with the page under the seat counter: the smaller of its
+        // move on screen and its move against the page (which scrolls up by the section's height per J).
+        const page = J >= MOTION_LIMITS.rideFrom - 1e-9 ? (pageHv * step) / Math.max(1, aspect) : 0;
         for (const P of J >= MOTION_LIMITS.frameFootFrom && J <= MOTION_LIMITS.frameFootTo ? [barrel, foot] : [barrel]) {
           const a = scr(f0, P);
           const b = scr(f1, P);
-          if (inFrame(a) && inFrame(b)) screen = Math.max(screen, Math.hypot(a.lx - b.lx, a.ly - b.ly));
+          if (!inFrame(a) || !inFrame(b)) continue;
+          const onScreen = Math.hypot(a.lx - b.lx, a.ly - b.ly);
+          screen = Math.max(screen, page ? Math.min(onScreen, Math.hypot(a.lx - b.lx, b.ly - a.ly + page)) : onScreen);
         }
       }
       const beat = beats.find((b) => J >= b.from - 1e-9 && J < b.to - 1e-9)?.id ?? '?';
@@ -972,7 +1106,9 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     // `ticketsEnd()`), the grille must also sit at least `speakerEdgeAir` above it: below that the
     // next band's background covers the frame and the speaker's view would lose its foreground.
     const speaker: { J: number; seatsIn: number; seatSpan: number; head: number[]; headM: number; seatM: number; camY: number; upstageM: number; edge?: number }[] = [];
-    for (let J = L.speakerJ[0]; J <= L.speakerJ[1] + 1e-9; J += 0.05) {
+    const speakerJ = portrait ? L.speakerJPortrait : L.speakerJ;
+    for (let J = speakerJ[0]; J <= speakerJ[1] + 1e-9; J += 0.05) {
+
       const f = at(J);
       if (!f) continue;
       let n = 0;
@@ -1002,12 +1138,42 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       if (row.headM > L.speakerHeadNear * seatM) why.push(`grille ${row.headM} m away, not in the foreground (nearest seat ${row.seatM} m)`);
       if (upstage < 0.2) why.push(`camera ${row.upstageM} m upstage of the stand, not behind the microphone`);
       if (row.camY < L.speakerEye[0] || row.camY > L.speakerEye[1]) why.push(`camera ${row.camY} m high, not at a speaker's eye height`);
+      // Against the page's edge the grille is judged with the page at rest (the rig settled at J): it
+      // rides up with the page, and behind a page that is still scrolling it trails a little, as the
+      // whole camera does.
       const edge = opts.edge?.[J.toFixed(3)];
       if (edge !== undefined) {
-        Object.assign(row, { edge });
-        if (h.y > edge - L.speakerEdgeAir) why.push(`grille at y ${row.head[1]}, under the page below Tickets (starts at ${edge})`);
+        const rest = scr(api.run({ js: Array(240).fill(J), drift: false, content: opts.content, portrait }).at(-1)!, head);
+        Object.assign(row, { edge, restY: +rest.y.toFixed(3) });
+        if (rest.y > edge - L.speakerEdgeAir) why.push(`grille at y ${rest.y.toFixed(3)} (page at rest), under the page below Tickets (starts at ${edge})`);
       }
+
       if (why.length) fails.push(`speaker's view J${row.J}: ${why.join('; ')}`);
+    }
+    // With the copy boxes: once the speaker's view has arrived (`speakerClear`), the grille's disc on
+    // screen, with the page at rest at each step, keeps `speakerCopyAirPx` from every line of text on
+    // the page: the seat counter's numerals, the ruler's numbers and the caption. (The sweep above
+    // trails the page by a few hundredths of J, as the camera does behind a scrolling page; here the
+    // rig is settled, as it is for a visitor who has stopped to look.)
+    const speakerCopy: { J: number; airPx: number; grille: number[] }[] = [];
+    if (opts.copy) {
+      const from = portrait ? L.speakerClearPortrait : L.speakerClear;
+      for (const key of Object.keys(opts.copy).sort((a, b) => +a - +b)) {
+        const J = +key;
+        if (J < from - 1e-9 || J > 5.96) continue;
+        const f = api.run({ js: Array(240).fill(J), drift: false, content: opts.content, portrait }).at(-1)!;
+        const q = scr(f, head);
+        const rPx = (MIC.grilleR / (q.z * 2 * Math.tan((f.fov * Math.PI) / 360))) * window.innerHeight;
+        let air = Infinity;
+        for (const b of opts.copy[key]) {
+          if (b[4] === 'p') continue;
+          const dx = Math.max(b[0] - q.x, 0, q.x - b[2]) * window.innerWidth;
+          const dy = Math.max(b[1] - q.y, 0, q.y - b[3]) * window.innerHeight;
+          air = Math.min(air, Math.hypot(dx, dy) - rPx);
+        }
+        speakerCopy.push({ J, airPx: +air.toFixed(1), grille: [+q.x.toFixed(3), +q.y.toFixed(3), +rPx.toFixed(1)] });
+        if (air < L.speakerCopyAirPx) fails.push(`speaker's view J${J}: the grille is ${air.toFixed(0)} px from the copy (at least ${L.speakerCopyAirPx}), at [${q.x.toFixed(3)}, ${q.y.toFixed(3)}]`);
+      }
     }
     // Near plane against the scene's surfaces (< 1 would clip).
     let minClr = Infinity;
@@ -1035,7 +1201,9 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       clearance: { min: minClr, at: clrAt },
       curtain: { minM: +curtainM.toFixed(3), atJ: curtainAt },
       speaker,
-      copy: opts.copy ? { steps: copySteps, hits: copyHits, longestRun: copyRun, longestRunAtJ: copyRunAt, minAirPx: +copyMin.toFixed(1), minAirAtJ: copyMinAt, points: copyPts } : null,
+      speakerCopy,
+      copy: opts.copy
+ ? { steps: copySteps, hits: copyHits, longestRun: copyRun, longestRunAtJ: copyRunAt, minAirPx: +copyMin.toFixed(1), minAirAtJ: copyMinAt, points: copyPts } : null,
       steps,
       /** Where the subject sits on screen (fractions from the left / top) at a few positions. */
       subjectAt: Array.from({ length: 31 }, (_, i) => 2.25 + i * 0.125).map((J) => {
@@ -1047,6 +1215,12 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
         return { J, head: r(head), barrel: r(barrel), tail: r(tail), foot: r(foot), dist: +new Vector3(...f.pos).distanceTo(new Vector3(...f.tgt)).toFixed(3) };
       }),
       fails,
+      /**
+       * The failures that are about where the subject is (in frame, clear of the copy, the speaker's
+       * view, the near plane), without the pace rules: what a sweep with a held pointer is judged by
+       * (the pace rules describe the authored move, measured with the reaction off).
+       */
+      placeFails: fails.filter((f) => /^(frame|copy|speaker's view|clearance)/.test(f)),
       pass: fails.length === 0,
     };
   };
