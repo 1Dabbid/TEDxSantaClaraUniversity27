@@ -76,7 +76,7 @@ Visitors who never get the live canvas (no JavaScript, reduced motion, Save-Data
 
 - **Default**: one fixed stack under the sections' scrims. Each section's still cross-fades in as the section reaches mid-viewport (scroll-driven animations on named view timelines, set in the "Scene stills" block of `globals.css`). A still below the hero stays `display: none`, so its lazy image is not requested, until its section enters the viewport.
 - **Reduced motion**, and browsers without scroll-driven animations when motion is off: no stack; each section carries its still as a background plate (`::before`, top of the section, fading out). Without scroll-driven animations and with motion on, only the hero still shows.
-- **Live scene**: visitors who get the canvas never see a still. The boot script in `SiteShell` sets `html.scene-likely` before first paint (home page, motion on, not 2G, not forced colours, not `?quality=static`), which keeps the stack hidden (the hero image is `loading="lazy"`, so it is not even requested); `SceneGate` runs the GPU probe right after the first paint, prefetches the scene chunk once the scene is confirmed, sets `html.scene-pending` and then `html.scene-live` once the canvas has drawn. The page shows black until the canvas fades in. If the probe finds no usable WebGL (or the scene fails, or the context is lost), `scene-likely` is removed and the stills fade in.
+- **Live scene**: visitors who get the canvas never see a still. The boot script in `SiteShell` sets `html.scene-likely` before first paint (home page, motion on, not 2G, not forced colours, not `?quality=static`), which keeps the stack hidden (the hero image is `loading="lazy"`, so it is not even requested); `SceneGate` runs the GPU probe right after the first paint, prefetches the scene chunk once the scene is confirmed, sets `html.scene-pending` and then `html.scene-live` once the canvas has drawn. The page shows black until the canvas fades in. If the probe finds no usable WebGL (or the scene fails, or the context is lost), `scene-likely` is removed and the stills fade in. The same happens if the scene runs but stays slow: it lowers its quality step by step, and if it is still under 24 frames a second at the last step for about six seconds, the canvas is hidden and paused and the stills take over for the rest of the visit.
 - Save-Data (with JavaScript): the hero still only (`html.save-data`). Print: hidden. Home page only.
 
 **Regenerate them whenever the scene changes** (`src/scene/**`: shots, materials, lighting, engraving) and commit the images; the build itself never needs a GPU:
@@ -90,7 +90,9 @@ PW_CHROMIUM_PATH=/path/to/chromium npm run stills     # starts `next start` on :
 
 ### Motion engine (`src/motion/`)
 
-- `html.motion` is set by an inline script before first paint (JS on, no reduced motion, no Save-Data, not on `/keystatic`) and removed by `MotionRoot` if the tier resolves to `static`. All pre-reveal CSS is scoped to `html.motion`.
+- `html.motion` is set by an inline script before first paint, by the same rules as the quality tier (JS on, no reduced motion, no Save-Data, no 2G connection, not `?quality=static`, WebGL not known to be missing, not on `/keystatic`), so a visit that will be static never gets the taller motion layout or downloads the motion engine. `MotionRoot` follows later changes (a first visit without WebGL is only known after the GPU probe; the Reduce motion switch) and keeps the reader on their deep link or in their section when it switches (`src/motion/anchor.ts`). All pre-reveal CSS is scoped to `html.motion`.
+- Resizing the window or rotating a phone keeps the reader in the same section at the same fraction (`SmoothScroll`).
+- Section moments far below the fold are set up at an idle moment, or when the reader comes near, instead of during page load (`useSectionMotion`).
 - `MotionRoot` lazy-loads the engine (`src/motion/engine/index.ts`): `reveal.ts` (the `data-reveal="lines|chars|fade|rule|stagger"` attribute API, CSS failsafe if the engine never arrives), `cursor.ts` (`data-cursor="link|loupe"`), `magnetic.ts` (`data-magnetic`), `navigation.ts` (smooth anchors with header offset, a curtain between routes, focus moved to `#main`, scroll position restored on back/forward), `chrome.ts` (header hides on scroll down; red reading-progress hairline), `focus.ts`.
 - `SmoothScroll` dynamically imports GSAP and Lenis only when motion is on; Lenis runs on the GSAP ticker. Always import GSAP from `@/motion/gsap`.
 - Section moments live in `src/motion/sections/*Motion.tsx`, run through `useSectionMotion` (lazy GSAP, scoped context, reverted on route change). Gate any new animation on `useQuality() !== 'static'` and animate *from* the static layout.
@@ -113,7 +115,8 @@ Separately, `sceneEnabled()` / `useSceneEnabled()` is **false when WebGL only ru
 | --- | --- |
 | `?quality=high`, `?quality=low`, `?quality=static` | force the tier; `high`/`low` also force the scene on, even on software WebGL |
 | `?perf` | exposes `window.__fpPerf` (`gsap`, `ScrollTrigger`, `lenis`, `refreshes` count) for performance and leak audits |
-| `?perf=off` | turns off the scene's automatic quality step-down (also exposes `__fpPerf`) |
+| `?perf=off` | turns off the scene's automatic quality step-down and its hand-over to the still frames (also exposes `__fpPerf`) |
+| `?perf=slow` | makes the scene read every frame as slow: it steps down within seconds and hands over to the still frames (tests) |
 | `?post=0` | scene without post-processing |
 | `?scene-debug=1` | writes per-frame camera/quality state to `window.__scene`; enables the `envrot` and `keymul` lighting parameters |
 

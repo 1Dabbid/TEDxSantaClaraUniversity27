@@ -2,6 +2,7 @@
 
 import { usePathname } from 'next/navigation';
 import { Component, lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react';
+import { SCENE_SLOW_EVENT, SCENE_SLOW_KEY } from '@/lib/motion-pref';
 import { probeNow, SCENE_LIKELY_CLASS, useSceneEnabled } from '@/lib/quality';
 import type { EngravingFacts } from '@/scene/engraving';
 
@@ -29,6 +30,17 @@ const SceneLoader = lazy(() => import('@/scene/SceneLoader'));
  * passed), SceneBoundary catches the error, the scene stays down for the rest of
  * the visit and the still frames (SceneStills) stay up. Nothing reaches the
  * route's or the global error page.
+ *
+ * The same happens when the scene runs but stays slow: its perf governor
+ * (src/scene/Experience.tsx) lowers the quality step by step, and if the frame
+ * rate is still poor at the last step it dispatches `scene:slow`. The canvas is
+ * then hidden and paused, exactly as off the home page, and the stills take over
+ * for the rest of the visit (sessionStorage: a reload does not load the scene
+ * again). It is hidden rather than unmounted because releasing a WebGL context
+ * can itself block for seconds on the slow devices this is for. Smooth scrolling
+ * and the section motion stay on, as on a device whose WebGL is software only.
+ * `?perf=off` turns the governor off; a forced `?quality=` never hands over,
+ * except with `?perf=slow`, which makes the governor read every frame as slow.
  */
 
 class SceneBoundary extends Component<{ onFail: () => void; children: ReactNode }, { failed: boolean }> {
@@ -45,6 +57,16 @@ class SceneBoundary extends Component<{ onFail: () => void; children: ReactNode 
 }
 
 const FLAG = 'fp:home-visited';
+
+/** The scene was found too slow earlier in this visit (QA overrides in the URL start afresh). */
+function wasSlow(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return !/[?&](quality|perf)=/.test(window.location.search) && sessionStorage.getItem(SCENE_SLOW_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
 
 type FiberRoots = Map<Element, { store: { getState: () => { frameloop: string; setFrameloop: (f: 'always' | 'demand' | 'never') => void } } }>;
 
@@ -115,8 +137,26 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
   const ref = useRef<HTMLDivElement>(null);
   const saved = useRef('always');
   // A failed scene stays down for the rest of the visit (the stills cover it).
-  const [failed, setFailed] = useState(false);
+  // (Nothing is rendered during hydration either way, so reading storage here is safe.)
+  const [failed, setFailed] = useState(wasSlow);
   const sceneOk = useSceneEnabled() && !failed;
+  // Too slow even at the lowest quality step: hidden and paused from then on, stills up.
+  const [slow, setSlow] = useState(false);
+  const shown = onHome && !slow;
+
+  // The perf governor gave up: the scene is too slow on this device even at its lowest step.
+  useEffect(() => {
+    const onSlow = () => {
+      try {
+        sessionStorage.setItem(SCENE_SLOW_KEY, '1');
+      } catch {
+        /* storage blocked: holds for this page view */
+      }
+      setSlow(true);
+    };
+    window.addEventListener(SCENE_SLOW_EVENT, onSlow);
+    return () => window.removeEventListener(SCENE_SLOW_EVENT, onSlow);
+  }, []);
 
   // The boot script guessed the scene will run (html.scene-likely, stills hidden): probe the
   // GPU right after the first paint instead of at the first idle moment, so the guess is
@@ -137,10 +177,10 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
     if (onHome && sceneOk) void import('@/scene/SceneCanvas').catch(() => {});
   }, [onHome, sceneOk]);
 
-  // The scene failed: show the still frames.
+  // The scene failed or is too slow: show the still frames.
   useEffect(() => {
-    if (failed) document.documentElement.classList.remove(SCENE_LIKELY_CLASS);
-  }, [failed]);
+    if (failed || slow) document.documentElement.classList.remove(SCENE_LIKELY_CLASS);
+  }, [failed, slow]);
 
   useEffect(() => {
     if (!onHome) return;
@@ -151,13 +191,13 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
     }
   }, [onHome]);
 
-  // Pause off home, resume on home. The canvas may appear later (SceneLoader waits
-  // for idle), so watch for it while hidden.
+  // Pause off home (and once found too slow), resume on home. The canvas may appear
+  // later (SceneLoader waits for idle), so watch for it while hidden.
   useEffect(() => {
     const el = ref.current;
     if (!el || !seen) return;
-    void setPaused(el, !onHome, saved);
-    if (onHome) return;
+    void setPaused(el, !shown, saved);
+    if (shown) return;
     const pause = () => void setPaused(el, true, saved);
     const mo = new MutationObserver(pause);
     mo.observe(el, { childList: true, subtree: true });
@@ -176,7 +216,7 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
       document.removeEventListener('visibilitychange', onVis);
       clearTimeout(t);
     };
-  }, [onHome, seen, sceneOk]);
+  }, [shown, seen, sceneOk]);
 
   // Still frames (SceneStills, home page) stand in for the canvas only for visitors who do
   // not get it: `html.scene-likely` (boot script) and `html.scene-pending` (the scene is
@@ -185,7 +225,7 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
   // as the canvas does.
   useEffect(() => {
     const root = document.documentElement;
-    if (!seen || !sceneOk) {
+    if (!seen || !sceneOk || slow) {
       root.classList.remove('scene-pending', 'scene-live');
       return;
     }
@@ -211,7 +251,7 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
       cancelled = true;
       if (lost) drawn?.removeEventListener('webglcontextlost', lost);
     };
-  }, [seen, sceneOk]);
+  }, [seen, sceneOk, slow]);
 
   // Save-Data: only the hero still (CSS cannot see the setting; without JS all stills load lazily).
   useEffect(() => {
@@ -222,7 +262,7 @@ export default function SceneGate({ engraving }: { engraving?: Partial<Engraving
 
   if (!seen || !sceneOk) return null;
   return (
-    <div ref={ref} className="scene-gate" data-hidden={onHome ? undefined : ''} aria-hidden="true">
+    <div ref={ref} className="scene-gate" data-hidden={shown ? undefined : ''} aria-hidden="true">
       <SceneBoundary onFail={() => setFailed(true)}>
         <Suspense fallback={null}>
           <SceneLoader engraving={engraving} />

@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from 'react';
 import { usePathname } from 'next/navigation';
 import { useQuality } from '@/lib/quality';
 import { SECTION_IDS, scrollState, type SectionId } from '@/scene/scrollState';
+import { anchorScroll, pickAnchor, type Anchor } from './anchor';
 import { lenisRef } from './lenisRef';
 
 /**
@@ -17,12 +18,22 @@ import { lenisRef } from './lenisRef';
  *
  * Every frame (or scroll event) it writes scrollState.progress, .sections,
  * .velocity; pointer moves write scrollState.pointer.
+ *
+ * Smooth mode also keeps the reader's place when the window is resized or a
+ * phone is rotated: section heights are in viewport units, so the same scroll
+ * offset would be another section afterwards. The section and the fraction
+ * through it are noted at the first resize event (from the last measurement,
+ * i.e. the old layout) and scrolled back to after ScrollTrigger has refreshed.
+ * Rotating there and back therefore returns to the same spot. Native mode
+ * leaves this to the browser's own scroll anchoring.
  */
 
 type Measured = { id: SectionId; top: number; height: number };
 
 let measured: Measured[] = [];
 let maxScroll = 0;
+// The viewport height `measured` was taken at (the reader's place is worked out from both).
+let measuredVh = 0;
 
 // `?perf` on the first URL of a visit exposes the live instances for performance and leak audits
 // (refresh counts, ScrollTrigger.getAll().length). Read once; costs nothing otherwise.
@@ -42,6 +53,7 @@ function measure() {
     measured.push({ id, top: r.top + y, height: r.height });
   }
   maxScroll = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+  measuredVh = window.innerHeight;
 }
 
 function write(scrollY: number, velocity: number) {
@@ -166,7 +178,67 @@ export default function SmoothScroll({ children }: { children?: ReactNode }) {
       measure();
       ScrollTrigger.refresh();
 
+      // The reader's place across a resize or rotation (see the note at the top).
+      let hold: Anchor | null = null;
+      let holdTimer: ReturnType<typeof setTimeout> | undefined;
+      let holdRaf = 0;
+      let lastW = window.innerWidth;
+      let lastH = window.innerHeight;
+      const INPUTS = ['wheel', 'touchstart', 'keydown', 'mousedown'] as const;
+      const release = () => {
+        hold = null;
+        clearTimeout(holdTimer);
+        cancelAnimationFrame(holdRaf);
+        for (const t of INPUTS) window.removeEventListener(t, release, true);
+      };
+      // `measured` must describe the new layout when this runs.
+      const restore = () => {
+        if (!hold) return;
+        lenis.resize();
+        const y = anchorScroll(hold, measured, window.innerHeight);
+        if (y === null || Math.abs(y - lenis.scroll) < 1) return;
+        lenis.scrollTo(y, { immediate: true, force: true });
+        write(lenis.scroll, 0);
+      };
+      const remeasureAndRestore = () => {
+        if (!hold) return;
+        measure();
+        restore();
+      };
+      const onResize = () => {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        const sameW = w === lastW;
+        const dH = Math.abs(h - lastH);
+        if (sameW && dH === 0) return;
+        // A phone's URL bar sliding in or out resizes the viewport on every change of
+        // direction: nothing is laid out again for that (svh units; ScrollTrigger ignores
+        // it too), so the page must not be moved either.
+        if (sameW && ScrollTrigger.isTouch === 1 && dH <= h * 0.25) return;
+        lastW = w;
+        lastH = h;
+        if (!hold) {
+          hold = pickAnchor(measured, lenis.scroll, measuredVh || h);
+          if (!hold) return;
+          for (const t of INPUTS) window.addEventListener(t, release, { passive: true, capture: true });
+        }
+        // Soon, so the wrong section is not on screen until the (debounced) refresh; then
+        // after every refresh while the layout settles; released once it has.
+        cancelAnimationFrame(holdRaf);
+        holdRaf = requestAnimationFrame(() => (holdRaf = requestAnimationFrame(remeasureAndRestore)));
+        clearTimeout(holdTimer);
+        holdTimer = setTimeout(() => {
+          remeasureAndRestore();
+          release();
+        }, 1200);
+      };
+      ScrollTrigger.addEventListener('refresh', restore);
+      window.addEventListener('resize', onResize);
+
       teardown = () => {
+        window.removeEventListener('resize', onResize);
+        ScrollTrigger.removeEventListener('refresh', restore);
+        release();
         ScrollTrigger.removeEventListener('refresh', onRefresh);
         gsap.ticker.remove(tick);
         lenis.destroy();

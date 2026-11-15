@@ -22,6 +22,7 @@ import {
   type SpotLight,
 } from 'three';
 import type { Quality } from '@/lib/quality';
+import { SCENE_SLOW_EVENT } from '@/lib/motion-pref';
 import {
   AWAY_SHOT,
   AWAY_SHOT_PORTRAIT,
@@ -113,6 +114,8 @@ function createState() {
     perfT: 0,
     perfFrames: 0,
     perfBad: 0,
+    /** Windows in a row that stayed slow at the last step; 'done' once the stills were asked for. */
+    perfSlow: 0 as number | 'done',
     darkFrames: 0,
     lastMeasure: 0,
     strike: createStrike(),
@@ -409,6 +412,8 @@ export default function Experience({
   const motesRef = useRef<Group>(null);
 
   const adaptive = searchFlag('perf') !== 'off';
+  const forceSlow = searchFlag('perf') === 'slow';
+  const handOver = forceSlow || searchFlag('quality') === null;
   const debug = searchFlag('scene-debug') !== null;
   const snap = debug && searchFlag('snap') !== null;
   const envOffset = debug ? Number(searchFlag('envrot') ?? 0) : 0;
@@ -654,18 +659,30 @@ export default function Experience({
       };
     }
 
-    // Adaptive quality: step down when sustained frame time is poor.
-    if (adaptive && step < 4) {
+    // Adaptive quality: step down when sustained frame time is poor. At the last step, if the
+    // scene is still clearly slow for several windows in a row, ask for the still frames instead
+    // (SceneGate hides and pauses the canvas). It takes four slow windows in a row, so a hiccup
+    // or a tab coming back (the loop sleeps while hidden, and the clock restarts on waking) never
+    // adds up to that. Not under a forced `?quality=`; `?perf=slow` reads every window as slow (tests).
+    if (adaptive && (step < 4 || (handOver && fs.perfSlow !== 'done'))) {
       fs.perfT += rawDt;
       fs.perfFrames++;
-      if (fs.perfT > 1.5) {
-        const fps = fs.perfFrames / fs.perfT;
-        fs.perfBad = fps < 46 ? fs.perfBad + 1 : 0;
+      if (fs.perfT > (forceSlow ? 0.3 : 1.5)) {
+        const fps = forceSlow ? 0 : fs.perfFrames / fs.perfT;
         fs.perfT = 0;
         fs.perfFrames = 0;
-        if (fs.perfBad >= 2 && t > 4) {
-          fs.perfBad = 0;
-          setStep((v) => v + 1);
+        if (step < 4) {
+          fs.perfBad = fps < 46 ? fs.perfBad + 1 : 0;
+          if (fs.perfBad >= 2 && t > 4) {
+            fs.perfBad = 0;
+            setStep((v) => v + 1);
+          }
+        } else if (fs.perfSlow !== 'done') {
+          fs.perfSlow = fps < 24 && t > 4 ? fs.perfSlow + 1 : 0;
+          if (fs.perfSlow >= 4) {
+            fs.perfSlow = 'done';
+            window.dispatchEvent(new Event(SCENE_SLOW_EVENT));
+          }
         }
       }
     }
