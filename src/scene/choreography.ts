@@ -448,13 +448,17 @@ export const MOTION_LIMITS = {
   /** With the page's edges: the grille at least this far (fraction of the height) above where the page below Tickets starts. */
   speakerEdgeAir: 0.04,
   /**
-   * With the page's copy: from `speakerClear` (phones `speakerClearPortrait`: the grille reaches the
-   * foot of the counter later there) to the fade, with the page at rest, the grille's disc keeps at
-   * least `speakerCopyAirPx` from every line of text: it rides in the empty space under the seat
-   * counter's caption, never on the numerals, the ruler's numbers or the caption.
+   * With the page's copy: from `speakerClear` to the fade, with the page at rest, the grille's disc
+   * keeps at least `speakerCopyAirPx` from every line of text: it rides in the empty space under the
+   * seat counter's caption, never on the numerals, the ruler's numbers or the caption. Phones, from
+   * `speakerClearPortrait`: the counter runs the full width there and the grille has to cross its
+   * ruler and caption on the way down (to about J 5.8), so until it is under the caption it either
+   * keeps that air or is taken down to a dark shape behind the text: its own light (key plus rim)
+   * at most `speakerDimPortrait`.
    */
   speakerClear: 5.75,
-  speakerClearPortrait: 5.85,
+  speakerClearPortrait: 5.6,
+  speakerDimPortrait: 0.2,
   speakerCopyAirPx: 6,
 
   /** Over the stage (J 3 to 6) the camera stays at least this far (m) in front of the back curtain. */
@@ -1262,6 +1266,15 @@ const LOW_PORTRAIT = { ...STAGE_PORTRAIT, fov: 40, dof: 0.2, cone: 0.32, spot: 0
 /** Phones: the speaker's view, a little wider (the narrow frame takes the middle of the house). */
 const SPEAKER_PORTRAIT = { ...SPEAKER_LOOK, fov: 44, parallax: 0, cone: 0.35, scrimEdge: 0.55 };
 
+/**
+ * Phones: the seat counter (numerals, ruler, caption) runs the full width and scrolls up through
+ * the whole frame, so the grille and the stand have to cross it once on the way down to their place
+ * under the caption. While they do, the microphone's own light (key, rim, the studio reflections)
+ * is taken down: it passes behind the ruler's numbers and the caption as a dark shape, and the
+ * house behind it stays lit.
+ */
+const CROSSING_DIM = { key: 0, rim: 0.05, env: 0.08 };
+
 /** The phone frame the portrait move is written for (width / height). */
 const PORTRAIT_ASPECT = 0.46;
 
@@ -1456,7 +1469,11 @@ const PORTRAIT_MOVE: Move = {
       lk(4.6, STAGE_PORTRAIT, { cone: 1.2, key: 0.4, rim: 1.1, scrimEdge: 0.6, warm: -0.35 }),
       lk(5.0, STAGE_PORTRAIT, { cone: 1.1, key: 0.45, rim: 1.15, scrimEdge: 0.6, warm: -0.3 }),
       lk(5.35, STAGE_PORTRAIT, { fov: 40, cone: 0.7, key: 0.45, rim: 1.25, vignette: 0.62, warm: -0.22 }),
-      lk(5.65, SPEAKER_PORTRAIT),
+      // The microphone's own light goes down while the grille and the stand cross the seat counter's
+      // ruler and caption (CROSSING_DIM), and comes back as the grille settles under the caption.
+      lk(5.65, SPEAKER_PORTRAIT, CROSSING_DIM),
+      lk(5.8, SPEAKER_PORTRAIT, CROSSING_DIM),
+      lk(5.85, SPEAKER_PORTRAIT),
       lk(5.9, SPEAKER_PORTRAIT, { exposure: 0.96, cone: 0.33, spot: 0.78, rim: 1.3 }),
       lk(6.0, SPEAKER_PORTRAIT, DARK, { warm: -0.15 }),
     ],
@@ -1619,7 +1636,7 @@ export type ShotOptions = {
   speakersX?: number;
   venueX?: number;
   ticketsX?: number;
-  /** Landscape: the hero's anchor x, so the grille clears the headline (measured). */
+  /** The hero's anchor x, measured: the grille clear of the headline (landscape), or of the headline and the facts row (the portrait move in a wide-copy window). */
   heroX?: number;
   /** The Tickets room figure (the seat counter), measured: where the grille goes over the end of Tickets. */
   ticketsRoom?: TicketsRoom;
@@ -1637,14 +1654,46 @@ export type ShotOptions = {
  * window, a small tablet on its side) unless it is short and wide like a phone on its side (1.7
  * and over). Below 1024 px the copy runs the full width, as on a tablet held upright, and the
  * landscape move's subject, at the right of the frame, would stand in the text; the portrait move
- * keeps it small in the upper middle and takes it down under each heading. A phone on its side
- * keeps the landscape move: its frame is too short for the portrait hero (the microphone under
- * the headline).
+ * keeps it small in the upper middle and takes it down under each heading. Where such a window is
+ * not taller than wide, the hero's copy is still laid out wide, so the move opens with the
+ * microphone at the right, beside it (wideOpening), not under the headline as on a phone. A phone
+ * on its side keeps the landscape move: its frame is too short for the portrait move's stage.
+ * The static tier chooses its still frames by the same rule (SceneStills.tsx, globals.css).
  */
 export const portraitFraming = (width: number, height: number): boolean => {
   const aspect = width / Math.max(1, height);
   return aspect < 0.9 || (width < 1024 && aspect < 1.7);
 };
+
+/**
+ * The portrait move in a window that is not taller than wide (0.9 and over; see portraitFraming):
+ * the hero's copy is laid out as on a desktop there (the headline, then the three facts side by
+ * side across the left half or more of the frame), so the phone's hero, with the microphone in the
+ * lower middle under the headline, would stand on the facts row.
+ */
+export const WIDE_COPY_ASPECT = 0.9;
+/** The hero's anchor x in such a window when the layout is not measured, its limits, and the macro's. */
+const WIDE_HERO_X = 0.74;
+const WIDE_HERO_X_RANGE = [0.66, 0.84] as const;
+const WIDE_MACRO_X = 0.78;
+/** The hero's anchor height there: the microphone beside the copy, level with the headline and the facts. */
+const WIDE_HERO_Y = 0.53;
+/**
+ * The opening of the portrait move for a wide-copy window: the hero's microphone at the right of
+ * the frame, clear of the headline and the facts row (`heroX`, measured from the layout:
+ * contentLayout.ts, measureHeroX); it slides right early in the push in, so the growing grille keeps
+ * clear of the facts row while that scrolls out, into a macro that sits further right than on a
+ * phone (the Theme headline runs wider), and the pull out brings it to the middle of the width for
+ * the stage, as on a phone. The height holds through the hero and the push
+ * in (the phone's hero starts lower and rises).
+ */
+function wideOpening(heroX: number | undefined): Pick<Move, 'ax' | 'ay'> {
+  const hx = Math.min(WIDE_HERO_X_RANGE[1], Math.max(WIDE_HERO_X_RANGE[0], heroX ?? WIDE_HERO_X));
+  return {
+    ax: [[0.4, hx], [0.5, hx + 0.003], [0.95, Math.max(hx + 0.003, WIDE_MACRO_X)], [1.4, WIDE_MACRO_X], [1.5, WIDE_MACRO_X + 0.005], [1.8, WIDE_MACRO_X], ...PORTRAIT_MOVE.ax.filter(([j]) => j >= 2.8)],
+    ay: [[0.4, WIDE_HERO_Y], [0.5, WIDE_HERO_Y], ...PORTRAIT_MOVE.ay.filter(([j]) => j > 0.5)],
+  };
+}
 
 /** The shot list for the current page content (defaults reproduce DESKTOP_SHOTS / PORTRAIT_SHOTS). */
 export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
@@ -1652,9 +1701,11 @@ export function shotsFor(portrait: boolean, opts: ShotOptions): Shot[] {
     // The grille follows the seat counter as this frame lays it out (a tablet's is wider and shorter).
     if (!opts.ticketsRoom && (!opts.aspect || Math.abs(opts.aspect - PORTRAIT_ASPECT) < 0.03)) return PORTRAIT_SHOTS;
     const end = endKeys(END_PORTRAIT, opts.ticketsRoom ?? ROOM_PORTRAIT, opts.aspect ?? PORTRAIT_ASPECT);
+    // A window with the wide copy layout opens on its own hero and macro (wideOpening).
+    const open = opts.aspect !== undefined && opts.aspect >= WIDE_COPY_ASPECT ? wideOpening(opts.heroX) : PORTRAIT_MOVE;
     return moveShots(PORTRAIT_MOVE, {
-      ax: [...PORTRAIT_MOVE.ax.filter(([j]) => j < END_PORTRAIT.from), ...end.ax],
-      ay: [...PORTRAIT_MOVE.ay.filter(([j]) => j < END_PORTRAIT.from), ...end.ay],
+      ax: [...open.ax.filter(([j]) => j < END_PORTRAIT.from), ...end.ax],
+      ay: [...open.ay.filter(([j]) => j < END_PORTRAIT.from), ...end.ay],
       aspect: opts.aspect ?? PORTRAIT_ASPECT,
     });
   }

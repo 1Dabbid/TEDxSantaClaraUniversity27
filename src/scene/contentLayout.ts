@@ -1,4 +1,4 @@
-import { portraitFraming } from './choreography';
+import { portraitFraming, WIDE_COPY_ASPECT } from './choreography';
 
 /**
  * Measurements of the page copy that the camera move adapts to (landscape).
@@ -90,14 +90,39 @@ function textRight(root: Node, limit: number): number {
 
 /**
  * Screen x (fraction of the width) for the hero's anchor so the grille keeps
- * clear of the end of the headline: the grille's left edge sits about 11% of
- * the width left of the anchor; it keeps 2.5% of the width of air, plus 1% for
- * the words drifting apart as the hero scrolls out (HeroMotion).
+ * clear of the hero's copy.
+ *
+ * Landscape move: clear of the end of the headline. The grille's left edge sits
+ * about 11% of the width left of the anchor; it keeps 2.5% of the width of
+ * air, plus 1% for the words drifting apart as the hero scrolls out
+ * (HeroMotion).
+ *
+ * Portrait move in a window that is not taller than wide (a half-screen
+ * browser window, a small tablet on its side): clear of the headline and of
+ * the facts row under it, which run across the left half or more of the
+ * frame. There the grille's left edge sits about 12.3% of the height left of
+ * the anchor (the hero's distance and lens are fixed, so the microphone's
+ * size follows the frame's height); the same air.
+ *
+ * Undefined on a frame taller than wide (the copy is stacked and the
+ * microphone stands under it) and without the hero.
  */
 export function measureHeroX(): number | undefined {
   if (typeof document === 'undefined') return undefined;
   const vw = window.innerWidth;
-  if (vw < 1 || portraitFraming(vw, window.innerHeight)) return undefined;
+  const vh = window.innerHeight;
+  if (vw < 1 || vh < 1) return undefined;
+  const portrait = portraitFraming(vw, vh);
+  if (portrait && vw / vh < WIDE_COPY_ASPECT) return undefined;
+  if (portrait) {
+    const title = document.querySelector<HTMLElement>('#hero-title');
+    const facts = document.querySelector<HTMLElement>('.hero-facts');
+    if (!title) return undefined;
+    // The words' scroll-out drift is small against the air kept here: the lines as they sit.
+    const copyRight = Math.max(textRight(title, vw), facts ? textRight(facts, vw) : -1);
+    if (copyRight < 0) return undefined;
+    return Math.round((copyRight / vw + 0.035 + (0.123 * vh) / vw) * 200) / 200;
+  }
   let right = -1;
   for (const w of document.querySelectorAll<HTMLElement>('#hero-title [data-hero-word]')) {
     // The words' own scroll-out drift is a transform: measure where they sit without it.

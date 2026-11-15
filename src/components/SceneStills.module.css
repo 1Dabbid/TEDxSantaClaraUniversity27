@@ -30,6 +30,18 @@
   object-fit: cover;
 }
 
+/* A window narrower than the desktop layout but not taller than wide gets the portrait stage
+   frames (SceneStills.tsx), cropped to a band of their height: the band is taken near the top,
+   where the microphone stands, not through the middle of the stand. Same query as the plates in
+   globals.css. */
+@media (min-aspect-ratio: 9/10) and (max-width: 1023.98px) and (max-aspect-ratio: 1699/1000) {
+  .speakers img,
+  .schedule img,
+  .venue img {
+    object-position: 50% 12%;
+  }
+}
+
 /* Everything but the hero waits for its section (below). `content-visibility:
    hidden` keeps the lazy image out of layout, so it is not requested up front
    (`display: none` would also stop the scroll-driven animation from running). */

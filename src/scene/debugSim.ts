@@ -80,6 +80,8 @@ type Frame = {
   motes: number;
   /** Upper-middle band veil (0..1). */
   band: number;
+  /** The subject's own light: key plus rim (the look's multipliers). */
+  lit: number;
   /** Weight: lag of the view behind its turn (deg, along camera right / up). */
   lag: [number, number];
 };
@@ -356,6 +358,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
           cone: +look.cone.toFixed(4),
           motes: +look.motes.toFixed(4),
           band: +look.band.toFixed(4),
+          lit: +(Math.max(0, look.key) + look.rim).toFixed(4),
           lag: [+((out.lagX * 180) / Math.PI).toFixed(4), +((out.lagY * 180) / Math.PI).toFixed(4)],
         });
       });
@@ -1155,7 +1158,11 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
     // the page: the seat counter's numerals, the ruler's numbers and the caption. (The sweep above
     // trails the page by a few hundredths of J, as the camera does behind a scrolling page; here the
     // rig is settled, as it is for a visitor who has stopped to look.)
-    const speakerCopy: { J: number; airPx: number; grille: number[] }[] = [];
+    // Phones: the counter runs the full width and scrolls up through the whole frame, so the grille
+    // has to cross its ruler and caption once on the way down (`speakerClearPortrait` to about 5.8).
+    // There it must either keep that air or be taken down: the microphone's own light (key plus rim)
+    // at most `speakerDimPortrait`, a dark shape behind the text.
+    const speakerCopy: { J: number; airPx: number; grille: number[]; lit: number; dim: boolean }[] = [];
     if (opts.copy) {
       const from = portrait ? L.speakerClearPortrait : L.speakerClear;
       for (const key of Object.keys(opts.copy).sort((a, b) => +a - +b)) {
@@ -1171,8 +1178,10 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
           const dy = Math.max(b[1] - q.y, 0, q.y - b[3]) * window.innerHeight;
           air = Math.min(air, Math.hypot(dx, dy) - rPx);
         }
-        speakerCopy.push({ J, airPx: +air.toFixed(1), grille: [+q.x.toFixed(3), +q.y.toFixed(3), +rPx.toFixed(1)] });
-        if (air < L.speakerCopyAirPx) fails.push(`speaker's view J${J}: the grille is ${air.toFixed(0)} px from the copy (at least ${L.speakerCopyAirPx}), at [${q.x.toFixed(3)}, ${q.y.toFixed(3)}]`);
+        const dim = portrait && f.lit <= L.speakerDimPortrait;
+        speakerCopy.push({ J, airPx: +air.toFixed(1), grille: [+q.x.toFixed(3), +q.y.toFixed(3), +rPx.toFixed(1)], lit: f.lit, dim });
+        if (air < L.speakerCopyAirPx && !dim)
+          fails.push(`speaker's view J${J}: the grille is ${air.toFixed(0)} px from the copy (at least ${L.speakerCopyAirPx}), at [${q.x.toFixed(3)}, ${q.y.toFixed(3)}]${portrait ? `, and lit (${f.lit}, at most ${L.speakerDimPortrait} to pass behind text)` : ''}`);
       }
     }
     // Near plane against the scene's surfaces (< 1 would clip).
