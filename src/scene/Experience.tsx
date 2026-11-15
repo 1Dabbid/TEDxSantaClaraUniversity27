@@ -28,6 +28,7 @@ import {
   DARK_FROM,
   journey,
   micPoint,
+  portraitFraming,
   resolveShot,
   resolveShots,
   shotsFor,
@@ -36,7 +37,7 @@ import {
 import { createStudioEnvironment } from './environment';
 import type { EngravingFacts } from './engraving';
 import { look } from './look';
-import { measureHeroX, measureSpeakersX, measureTicketsX, measureVenueX } from './contentLayout';
+import { measureHeroX, measureSpeakersX, measureTicketsRoom, measureTicketsX, measureVenueX } from './contentLayout';
 import { createRig, createRigOut, REACT, scrollKickFor, stepRig } from './rig';
 import { createHazeMaterial, createMotesMaterial, shared } from './materials';
 import { houseLights, houseSeatsLit } from './houseLights';
@@ -77,7 +78,7 @@ function measureSections() {
     if (el) metrics.heights[id] = el.getBoundingClientRect().height;
   }
   const opts = contentOptions();
-  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}:${opts.speakersX ?? ''}:${opts.venueX ?? ''}:${opts.ticketsX ?? ''}:${opts.heroX ?? ''}:${opts.aspect?.toFixed(2) ?? ''}`;
+  const key = `${opts.speakersTba ? 1 : 0}:${opts.scheduleScale.toFixed(2)}:${opts.speakersX ?? ''}:${opts.venueX ?? ''}:${opts.ticketsX ?? ''}:${opts.heroX ?? ''}:${opts.aspect?.toFixed(2) ?? ''}:${opts.ticketsRoom ? Object.values(opts.ticketsRoom).join(',') : ''}`;
   if (key !== contentKey) {
     contentKey = key;
     contentListeners.forEach((f) => f());
@@ -90,7 +91,7 @@ function contentOptions(): ShotOptions {
   // The frame's shape is part of the content key: the held stand over Tickets (Move.hold) depends on
   // it, and a change of height alone (devtools, the browser bar) changes no measured x.
   const aspect = +(window.innerWidth / Math.max(1, window.innerHeight)).toFixed(2);
-  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale, speakersX: measureSpeakersX(), venueX: measureVenueX(), ticketsX: measureTicketsX(), heroX: measureHeroX(), aspect };
+  return { speakersTba: !!document.querySelector('.speakers-runway--tba'), scheduleScale, speakersX: measureSpeakersX(), venueX: measureVenueX(), ticketsX: measureTicketsX(), heroX: measureHeroX(), aspect, ticketsRoom: measureTicketsRoom() };
 }
 const currentJourney = () => journey(scrollState.sections, metrics.heights, metrics.vh);
 
@@ -333,7 +334,7 @@ export default function Experience({
     };
   }, [get, setFrameloop, pathname, contextGen]);
 
-  const portrait = size.width / Math.max(1, size.height) < 0.9;
+  const portrait = portraitFraming(size.width, size.height);
   const [content, setContent] = useState(() => contentKey);
   useEffect(() => {
     const on = () => setContent(contentKey);
