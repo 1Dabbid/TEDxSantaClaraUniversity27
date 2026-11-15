@@ -8,6 +8,11 @@
  * Never replace the objects (`scrollState.sections = ...`); mutate fields.
  */
 
+/**
+ * The home sections in page order. The scene's journey coordinate J counts
+ * them (choreography.ts, `journey`): 0 at the top of the hero, 6 at the end of
+ * Tickets (where the 3D scene goes dark), 9 at the end of Newsletter.
+ */
 export const SECTION_IDS = [
   'hero',
   'theme',

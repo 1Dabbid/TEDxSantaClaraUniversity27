@@ -59,13 +59,17 @@ import { SECTION_IDS } from './scrollState';
  *    grille), then the lights go down. About 200 degrees of orbit in all as
  *    keyed (measured round the stand line, about 214 on desktop, 196 on
  *    phones), one way.
- * 7. After Tickets: the lights go down; the move eases to a stop in the dark.
+ * 7. After Tickets: the lights go down; the move eases to a stop in the dark,
+ *    and the scene stays dark (and stops drawing) under Team, FAQ, Newsletter
+ *    and the footer.
  * 8. Idle: with the page at rest the frame still breathes (a few millimetres
  *    of camera float, the dust and the haze rolling in the beam). The static
  *    tier (reduced motion) has no canvas at all.
  * 9. Reacting: on top of these keys (never changing them), rig.ts (REACT)
- *    orbits the camera a little with the pointer, the device tilt or a slow
- *    sway, gives the view a little weight, and the lights follow the pointer.
+ *    orbits the camera a little round the subject with the pointer, the
+ *    device tilt or a slow sway, gives the view a little weight, and the
+ *    lights follow the pointer. The subject keeps its place on screen (the
+ *    room slides behind it), and the speaker's view answers least (`react`).
  *
  * The camera is held on a sphere round the subject: an aim point (`aim`,
  * held at the screen anchor), a distance (`dist`), an orbit angle (`orbit`,
@@ -110,9 +114,10 @@ import { SECTION_IDS } from './scrollState';
  *   passes behind body copy (the veils: scrim, scrimEdge, band, shade; the
  *   rendered frames are checked for the contrast behind the copy).
  *
- * Journey coordinate `J`: continuous over the home page; section k (in
- * SECTION_IDS order) spans [k, k+1) and the fraction is how far the viewport
- * centre has travelled through it. So J = 0.5 is the hero's middle at the
+ * Journey coordinate `J`: continuous over the home page, 0 at the top to 9 at
+ * the foot (Team, FAQ and Newsletter are sections 6 to 8; the scene is dark
+ * from DARK_FROM = 6 on); section k (in SECTION_IDS order) spans [k, k+1) and
+ * the fraction is how far the viewport centre has travelled through it. So J = 0.5 is the hero's middle at the
  * viewport centre; on a 1440x900 screen 1.22..1.78 is the pinned part of the
  * 225vh theme runway and the speakers stage pins at about 2.25; 2.5 is
  * speakers centred, and so on.
@@ -207,6 +212,12 @@ export type Shot = {
   warm?: number;
   /** Turn of the barrel sleeve (engraving, knurl) about the mic axis, radians. */
   turn?: number;
+  /**
+   * How much the camera answers the visitor here (pointer, tilt, sway, scroll kick; rig.ts REACT),
+   * 0..1, default 1. Turned down where the framing has no room to give: the speaker's view, where
+   * the grille is a hand's breadth from the lens.
+   */
+  react?: number;
 };
 
 export type ResolvedShot = {
@@ -259,6 +270,7 @@ export type ResolvedShot = {
   env: number;
   warm: number;
   turn: number;
+  react: number;
 };
 
 /**
@@ -515,7 +527,7 @@ const DARK = { exposure: 0, drift: 0, parallax: 0, key: 0, spot: 0, cone: 1, vig
  * sharp point of the edge blur as an offset from the screen anchor, so that
  * every field interpolates along the move.
  */
-type Look = Omit<Shot, 'at' | 'aim' | 'dist' | 'orbit' | 'elev' | 'lift' | 'anchor' | 'roll' | 'keyDir' | 'focus' | 'turn'> & {
+type Look = Omit<Shot, 'at' | 'aim' | 'dist' | 'orbit' | 'elev' | 'lift' | 'anchor' | 'roll' | 'keyDir' | 'focus' | 'turn' | 'react'> & {
   kx?: number;
   ky?: number;
   kz?: number;
@@ -614,8 +626,11 @@ const PULL_STAND = { fov: 31, exposure: 1, dof: 0.22, drift: 0.005, parallax: 0.
 
 /**
  * Journey position at or beyond which the scene is fully dark: the end of
- * Tickets. The text-only partner band after Tickets has no data-section, so J
- * rests at 6 while it scrolls past; the scene is already black behind it.
+ * Tickets. The journey carries on below it (the partner band has no
+ * data-section, so J rests at 6 while it scrolls past, then Team, FAQ and
+ * Newsletter take J on to 9 at the foot of the page); the scene is black
+ * behind all of it and the render loop sleeps (Experience.tsx). The shot list
+ * always carries a shot exactly here (moveShots), whatever its sampling grid.
  */
 export const DARK_FROM = 6.0;
 
@@ -735,6 +750,8 @@ type Move = {
   looks: { open: readonly LightKey[]; pull: readonly LightKey[]; stage: readonly LightKey[] };
   /** Optional: the upper-middle band veil (Shot.band) by J, over the looks. */
   band?: Keys;
+  /** Optional: how much the camera answers the visitor (Shot.react) by J; 1 where there are no keys. */
+  react?: Keys;
 };
 type LightKey = { at: number } & Required<Look>;
 const lk = (at: number, ...parts: Partial<Look>[]): LightKey => Object.assign({ at }, LOOK_BASE, ...parts);
@@ -841,6 +858,15 @@ const houseX = (aspect: number) => Math.min(0.56, Math.max(0.44, 0.735 - 0.45 / 
 /** The nominal landscape frame (1.7) when the frame is not known. */
 const HOUSE_X = houseX(1.7);
 
+/**
+ * How much the camera answers the visitor over the end of Tickets (Shot.react): fully until the
+ * crane starts down behind the microphone, a third in the speaker's view.
+ */
+const SPEAKER_REACT: Keys = [
+  [5.2, 1],
+  [5.65, 0.35],
+];
+
 const DESKTOP_MOVE: Move = {
   // The macro a little open (0.071 m), so the rows of the engraving fit across the frame as they pass.
   push: { from: 0.45, d0: 0.4, d1: 0.071 },
@@ -919,6 +945,18 @@ const DESKTOP_MOVE: Move = {
     [5.75, 0],
   ],
   aspect: 1.7,
+  // Over Venue the stand rides in a gutter a few dozen pixels wide beside the location plate, seen
+  // from the crane (the grille and the foot at different depths, so an orbit moves one against the
+  // other): the camera barely answers there (0.15). The speaker's view has no room to give either: the
+  // grille is close to the lens and the seat counter runs across the frame (rig.ts keeps the grille
+  // in its place and lets the house slide behind it).
+  react: [
+    [3.9, 1],
+    [4.3, 0.15],
+    [4.7, 0.15],
+    [4.95, 1],
+    ...SPEAKER_REACT,
+  ],
   // The orbit and the sink set off a step early, while the descent slows at the foot of the band, so
   // the turn builds up evenly into the pull out; then one direction all the way round to behind the
   // microphone and a little past the line to the house, so the grille sits in the right third of the
@@ -1170,6 +1208,7 @@ const PORTRAIT_MOVE: Move = {
     [5.7, 0],
   ],
   aspect: PORTRAIT_ASPECT,
+  react: SPEAKER_REACT,
   orbit: [
     [1.6, 0],
     [2.0, -0.45],
@@ -1295,7 +1334,8 @@ const MOVE_STEP = 0.0625;
 /**
  * The shot list of one move: a shot at J 0 (the hero at rest), then shots
  * sampled from the keys at an even spacing from the start of the push in to the
- * end of Tickets. `variant` overrides the anchor height and barrel glide keys
+ * end of Tickets, a shot exactly at the end of Tickets (DARK_FROM: lights out)
+ * and its copy held to the foot of the page. `variant` overrides the anchor height and barrel glide keys
  * (a content variant).
  */
 function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'ax' | 'aspect'>> = {}): Shot[] {
@@ -1338,6 +1378,7 @@ function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'a
       keyDir: [kx, ky, kz],
       focus: [anchor[0] + fdx, 1 - anchor[1] + fdy],
       band: mv.band ? track(mv.band, J) : rest.band,
+      react: mv.react ? track(mv.react, J) : 1,
     };
   };
   // Hold the point on the stand at the anchor keys while the aim swings out (Move.hold).
@@ -1365,7 +1406,11 @@ function moveShots(move: Move, variant: Partial<Pick<Move, 'ay' | 'barrelY' | 'a
     if (J > DARK_FROM + 1e-9) break;
     out.push(held(J));
   }
-  // After Tickets the lights stay down and the move has come to rest.
+  // The sampling grid starts at the push in, so it need not land on the end of Tickets: the dark
+  // shot is always added exactly there. Without it the last sampled shot (half way through the
+  // fade) would be held for the rest of the page.
+  if (out[out.length - 1].at < DARK_FROM - 1e-9) out.push(held(DARK_FROM));
+  // After Tickets (Team, FAQ, Newsletter: J 6 to 9) the lights stay down and the move has come to rest.
   out.push({ ...out[out.length - 1], at: 9.5 });
   return out;
 }
@@ -1537,6 +1582,7 @@ export function resolveShot(s: Shot): ResolvedShot {
     env: s.env ?? 1,
     warm: s.warm ?? 0,
     turn: s.turn ?? 0,
+    react: s.react ?? 1,
   };
 }
 
@@ -1575,6 +1621,7 @@ const scalarKeys = [
   'env',
   'warm',
   'turn',
+  'react',
 ] as const;
 const vectorKeys = ['target', 'origin', 'keyDir'] as const;
 

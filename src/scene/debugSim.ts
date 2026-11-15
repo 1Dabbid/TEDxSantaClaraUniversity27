@@ -376,6 +376,68 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
       };
     },
     /**
+     * How far the reaction carries the subject on screen at a journey position: the page held at J,
+     * the rig settled, then the pointer held at each side and corner (or, with `sway`, the automatic
+     * sway of a touch screen for `seconds`, with an optional held scroll kick). Reports the largest
+     * displacement (px) of the grille and of any part of the subject in frame at rest (grille, barrel,
+     * stand foot) against the frame at rest, where the grille went (fractions of the frame), and how
+     * far the house's middle slid behind it (px).
+     */
+    subjectShift(opts: { J: number; sway?: boolean; seconds?: number; kick?: number }) {
+      const aspect = window.innerWidth / Math.max(1, window.innerHeight);
+      const portrait = aspect < 0.9;
+      const settle = Array(240).fill(opts.J);
+      const base = api.run({ js: settle, drift: false, portrait }).at(-1)!;
+      const head = micPoint(0.1302);
+      const parts = [head, SPINE, STAND_BASE.clone()];
+      const house = fromHouse(new Vector3(0, 1.35, 9.0));
+      const at = (f: Frame, P: Vector3) => project(f, P, aspect);
+      const inside = (q: number[]) => q[2] > 0 && q[0] >= 0 && q[0] <= 1 && q[1] >= 0 && q[1] <= 1;
+      const rest = parts.map((P) => at(base, P));
+      const house0 = at(base, house);
+      const px = (a: number[], b: number[]) => Math.hypot((a[0] - b[0]) * window.innerWidth, (a[1] - b[1]) * window.innerHeight);
+      const runs: Frame[][] = [];
+      if (opts.sway) {
+        const n = Math.round((opts.seconds ?? 30) * 60);
+        runs.push(api.run({ js: [...settle, ...Array(n).fill(opts.J)], react: 1, sway: 1, kick: opts.kick, portrait }).slice(settle.length));
+      } else {
+        for (const p of [[-1, 0], [1, 0], [0, 1], [0, -1], [-1, -1], [-1, 1], [1, -1], [1, 1]] as [number, number][])
+          runs.push(api.run({ js: [...settle, ...Array(180).fill(opts.J)], drift: false, react: 1, pointer: p, portrait }).slice(settle.length));
+      }
+      let headPx = 0;
+      let maxPx = 0;
+      let housePx = 0;
+      let headIn = inside(rest[0]);
+      const box = [1, 1, 0, 0];
+      for (const F of runs)
+        for (const f of F) {
+          parts.forEach((P, i) => {
+            if (!inside(rest[i])) return;
+            const q = at(f, P);
+            const d = px(q, rest[i]);
+            maxPx = Math.max(maxPx, d);
+            if (i === 0) {
+              headPx = Math.max(headPx, d);
+              headIn &&= inside(q);
+              box[0] = Math.min(box[0], q[0]);
+              box[1] = Math.min(box[1], q[1]);
+              box[2] = Math.max(box[2], q[0]);
+              box[3] = Math.max(box[3], q[1]);
+            }
+          });
+          housePx = Math.max(housePx, px(at(f, house), house0));
+        }
+      return {
+        J: opts.J,
+        headPx: +headPx.toFixed(1),
+        maxPx: +maxPx.toFixed(1),
+        housePx: +housePx.toFixed(1),
+        headIn,
+        headRest: [+rest[0][0].toFixed(3), +rest[0][1].toFixed(3)],
+        headBox: box.map((v) => +v.toFixed(3)),
+      };
+    },
+    /**
      * A fling: the journey jumps from `from` to `to` in one frame and back, at 60 fps. Reports the
      * largest weight lag and the largest bank into the move (deg; the rig's own roll, not the
      * authored horizon roll of the shot), the bank limit (deg), whether every value stayed finite,
@@ -576,7 +638,7 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
    * page scrolled there; the audit script collects them), so the keep-out test uses the real layout
    * at this viewport instead of fixed fractions. `copyMarginPx` is the air kept round every box.
    * `pointer` holds the pointer there for the whole sweep with the scene reacting, to check that the
-   * reaction keeps the subject clear of the copy too.
+   * reaction keeps the subject in frame and clear of the copy too (`placeFails`).
    */
   const motion = (
     opts: {
@@ -1047,6 +1109,12 @@ export function installSim(getShots: () => { shots: ResolvedShot[]; away: Resolv
         return { J, head: r(head), barrel: r(barrel), tail: r(tail), foot: r(foot), dist: +new Vector3(...f.pos).distanceTo(new Vector3(...f.tgt)).toFixed(3) };
       }),
       fails,
+      /**
+       * The failures that are about where the subject is (in frame, clear of the copy, the speaker's
+       * view, the near plane), without the pace rules: what a sweep with a held pointer is judged by
+       * (the pace rules describe the authored move, measured with the reaction off).
+       */
+      placeFails: fails.filter((f) => /^(frame|copy|speaker's view|clearance)/.test(f)),
       pass: fails.length === 0,
     };
   };
