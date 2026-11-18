@@ -150,7 +150,7 @@ Go through this once after step d, and again whenever the team changes hands.
 - [ ] **`KEYSTATIC_SECRET` is at least 32 random characters** (a password manager's generator, or `openssl rand -hex 32`), never a word or a reused password. Rotate it, together with the GitHub App's client secret, if either may have leaked (step d, "After either route").
 - [ ] **The four Keystatic variables are set for Production only**, Deployment Protection is on for previews, and `/keystatic` on a preview URL answers 404.
 - [ ] **Never set `ANALYZE=1` on Vercel**: it publishes browser source maps of the whole site. It is only for local bundle analysis.
-- [ ] Know the residual risk: the signed-in editor's GitHub access token is kept in a cookie that the admin's own JavaScript must read (`keystatic-gh-access-token`, a Keystatic design decision), so script running on this origin could read it. The site therefore allows no third-party scripts, uploads under `/images`, `/brand`, `/stills` and `/icons` are served with a sandboxed, script-free Content-Security-Policy, and speaker and team photos must be JPG, PNG, WebP or AVIF (checked by file contents at build time; anything else is left out of the page with a content warning). Sponsor logos may be SVG; they are only shown through `<img>`, which never runs script.
+- [ ] Know the residual risk: the signed-in editor's GitHub access token is kept in a cookie that the admin's own JavaScript must read (`keystatic-gh-access-token`, a Keystatic design decision), so script running on this origin could read it. The site therefore allows no third-party scripts (with one exception you choose yourself: switching on Google Analytics adds Google's script to the public pages, never to the admin; see docs/ANALYTICS.md), uploads under `/images`, `/brand`, `/stills` and `/icons` are served with a sandboxed, script-free Content-Security-Policy, and speaker and team photos must be JPG, PNG, WebP or AVIF (checked by file contents at build time; anything else is left out of the page with a content warning). Sponsor logos may be SVG; they are only shown through `<img>`, which never runs script.
 
 ## e. Post-deploy checklist
 
@@ -165,14 +165,18 @@ Go through this once after step d, and again whenever the team changes hands.
 - [ ] `/keystatic`: sign in, change a harmless FAQ answer, save, and see it live within a couple of minutes; change it back.
 - [ ] The footer shows "This independent TEDx event is operated under license from TED."
 
-## f. Rolling back
+## f. Visitor statistics (optional)
+
+The site can report visits and Tickets-button clicks to Google Analytics. It is off until you add one setting in Vercel (`NEXT_PUBLIC_GA_MEASUREMENT_ID`, Production only) and redeploy. The numbered steps, what is measured, how to switch it off, and what to decide about cookies and a privacy note first are in [docs/ANALYTICS.md](ANALYTICS.md).
+
+## g. Rolling back
 
 - **A bad code or content deploy**: Vercel > Project > **Deployments** > pick the last good production deployment > **…** > **Promote to Production** (Instant Rollback). The live site switches back within seconds. While rolled back, Vercel may stop promoting new pushes automatically until you promote a new deployment again; check the banner on the project page **(verify on first deploy)**.
 - **Then fix the cause**: for a content mistake, edit it again in `/keystatic`, or on GitHub open the commit (repo > **Commits**) and use **Revert** (via a pull request) to undo it. For code, revert the commit and push.
 - **A broken build never goes live**: if a build fails, Vercel keeps serving the previous deployment. The failed build's log is under Deployments; a content problem is reported as "Content error in content/<file>.yaml" with the field and the allowed values (docs/EDITING.md, "If the site fails to build after an edit").
 - **Content warnings**: most editor mistakes (a link without `https://`, a photo that is not a JPG/PNG/WebP/AVIF, a photo over 2 MB, an invalid page address, an impossible date) do not fail the build: the value is repaired or left out and the build log lists a "Content warning". `npm run check:content` prints them all locally; CI runs it as a non-blocking step (and blocks only on errors that would stop the build).
 
-## g. Known notices in the build log (no action needed)
+## h. Known notices in the build log (no action needed)
 
 - **`npm warn deprecated eslint@9…`** during install: the code checker's current major version is no longer maintained upstream. It only checks code on developers' machines and in CI and is not part of the site. Upgrade it when `eslint-config-next` supports the next major.
 - **`npm audit` reports 2 moderate issues** (`minimatch`, through `@keystatic/core`): they concern the admin's build tooling, not the public pages. Upgrade `@keystatic/core` when a release drops that dependency. **Never run `npm audit fix --force`**: its only "fix" is a years-old Keystatic that breaks the admin.
