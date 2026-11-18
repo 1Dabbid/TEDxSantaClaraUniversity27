@@ -52,3 +52,16 @@ test.describe('analytics off (no Measurement ID)', () => {
     expect(foreign).toEqual([]);
   });
 });
+
+test('the built-in ID is used on the live site only, and "off" switches it off', async () => {
+  const { gaMeasurementId, gaIdProblem, SITE_GA_ID } = await import('../../src/lib/analytics-id');
+  const prod = { NODE_ENV: 'production' };
+  expect(SITE_GA_ID).toMatch(/^G-[A-Z0-9]{4,}$/);
+  expect(gaMeasurementId({ ...prod })).toBeNull();
+  expect(gaMeasurementId({ ...prod, VERCEL_ENV: 'preview' })).toBeNull();
+  expect(gaMeasurementId({ NODE_ENV: 'development', VERCEL_ENV: 'production' })).toBeNull();
+  expect(gaMeasurementId({ ...prod, VERCEL_ENV: 'production' })).toBe(SITE_GA_ID);
+  expect(gaMeasurementId({ ...prod, VERCEL_ENV: 'production', NEXT_PUBLIC_GA_MEASUREMENT_ID: 'off' })).toBeNull();
+  expect(gaMeasurementId({ ...prod, VERCEL_ENV: 'production', NEXT_PUBLIC_GA_MEASUREMENT_ID: 'G-TEST000000' })).toBe('G-TEST000000');
+  expect(gaIdProblem({ NEXT_PUBLIC_GA_MEASUREMENT_ID: 'off' })).toBe('');
+});

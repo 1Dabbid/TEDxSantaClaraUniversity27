@@ -1,12 +1,12 @@
 # Visitor statistics with Google Analytics
 
-The site can report to Google Analytics 4 (GA4): how many people visit, which pages they open, and whether they click the Tickets button. It is **off** until you do the steps below. The site's half is already built; you create the Google Analytics property and paste one ID into Vercel. No code, about 15 minutes.
+The site can report to Google Analytics 4 (GA4): how many people visit, which pages they open, and whether they click the Tickets button. The club's Measurement ID (`G-NH4G85FK73`) is built into the site, so the live site (the Vercel Production deployment) reports to it without any setting. Local copies, tests and preview deployments never report. What is left for you is on the Google side: steps 4, 5 and 8 below. No code, about 10 minutes. Steps 1 to 3 and 6 to 7 are only needed if you ever move to a different Google Analytics property.
 
 Before you start, read "Before you switch it on" at the end: Google Analytics sets cookies, and that comes with a duty to tell visitors.
 
 ## Switch it on
 
-1. **Create the Google Analytics account and property.** Go to [analytics.google.com](https://analytics.google.com) and sign in with the Google account the club shares (not a personal one, so next year's team can get in). Choose **Start measuring**. Give the account a name (the club's name), then the property a name (for example the site's address), time zone **United States, Los Angeles time**, currency **US Dollar**. Answer the questions about the organization, choose any objective, and accept the terms.
+1. **Create the Google Analytics account and property.** Go to [analytics.google.com](https://analytics.google.com) and sign in with the Google account the club shares (not a personal one, so next year's team can get in). Choose **Start measuring**. Give the account a name (the club's name), then the property a name (for example the site's address), time zone **United States, Los Angeles time**, currency **US Dollar**. Answer the questions about the organization, choose the objective **Get baseline reports** (the menu names in this guide assume it; if your menu looks different, use the search box at the top of Google Analytics and type the report name), and accept the terms.
 2. **Create the web data stream.** When asked for a platform choose **Web**. Enter the site's address (the one visitors use, see docs/DEPLOY.md, "Add the domain") and a stream name such as "Website". Choose **Create stream**.
 3. **Copy the Measurement ID.** The stream's page shows a **Measurement ID** at the top right. It looks like `G-AB12CD34EF`. Copy it. (You can find it again later under **Admin** (the gear, bottom left) **> Data streams >** your stream.)
 4. **Change two switches on the same page**, under **Enhanced measurement** (the gear icon at the right of that box):
@@ -14,9 +14,9 @@ Before you start, read "Before you switch it on" at the end: Google Analytics se
    - Switch **Form interactions** off. The site has no forms, so it only adds noise.
    - Leave the rest on (Scrolls, Outbound clicks, File downloads). Choose **Save**.
 5. **Leave Google signals off.** Under **Admin > Data collection and modification > Data collection**, do not turn on "Google signals". The site asks Google not to use it either way, and it is only for advertising.
-6. **Add the ID in Vercel.** Open the project in Vercel, then **Settings > Environment Variables**. Key: `NEXT_PUBLIC_GA_MEASUREMENT_ID`. Value: the ID you copied. Under Environments tick **Production only** (untick Preview and Development). Choose **Save**.
-7. **Redeploy.** In Vercel open **Deployments**, find the newest Production deployment, open its **…** menu and choose **Redeploy**. The ID is read when the site is built, so nothing changes until this is done.
-8. **Check it.** Open the live site in a normal browser window, wait about ten seconds and click around. In Google Analytics open **Reports > Realtime**: you should see yourself within a minute. If you do not, see "If nothing shows up" below.
+6. **Only for a different ID: add it in Vercel.** Open the project in Vercel, then **Settings > Environment Variables**. Key: `NEXT_PUBLIC_GA_MEASUREMENT_ID`. Value: the ID you copied. Under Environments tick **Production only** (untick Preview and Development). Choose **Save**.
+7. **Redeploy (only after step 6).** In Vercel open **Deployments**, find the newest Production deployment, open its **…** menu and choose **Redeploy**. The ID is read when the site is built, so nothing changes until this is done.
+8. **Check it.** Open the live site in a normal browser window, wait about ten seconds and click around. In Google Analytics open **Reports > Realtime**: you should see yourself within a minute. If you do not, see "If nothing shows up" below. Then click a section link in the site's menu on the home page: the page view count must not go up. If it does, step 4 was missed.
 9. **Optional, but worth five minutes: name the details so they appear in reports.** Under **Admin > Data display > Custom definitions > Create custom dimension**, add these four, typing the name in the last column exactly:
 
    | Dimension name (your choice) | Scope | Event parameter / User property |
@@ -65,7 +65,7 @@ The numbers are a little lower than real traffic, on purpose. Visitors whose bro
 
 ## Switch it off
 
-In Vercel, **Settings > Environment Variables**, delete `NEXT_PUBLIC_GA_MEASUREMENT_ID`, then redeploy (step 7). The site then loads nothing from Google and is exactly as it was before. Data already collected stays in Google Analytics until you delete the property there (**Admin > Property details > Move to trash**).
+In Vercel, **Settings > Environment Variables**, add `NEXT_PUBLIC_GA_MEASUREMENT_ID` with the value `off` (Production), then redeploy (step 7). The site then loads nothing from Google and is exactly as it was before. Data already collected stays in Google Analytics until you delete the property there (**Admin > Property details > Move to trash**).
 
 ## If nothing shows up
 
