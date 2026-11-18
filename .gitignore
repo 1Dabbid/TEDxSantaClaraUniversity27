@@ -5,6 +5,8 @@
 
 # next.js
 /.next/
+# second build of the e2e suite (analytics switched on)
+/.next-ga/
 /out/
 /build
 next-env.d.ts

@@ -56,10 +56,13 @@ const MOTION_BOOT = `try{var d=document.documentElement,c=navigator.connection,q
  * The Keystatic admin (/keystatic) lives outside the group and gets none of
  * this: its popovers portal into <body> and must not sit under the content
  * layer's stacking context.
+ *
+ * Google Analytics (src/components/Analytics.tsx) is added only when the build has
+ * a Measurement ID; without one the HTML and the scripts carry no trace of it.
  */
 export async function SiteShell({ children }: { children: ReactNode }) {
   const settings = await getSettings();
-  return (
+  const shell = (
     <>
       <script dangerouslySetInnerHTML={{ __html: MOTION_BOOT }} />
       {/* The accent comes from Event basics; the loader guarantees a 6-digit hex value. */}
@@ -78,4 +81,21 @@ export async function SiteShell({ children }: { children: ReactNode }) {
       <MotionRoot caption={settings.copy.transitionCaption} />
     </>
   );
+  // Google Analytics, only in a build that has a Measurement ID. next.config.ts inlines
+  // GA_MEASUREMENT_ID ('' when off), so without one this branch, the import in it and the
+  // analytics code itself are left out of the build, and the page is exactly `shell`.
+  if (process.env.GA_MEASUREMENT_ID) {
+    const { default: Analytics } = await import('@/components/Analytics');
+    return (
+      <>
+        {shell}
+        <Analytics
+          id={process.env.GA_MEASUREMENT_ID}
+          ticketState={settings.ticketState}
+          links={{ ticket: settings.ticketUrl, interest: settings.interestUrl, newsletter: settings.newsletterUrl }}
+        />
+      </>
+    );
+  }
+  return shell;
 }

@@ -42,7 +42,11 @@ for (const name of loaders) {
 }
 console.warn = originalWarn;
 
-const warnings = contentWarnings();
+const warnings = [...contentWarnings()];
+// Not content, but the same kind of slip: a mistyped Google Analytics ID leaves analytics off.
+const { gaIdProblem, GA_ID_VAR } = await import('../src/lib/analytics-id.ts');
+const gaProblem = gaIdProblem();
+if (gaProblem) warnings.push({ file: 'Environment variables (Vercel settings or .env)', field: GA_ID_VAR, message: gaProblem });
 for (const e of errors) console.log(`ERROR (the site will not build until this is fixed)\n${e}\n`);
 if (warnings.length) {
   console.log(`${warnings.length} warning${warnings.length === 1 ? '' : 's'} (the site still builds; the value is fixed or left out):`);

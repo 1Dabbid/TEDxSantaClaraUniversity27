@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { NextConfig } from 'next';
+import { gaIdProblem, gaMeasurementId } from './src/lib/analytics-id';
 import { normalizeLink } from './src/lib/content-checks';
 
 const isDev = process.env.NODE_ENV !== 'production';
@@ -66,19 +67,44 @@ const preview = process.env.VERCEL_ENV === 'preview';
 const toolbar = (...extra: string[]) => (preview ? ['https://vercel.live', ...extra] : []);
 
 /**
+ * Google Analytics 4 (docs/ANALYTICS.md): only when NEXT_PUBLIC_GA_MEASUREMENT_ID is a
+ * valid Measurement ID in a production build, and only in the public site's policy,
+ * never the admin's. The hosts are the ones Google documents for GA4 without Google
+ * signals (which the site keeps off, so no advertising host is needed): the tag
+ * itself from googletagmanager.com, measurement requests to google-analytics.com and
+ * its regional analytics.google.com endpoints.
+ */
+const gaProblem = gaIdProblem();
+if (gaProblem) console.warn(`\nAnalytics warning: ${gaProblem}\n`);
+const gaId = gaMeasurementId();
+const ga = Boolean(gaId);
+const gaHosts = (...hosts: string[]) => (ga ? hosts : []);
+
+/**
  * Public site. Every page is statically generated, so per-request nonces are not
  * possible: Next's inline RSC payload scripts and the motion boot script need
  * 'unsafe-inline'. Everything else is same-origin only; the site makes no
- * third-party requests (self-hosted fonts, no analytics). Preview deployments
- * additionally allow the Vercel Toolbar.
+ * third-party requests (self-hosted fonts) unless Google Analytics is switched on
+ * (above). Preview deployments additionally allow the Vercel Toolbar.
  */
 const siteCsp = csp({
   'default-src': ["'self'"],
-  'script-src': ["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : []), ...toolbar()],
+  'script-src': ["'self'", "'unsafe-inline'", ...(isDev ? ["'unsafe-eval'"] : []), ...toolbar(), ...gaHosts('https://*.googletagmanager.com')],
   'style-src': ["'self'", "'unsafe-inline'", ...toolbar()],
-  'img-src': ["'self'", 'data:', 'blob:', ...toolbar('https://vercel.com')],
+  'img-src': [
+    "'self'",
+    'data:',
+    'blob:',
+    ...toolbar('https://vercel.com'),
+    ...gaHosts('https://*.google-analytics.com', 'https://*.googletagmanager.com'),
+  ],
   'font-src': ["'self'", 'data:', ...toolbar('https://assets.vercel.com')],
-  'connect-src': ["'self'", ...(isDev ? ['ws:'] : []), ...toolbar('wss://ws-us3.pusher.com')],
+  'connect-src': [
+    "'self'",
+    ...(isDev ? ['ws:'] : []),
+    ...toolbar('wss://ws-us3.pusher.com'),
+    ...gaHosts('https://*.google-analytics.com', 'https://*.analytics.google.com', 'https://*.googletagmanager.com'),
+  ],
   'worker-src': ["'self'", 'blob:'],
   'media-src': ["'self'"],
   'frame-src': frames.length || preview ? ["'self'", ...frames, ...toolbar()] : ["'none'"],
@@ -139,8 +165,14 @@ const noStore = [
 ];
 
 const nextConfig: NextConfig = {
+  // The e2e suite serves a second build (analytics switched on) from `.next-ga` beside the
+  // normal one (playwright.config.ts). Only for `next start`: a build with another distDir
+  // would make Next rewrite tsconfig.json, so that build is made in `.next` and then moved.
+  ...(process.env.NEXT_DIST_DIR ? { distDir: process.env.NEXT_DIST_DIR } : {}),
   reactStrictMode: true,
-  env: { KEYSTATIC_GITHUB_MODE: keystaticGithubMode ? '1' : '' },
+  // Both are inlined into the code at build time. GA_MEASUREMENT_ID is '' when analytics is off,
+  // which lets the build leave the analytics code out altogether (src/components/SiteShell.tsx).
+  env: { KEYSTATIC_GITHUB_MODE: keystaticGithubMode ? '1' : '', GA_MEASUREMENT_ID: gaId ?? '' },
   poweredByHeader: false,
   // `ANALYZE=1 next build` emits browser source maps so first-load chunks can be attributed per module.
   productionBrowserSourceMaps: process.env.ANALYZE === '1',

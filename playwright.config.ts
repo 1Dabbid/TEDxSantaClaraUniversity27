@@ -12,10 +12,21 @@ import { defineConfig, devices } from '@playwright/test';
  * Server: `npm run build && npm run start` on PORT (default 3100). Set
  * PW_SKIP_BUILD=1 to reuse an existing `.next` build, or start a server yourself
  * on that port: it is reused outside CI.
+ *
+ * Second server: tests/e2e/analytics-on.spec.ts needs a build with Google Analytics
+ * switched on (the ID is a build-time setting), with the made-up ID G-TEST000000. It
+ * is built first, moved to `.next-ga` and served on PORT + 1; the normal build then
+ * follows. The spec answers every request to Google itself, so nothing leaves the
+ * machine. PW_SKIP_ANALYTICS=1 leaves the second build out (that spec is then skipped).
  */
 const PORT = Number(process.env.PORT ?? 3100);
 const BASE_URL = `http://127.0.0.1:${PORT}`;
+const GA_PORT = PORT + 1;
+const GA_URL = `http://127.0.0.1:${GA_PORT}`;
+const GA_TEST_ID = 'G-TEST000000';
 const CI = Boolean(process.env.CI);
+const SKIP_BUILD = Boolean(process.env.PW_SKIP_BUILD);
+const server = { reuseExistingServer: !CI, timeout: 240_000, stdout: 'ignore', stderr: 'pipe' } as const;
 const executablePath = process.env.PW_CHROMIUM_PATH || undefined;
 
 export default defineConfig({
@@ -43,14 +54,25 @@ export default defineConfig({
     },
   },
   projects: [{ name: 'chromium' }],
-  webServer: {
-    command: process.env.PW_SKIP_BUILD
-      ? `npm run start -- -p ${PORT}`
-      : `npm run build && npm run start -- -p ${PORT}`,
-    url: BASE_URL,
-    reuseExistingServer: !CI,
-    timeout: 240_000,
-    stdout: 'ignore',
-    stderr: 'pipe',
-  },
+  // Started one after the other, in this order (both builds use `.next` while they run).
+  webServer: [
+    ...(process.env.PW_SKIP_ANALYTICS
+      ? []
+      : [
+          {
+            command:
+              (SKIP_BUILD
+                ? ''
+                : `NEXT_PUBLIC_GA_MEASUREMENT_ID=${GA_TEST_ID} npm run build && rm -rf .next-ga && mv .next .next-ga && `) +
+              `NEXT_DIST_DIR=.next-ga npm run start -- -p ${GA_PORT}`,
+            url: GA_URL,
+            ...server,
+          },
+        ]),
+    {
+      command: SKIP_BUILD ? `npm run start -- -p ${PORT}` : `npm run build && npm run start -- -p ${PORT}`,
+      url: BASE_URL,
+      ...server,
+    },
+  ],
 });
