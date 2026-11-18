@@ -9,7 +9,7 @@ items:
       A board of Santa Clara University students. {eventName} ran in earlier
       years; the last event was in 2020, after which the club went dormant. The
       current board has brought it back, so this is the first {eventName} since
-      2020. This is first sense 2090.
+      2020.
   - question: When and where is {eventName}?
     answer: >-
       {date}, at the {venue} on the {campus} campus. Doors open at about
