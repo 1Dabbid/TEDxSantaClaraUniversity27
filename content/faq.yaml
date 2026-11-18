@@ -1,31 +1,45 @@
 items:
   - question: What is TEDx?
-    answer: |-
-      {eventName} is an independently organized TEDx event, operated under license from TED. TED's description of the TEDx program and of TED is printed under “About TEDx” and “About TED” at the bottom of every page.
+    answer: >-
+      {eventName} is an independently organized TEDx event, operated under
+      license from TED. TED's description of the TEDx program and of TED is
+      printed under “About TEDx” and “About TED” at the bottom of every page.
   - question: Who organizes it?
-    answer: |-
-      A board of Santa Clara University students. {eventName} ran in earlier years; the last event was in 2020, after which the club went dormant. The current board has brought it back, so this is the first {eventName} since 2020.
+    answer: >-
+      A board of Santa Clara University students. {eventName} ran in earlier
+      years; the last event was in 2020, after which the club went dormant. The
+      current board has brought it back, so this is the first {eventName} since
+      2020. This is first sense 2090.
   - question: When and where is {eventName}?
-    answer: |-
-      {date}, at the {venue} on the {campus} campus. Doors open at about {doorsTime} with a reception outside the venue (drinks, food and lounge seating), talks begin at about {talksTime}, and the evening ends around {endTime}. {timesNote}
+    answer: >-
+      {date}, at the {venue} on the {campus} campus. Doors open at about
+      {doorsTime} with a reception outside the venue (drinks, food and lounge
+      seating), talks begin at about {talksTime}, and the evening ends around
+      {endTime}. {timesNote}
   - question: Are tickets on sale?
-    answer: |-
-      {ticketStatus} {ticketPriceNote}
+    answer: '{ticketStatus} {ticketPriceNote}'
   - question: How many people can attend?
-    answer: |-
-      Attendance is limited to {capacity} people.
+    answer: Attendance is limited to {capacity} people.
   - question: Will the talks be online?
-    answer: |-
-      The talks are recorded and submitted for publication on the TEDx Talks YouTube channel.
+    answer: >-
+      The talks are recorded and submitted for publication on the TEDx Talks
+      YouTube channel.
   - question: How can I apply to speak?
-    answer: |-
-      {applicationsStatus} To register your interest in giving a talk, use the club’s interest form: {interestUrl}.
+    answer: >-
+      {applicationsStatus} To register your interest in giving a talk, use the
+      club’s interest form: {interestUrl}.
   - question: How can I get involved?
-    answer: |-
-      Use the club’s interest form to help organize {eventName}, join its contact list or register your interest in speaking: {interestUrl}.
+    answer: >-
+      Use the club’s interest form to help organize {eventName}, join its
+      contact list or register your interest in speaking: {interestUrl}.
   - question: How can my organization become a partner?
-    answer: |-
-      We are inviting a small number of partners to support the event. The [Partners page](/partners) explains what partnership means under TEDx rules and how to get in touch.
+    answer: >-
+      We are inviting a small number of partners to support the event. The
+      [Partners page](/partners) explains what partnership means under TEDx
+      rules and how to get in touch.
   - question: Is the event accessible?
-    answer: |-
-      We want everyone to be able to take part. If you have accessibility needs or questions, contact the team at {contactEmail} and we will do our best to accommodate you. Full venue accessibility details will be published before the event.
+    answer: >-
+      We want everyone to be able to take part. If you have accessibility needs
+      or questions, contact the team at {contactEmail} and we will do our best
+      to accommodate you. Full venue accessibility details will be published
+      before the event.
